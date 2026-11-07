@@ -47,3 +47,22 @@ license:   蓝图和工具用: 可公开 / 只本机
 - 开班: 读训练集根目录 (界面选的), 按正式区 + 标暂用的生成简报、经验种子、蓝图库索引。
 - 模型动手时: 按触发键把对应的经验、配比、蓝图递上, 每个角色每种东西一次。
 - 班末: 产出进待核实区, 写统计 (这班用了哪些条目、带出了多少次)。
+
+## 7. 从旧项目和第一版搬什么 (草图, 2026-11-07, 待定后再动手)
+第一步先做条目的程序 (`core/training/`: 读写条目、Markdown 和 JSON 互生成、正式区 + 暂用 + 私有区合并读、触发键查找), 有测试后再逐行搬; 搬一行, 旧项目对应的文件删一行。
+
+| 来源 (旧项目 factorio-pilot / 第一版) | 去处 | 区 | 公开 | 备注 |
+|---|---|---|---|---|
+| `knowledge/facts.json` + `facts.md` (实验写入, 每条带出处和版本) | `knowledge/` | verified | 是 | 转成第 3 节的条目; `.md` 从 `.json` 生成 |
+| `knowledge/brief-points.md` (要点, 每条带 P-xxx / facts 出处) | `knowledge/` | verified | 是 | 简报生成时引用, 不再手写进简报 |
+| `knowledge/patterns/` 9 个主题 (心法、产线、物流、布局、防御、战斗、星球、进程) | `patterns/` | 用户看过的 verified, 其余 pending | 是 | 朋友基地的案例 `case-friend-nauvis.md` 只本机 |
+| `knowledge/lessons-seed.json` (核过的种子, 按 action / entity / item / recipe 键) | `lessons/` | verified | 是 | 已经是条目形状 |
+| `lab-data/play/lessons-learned.jsonl` + `knowledge/lessons-learned.jsonl` (模型各班自己记的) | `lessons/` | pending | 是 (去掉坐标) | 每条带班次编号 |
+| `knowledge/blueprints/` (社区 7 份带 LICENSE + 自己的 5 个积木带 feed 实测) | `blueprints/` | verified (实测过产量) | 社区的按各自许可, 自己的是 | `index.jsonl` 转成说明条目 |
+| `lab-data/datasets/` (社区 660 份 + 预览图 643 + 索引) | `data/training-private/blueprints/` | pending | 否 (许可没逐份查) | 程序合并读; 查清许可的才挪进公开 |
+| `lab-data/blueprints/`、`lab-data/friend-world/` (朋友的基地和世界导出) | `data/training-private/` | — | 否 | 要他点头才公开 |
+| `lab-data/play/team-tools-keep/` (模型写的跨班工具) | `tools/` | pending | 是 | 验证过有用的才 verified |
+| `src/play/brief-zh.md` (简报模板: 世界 / 规矩 / 工具三节) + 派对的命令手册 (已在 `commands/` 里) | `manuals/` | — | 是 (派对 MIT, NOTICE 署名) | 简报由程序按世界真实值生成, 不写死 |
+| `docs/research/` 3 篇 (派对、harness、FLE 的阅读笔记) | `knowledge/` | pending | 是 | 检索资料, 标出处和日期 |
+| 第一版 `I:\fn\knowledge\` (topics 24 篇、manuals 6、catalogs 10、journal 5、playbook) | 按 `I:\fn\context\v1-knowledge-inventory.md` 清点, 仓库没有的 → `knowledge/` 或 `patterns/` | 一律 pending | 是 | 第一版的说法可能是错的 (ops.md 有几处被实测推翻) |
+| 第一版 `I:\fn\data\` (作废的目标文件、界面导出)、`lab-data/gamedata`、`prototypes` (游戏导出数据) | 不进训练集 | — | — | 游戏数据归 `data/` 不上传; 作废的删 |
