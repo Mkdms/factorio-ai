@@ -12,8 +12,8 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 1. 客户端: 开独立版连服务器 (沙盘 / 别人的), 看客户端日志等它进世界 (`online-lib.ts clientPhase`; 连不上报原因, 密码错和模组不一样客户端日志都只有 "refused"); 联机 `--backend auto` 时先用干净客户端试进, 进得去 = 服务器没装模组 → 走外挂, 一条 Lua 都不跑。
 2. 注入客户端 (`game/client`, 只读默认不注入), 读玩家、退出远程视图, 读 `game.console_command_used`。
 3. 起代理 (`commands/broker.ts`) 和游戏外的模组宿主 (账本 `ledger.lua` 在记录目录); 读 `where` 写 `where.json`。
-4. 角色目录 (`workspace.ts`): 简报 AGENTS.md / CLAUDE.md、notes.md、ref/、deadline.txt、`./fh` 和 `fh.ps1` (都经管道; 脚本里只有管道名, 没有 RCON 密码)。
-5. 开班扫描 (`scan.ts`): 现状写 world-scan.md (判断 / 规划等计算器那块接上再有)。
+4. 角色目录 (`workspace.ts`): 简报 AGENTS.md / CLAUDE.md (`brief.ts`: 训练集 manuals/brief.md 模板 + 世界真实值 + 用户目标 + 手册目录)、notes.md (训练集的模板)、ref/ (手册主题 + 思路 pattern-*.md + facts.md + names.tsv)、deadline.txt、`./fh` / `./know` 各两版 (脚本里只有管道名, 没有 RCON 密码)。教训从训练集读进内存 (`deliver.ts`), 行动层做对应动作时在回复里带 2 条。
+5. 开班扫描 (`scan.ts`): 现状写 world-scan.md, 后面附对得上的要点 (`hints.ts`); 判断 / 规划等计算器那块接上再有。
 6. 大脑 (`--brain claude`): 角色目录写 `.claude/settings.json` (压缩点 + 钩子) 和 `.context-hooks`; 一轮一个 Claude Code 进程, 第 1 轮开场提示词 (先读简报、笔记、world-scan.md, 再看 status / observe, 然后动手), 之后"继续"; 会话号接力 (`--resume`); 一轮很快结束就等满 30 秒再叫; 到点 / STOP / DONE / 客户端关了 / 掉线就连子进程一起杀。`--brain none`: 只等到点 / STOP。收工写 `end.json`、`probe-stats.json`, 联机时抹掉客户端日志里的地址和密码。
 
 记录在 `data/play/online/<runId>/`, 角色目录在 `BRAIN_DIR` (默认 `~/factorio-ai-brain`) 下 (必须在仓库外: 模型会往上读到开发规则)。
@@ -25,6 +25,8 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 | `online-lib.ts` | 服务器地址 (keys.json 的 server)、客户端日志 → 阶段、抹地址密码、简报里联机这一节 |
 | `workspace.ts` | 角色目录和 `./fh` 包装 (sh + ps1, `ps1-wrap.ts` 把参数写成文件交给 `commands/fh.ts`) |
 | `scan.ts` | 开班扫描 (SCAN_LUA 跑在游戏外的假接口上) |
+| `brief.ts` | 简报组装 (模板占位符 WORLD / PLAYER / GOAL / REF_INDEX) |
+| `deliver.ts` / `lessons.ts` / `hints.ts` / `knowledge.ts` / `training.ts` | 递积累: 教训 (种子 + 待核区; 挑选、键推断、班末收笔记)、要点、查全部积累、训练集在哪 (公开 + 只本机两份合并读) |
 | `shell.ts` | 找 Git for Windows 的 bash (PATH 上的 bash 可能是 WSL 的) |
 
 ## 还没搬 (旧项目有; 顺序见 docs/brains.md)

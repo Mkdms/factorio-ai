@@ -1,0 +1,602 @@
+[
+ {
+  "label": "冶炼列 stone-furnace × 16 / inserter / transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 300,
+  "perTile": 1.515,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.091,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 300.5,
+   "coal": 24
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 24 / inserter / transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 448.5,
+  "perTile": 1.568,
+  "efficiency": 0.997,
+  "trend": 1.002,
+  "working": 0.998,
+  "powerMW": 0.139,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 450.5,
+   "coal": 35.5
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 32 / inserter / transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 449.5,
+  "perTile": 1.202,
+  "efficiency": 0.749,
+  "trend": 0.998,
+  "working": 0.751,
+  "powerMW": 0.146,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 450.5,
+   "coal": 35.5
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 16 / inserter / fast-transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 300,
+  "perTile": 1.515,
+  "efficiency": 1,
+  "trend": 1.007,
+  "working": 1,
+  "powerMW": 0.091,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 300.5,
+   "coal": 24
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 24 / inserter / fast-transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 449.5,
+  "perTile": 1.572,
+  "efficiency": 0.999,
+  "trend": 1.007,
+  "working": 1,
+  "powerMW": 0.137,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 449.5,
+   "coal": 36
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 32 / inserter / fast-transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 599.5,
+  "perTile": 1.603,
+  "efficiency": 0.999,
+  "trend": 1.005,
+  "working": 1,
+  "powerMW": 0.184,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 601,
+   "coal": 48
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 16 / fast-inserter / transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 300,
+  "perTile": 1.515,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.122,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 299.5,
+   "coal": 23.5
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 24 / fast-inserter / transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 450,
+  "perTile": 1.573,
+  "efficiency": 1,
+  "trend": 1.009,
+  "working": 1,
+  "powerMW": 0.182,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 462.5,
+   "coal": 35.5
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 32 / fast-inserter / transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 468.5,
+  "perTile": 1.253,
+  "efficiency": 0.781,
+  "trend": 1.011,
+  "working": 0.781,
+  "powerMW": 0.199,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 469,
+   "coal": 37
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 16 / fast-inserter / fast-transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 300.5,
+  "perTile": 1.518,
+  "efficiency": 1.002,
+  "trend": 0.997,
+  "working": 1,
+  "powerMW": 0.122,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 300,
+   "coal": 23.5
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 24 / fast-inserter / fast-transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 450.5,
+  "perTile": 1.575,
+  "efficiency": 1.001,
+  "trend": 0.998,
+  "working": 1,
+  "powerMW": 0.182,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 450,
+   "coal": 35.5
+  }
+ },
+ {
+  "label": "冶炼列 stone-furnace × 32 / fast-inserter / fast-transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 599.5,
+  "perTile": 1.603,
+  "efficiency": 0.999,
+  "trend": 1.002,
+  "working": 1,
+  "powerMW": 0.243,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600.5,
+   "coal": 47.5
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 16 / inserter / transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 450.5,
+  "perTile": 2.275,
+  "efficiency": 0.751,
+  "trend": 0.993,
+  "working": 0.753,
+  "powerMW": 0.129,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 450.5,
+   "coal": 17.5
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 24 / inserter / transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 450.5,
+  "perTile": 1.575,
+  "efficiency": 0.501,
+  "trend": 0.993,
+  "working": 0.502,
+  "powerMW": 0.136,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 450.5,
+   "coal": 17.5
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 32 / inserter / transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 450.5,
+  "perTile": 1.205,
+  "efficiency": 0.375,
+  "trend": 0.993,
+  "working": 0.376,
+  "powerMW": 0.142,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 450.5,
+   "coal": 17.5
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 16 / inserter / fast-transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 600,
+  "perTile": 3.03,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.166,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600,
+   "coal": 24
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 24 / inserter / fast-transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 900,
+  "perTile": 3.147,
+  "efficiency": 1,
+  "trend": 1.002,
+  "working": 1,
+  "powerMW": 0.252,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900,
+   "coal": 36
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 32 / inserter / fast-transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 900,
+  "perTile": 2.406,
+  "efficiency": 0.75,
+  "trend": 0.989,
+  "working": 0.747,
+  "powerMW": 0.263,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900,
+   "coal": 35
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 16 / fast-inserter / transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 487.5,
+  "perTile": 2.462,
+  "efficiency": 0.813,
+  "trend": 1.01,
+  "working": 0.813,
+  "powerMW": 0.187,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 487.5,
+   "coal": 19
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 24 / fast-inserter / transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 487.5,
+  "perTile": 1.705,
+  "efficiency": 0.542,
+  "trend": 1.01,
+  "working": 0.542,
+  "powerMW": 0.195,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 487.5,
+   "coal": 19
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 32 / fast-inserter / transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 487.5,
+  "perTile": 1.303,
+  "efficiency": 0.406,
+  "trend": 1.01,
+  "working": 0.406,
+  "powerMW": 0.203,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 487.5,
+   "coal": 19
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 16 / fast-inserter / fast-transport-belt",
+  "entities": 114,
+  "w": 11,
+  "h": 18,
+  "outPerMin": 600,
+  "perTile": 3.03,
+  "efficiency": 1,
+  "trend": 0.997,
+  "working": 1,
+  "powerMW": 0.222,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600,
+   "coal": 23.5
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 24 / fast-inserter / fast-transport-belt",
+  "entities": 168,
+  "w": 11,
+  "h": 26,
+  "outPerMin": 900,
+  "perTile": 3.147,
+  "efficiency": 1,
+  "trend": 0.996,
+  "working": 0.998,
+  "powerMW": 0.339,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900,
+   "coal": 35.5
+  }
+ },
+ {
+  "label": "冶炼列 steel-furnace × 32 / fast-inserter / fast-transport-belt",
+  "entities": 222,
+  "w": 11,
+  "h": 34,
+  "outPerMin": 900.5,
+  "perTile": 2.408,
+  "efficiency": 0.75,
+  "trend": 0.997,
+  "working": 0.75,
+  "powerMW": 0.347,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900,
+   "coal": 35.5
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 16 / inserter / transport-belt",
+  "entities": 139,
+  "w": 13,
+  "h": 26,
+  "outPerMin": 600,
+  "perTile": 1.775,
+  "efficiency": 1,
+  "trend": 0.987,
+  "working": 1,
+  "powerMW": 3.146,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 24 / inserter / transport-belt",
+  "entities": 205,
+  "w": 13,
+  "h": 38,
+  "outPerMin": 900,
+  "perTile": 1.822,
+  "efficiency": 1,
+  "trend": 0.991,
+  "working": 1,
+  "powerMW": 4.715,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 32 / inserter / transport-belt",
+  "entities": 271,
+  "w": 13,
+  "h": 50,
+  "outPerMin": 900,
+  "perTile": 1.385,
+  "efficiency": 0.75,
+  "trend": 0.991,
+  "working": 0.75,
+  "powerMW": 4.77,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 16 / inserter / fast-transport-belt",
+  "entities": 139,
+  "w": 13,
+  "h": 26,
+  "outPerMin": 600,
+  "perTile": 1.775,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 3.146,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 24 / inserter / fast-transport-belt",
+  "entities": 205,
+  "w": 13,
+  "h": 38,
+  "outPerMin": 900,
+  "perTile": 1.822,
+  "efficiency": 1,
+  "trend": 0.996,
+  "working": 1,
+  "powerMW": 4.719,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 32 / inserter / fast-transport-belt",
+  "entities": 271,
+  "w": 13,
+  "h": 50,
+  "outPerMin": 1200,
+  "perTile": 1.846,
+  "efficiency": 1,
+  "trend": 0.998,
+  "working": 1,
+  "powerMW": 6.294,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 1200
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 16 / fast-inserter / transport-belt",
+  "entities": 139,
+  "w": 13,
+  "h": 26,
+  "outPerMin": 600,
+  "perTile": 1.775,
+  "efficiency": 1,
+  "trend": 1.01,
+  "working": 1,
+  "powerMW": 3.201,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 24 / fast-inserter / transport-belt",
+  "entities": 205,
+  "w": 13,
+  "h": 38,
+  "outPerMin": 900,
+  "perTile": 1.822,
+  "efficiency": 1,
+  "trend": 1.002,
+  "working": 1,
+  "powerMW": 4.806,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 32 / fast-inserter / transport-belt",
+  "entities": 271,
+  "w": 13,
+  "h": 50,
+  "outPerMin": 900,
+  "perTile": 1.385,
+  "efficiency": 0.75,
+  "trend": 1.002,
+  "working": 0.75,
+  "powerMW": 4.862,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 16 / fast-inserter / fast-transport-belt",
+  "entities": 139,
+  "w": 13,
+  "h": 26,
+  "outPerMin": 600,
+  "perTile": 1.775,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 3.203,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 600
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 24 / fast-inserter / fast-transport-belt",
+  "entities": 205,
+  "w": 13,
+  "h": 38,
+  "outPerMin": 900,
+  "perTile": 1.822,
+  "efficiency": 1,
+  "trend": 1.002,
+  "working": 1,
+  "powerMW": 4.804,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 900
+  }
+ },
+ {
+  "label": "冶炼列 electric-furnace × 32 / fast-inserter / fast-transport-belt",
+  "entities": 271,
+  "w": 13,
+  "h": 50,
+  "outPerMin": 1200,
+  "perTile": 1.846,
+  "efficiency": 1,
+  "trend": 1.002,
+  "working": 1,
+  "powerMW": 6.405,
+  "powerFixed": 0,
+  "fed": {
+   "iron-ore": 1200
+  }
+ }
+]

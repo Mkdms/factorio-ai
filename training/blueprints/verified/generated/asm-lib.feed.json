@@ -1,0 +1,662 @@
+[
+ {
+  "label": "组装机排 集成电路 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 45,
+  "perTile": 0.281,
+  "efficiency": 1,
+  "trend": 1.045,
+  "working": 1,
+  "powerMW": 0.993,
+  "powerFixed": 0,
+  "fed": {
+   "copper-cable": 182,
+   "electronic-circuit": 92,
+   "plastic-bar": 90
+  }
+ },
+ {
+  "label": "组装机排 集成电路 × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 91,
+  "perTile": 0.325,
+  "efficiency": 1.011,
+  "trend": 1.022,
+  "working": 1,
+  "powerMW": 1.985,
+  "powerFixed": 0,
+  "fed": {
+   "copper-cable": 363,
+   "plastic-bar": 182,
+   "electronic-circuit": 182
+  }
+ },
+ {
+  "label": "组装机排 机自科技包（红瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 66,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 54,
+  "perTile": 0.386,
+  "efficiency": 1,
+  "trend": 0.929,
+  "working": 1,
+  "powerMW": 0.955,
+  "powerFixed": 0,
+  "fed": {
+   "iron-gear-wheel": 54,
+   "copper-plate": 54
+  }
+ },
+ {
+  "label": "组装机排 机自科技包（红瓶） × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 108,
+  "w": 20,
+  "h": 13,
+  "outPerMin": 108,
+  "perTile": 0.415,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.911,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 108,
+   "iron-gear-wheel": 108
+  }
+ },
+ {
+  "label": "组装机排 化工科技包（蓝瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 24,
+  "perTile": 0.15,
+  "efficiency": 1.067,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.95,
+  "powerFixed": 0,
+  "fed": {
+   "advanced-circuit": 36,
+   "sulfur": 12,
+   "engine-unit": 24
+  }
+ },
+ {
+  "label": "组装机排 化工科技包（蓝瓶） × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 48,
+  "perTile": 0.171,
+  "efficiency": 1.067,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.9,
+  "powerFixed": 0,
+  "fed": {
+   "advanced-circuit": 72,
+   "sulfur": 24,
+   "engine-unit": 48
+  }
+ },
+ {
+  "label": "组装机排 铜缆 × 5 / 组装机2型 / 高速机械臂×1 出×2 / 高速传送带 / 单排",
+  "entities": 60,
+  "w": 17,
+  "h": 7,
+  "outPerMin": 900,
+  "perTile": 7.563,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.011,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 450
+  }
+ },
+ {
+  "label": "组装机排 铜缆 × 10 / 组装机2型 / 高速机械臂×1 出×2 / 高速传送带 / 双排",
+  "entities": 100,
+  "w": 17,
+  "h": 13,
+  "outPerMin": 1800,
+  "perTile": 8.145,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 2.024,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 900
+  }
+ },
+ {
+  "label": "组装机排 电炉 × 5 / 组装机2型 / 高速机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 76,
+  "w": 17,
+  "h": 8,
+  "outPerMin": 37,
+  "perTile": 0.272,
+  "efficiency": 0.822,
+  "trend": 1.056,
+  "working": 0.8,
+  "powerMW": 0.784,
+  "powerFixed": 0,
+  "fed": {
+   "stone-brick": 360,
+   "steel-plate": 359,
+   "advanced-circuit": 180
+  }
+ },
+ {
+  "label": "组装机排 电炉 × 4 / 组装机2型 / 高速机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 48,
+  "w": 8,
+  "h": 14,
+  "outPerMin": 24,
+  "perTile": 0.214,
+  "efficiency": 0.667,
+  "trend": 1,
+  "working": 0.667,
+  "powerMW": 0.514,
+  "powerFixed": 0,
+  "fed": {
+   "stone-brick": 230,
+   "steel-plate": 247,
+   "advanced-circuit": 113
+  }
+ },
+ {
+  "label": "组装机排 标准弹匣 × 5 / 组装机2型 / 高速机械臂×2 出×1 / 高速传送带 / 单排",
+  "entities": 60,
+  "w": 17,
+  "h": 7,
+  "outPerMin": 225,
+  "perTile": 1.891,
+  "efficiency": 1,
+  "trend": 1.009,
+  "working": 1,
+  "powerMW": 0.984,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 900
+  }
+ },
+ {
+  "label": "组装机排 标准弹匣 × 4 / 组装机2型 / 高速机械臂×2 出×1 / 高速传送带 / 双排",
+  "entities": 40,
+  "w": 8,
+  "h": 13,
+  "outPerMin": 180,
+  "perTile": 1.731,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.788,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 720
+  }
+ },
+ {
+  "label": "组装机排 机器人构架 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 16,
+  "perTile": 0.1,
+  "efficiency": 1.185,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.954,
+  "powerFixed": 0,
+  "fed": {
+   "electronic-circuit": 47,
+   "steel-plate": 16,
+   "electric-engine-unit": 16,
+   "battery": 29
+  }
+ },
+ {
+  "label": "组装机排 机器人构架 × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 32,
+  "perTile": 0.114,
+  "efficiency": 1.185,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.906,
+  "powerFixed": 0,
+  "fed": {
+   "electronic-circuit": 89,
+   "steel-plate": 31,
+   "electric-engine-unit": 32,
+   "battery": 60
+  }
+ },
+ {
+  "label": "组装机排 标准手雷 × 6 / 组装机2型 / 电力机械臂×2 出×1 / 基础传送带 / 单排",
+  "entities": 72,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 32,
+  "perTile": 0.229,
+  "efficiency": 0.948,
+  "trend": 1.133,
+  "working": 1,
+  "powerMW": 1.005,
+  "powerFixed": 0,
+  "fed": {
+   "coal": 342,
+   "iron-plate": 165
+  }
+ },
+ {
+  "label": "组装机排 标准手雷 × 8 / 组装机2型 / 电力机械臂×2 出×1 / 基础传送带 / 双排",
+  "entities": 80,
+  "w": 14,
+  "h": 13,
+  "outPerMin": 42,
+  "perTile": 0.231,
+  "efficiency": 0.933,
+  "trend": 0.909,
+  "working": 0.99,
+  "powerMW": 1.33,
+  "powerFixed": 0,
+  "fed": {
+   "coal": 455,
+   "iron-plate": 233
+  }
+ },
+ {
+  "label": "组装机排 铁棒 × 5 / 组装机2型 / 高速机械臂×1 出×2 / 高速传送带 / 单排",
+  "entities": 60,
+  "w": 17,
+  "h": 7,
+  "outPerMin": 900,
+  "perTile": 7.563,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.011,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 450
+  }
+ },
+ {
+  "label": "组装机排 铁棒 × 10 / 组装机2型 / 高速机械臂×1 出×2 / 高速传送带 / 双排",
+  "entities": 100,
+  "w": 17,
+  "h": 13,
+  "outPerMin": 1800,
+  "perTile": 8.145,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 2.024,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 900
+  }
+ },
+ {
+  "label": "组装机排 物流科技包（绿瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 66,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 44,
+  "perTile": 0.314,
+  "efficiency": 0.978,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.952,
+  "powerFixed": 0,
+  "fed": {
+   "inserter": 46,
+   "transport-belt": 44
+  }
+ },
+ {
+  "label": "组装机排 物流科技包（绿瓶） × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 108,
+  "w": 20,
+  "h": 13,
+  "outPerMin": 90,
+  "perTile": 0.346,
+  "efficiency": 1,
+  "trend": 1.045,
+  "working": 1,
+  "powerMW": 1.904,
+  "powerFixed": 0,
+  "fed": {
+   "inserter": 90,
+   "transport-belt": 90
+  }
+ },
+ {
+  "label": "组装机排 轻质框架 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 18,
+  "perTile": 0.113,
+  "efficiency": 1,
+  "trend": 0.8,
+  "working": 1,
+  "powerMW": 1.018,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 447,
+   "steel-plate": 36,
+   "plastic-bar": 90
+  }
+ },
+ {
+  "label": "组装机排 轻质框架 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 72,
+  "w": 11,
+  "h": 14,
+  "outPerMin": 18,
+  "perTile": 0.117,
+  "efficiency": 1,
+  "trend": 0.8,
+  "working": 0.958,
+  "powerMW": 0.966,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 380,
+   "plastic-bar": 90,
+   "steel-plate": 36
+  }
+ },
+ {
+  "label": "组装机排 军备科技包（灰瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 54,
+  "perTile": 0.338,
+  "efficiency": 1,
+  "trend": 0.929,
+  "working": 1,
+  "powerMW": 0.959,
+  "powerFixed": 0,
+  "fed": {
+   "stone-wall": 55,
+   "piercing-rounds-magazine": 27,
+   "grenade": 28
+  }
+ },
+ {
+  "label": "组装机排 军备科技包（灰瓶） × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 108,
+  "perTile": 0.386,
+  "efficiency": 1,
+  "trend": 0.929,
+  "working": 1,
+  "powerMW": 1.918,
+  "powerFixed": 0,
+  "fed": {
+   "piercing-rounds-magazine": 55,
+   "stone-wall": 110,
+   "grenade": 55
+  }
+ },
+ {
+  "label": "组装机排 穿甲弹匣 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 90,
+  "perTile": 0.563,
+  "efficiency": 1,
+  "trend": 1.045,
+  "working": 1,
+  "powerMW": 0.979,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 91,
+   "steel-plate": 46,
+   "firearm-magazine": 91
+  }
+ },
+ {
+  "label": "组装机排 穿甲弹匣 × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 182,
+  "perTile": 0.65,
+  "efficiency": 1.011,
+  "trend": 1.022,
+  "working": 1,
+  "powerMW": 1.958,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 183,
+   "steel-plate": 91,
+   "firearm-magazine": 181
+  }
+ },
+ {
+  "label": "组装机排 管道 × 5 / 组装机2型 / 电力机械臂×2 出×2 / 基础传送带 / 单排",
+  "entities": 65,
+  "w": 17,
+  "h": 7,
+  "outPerMin": 450,
+  "perTile": 3.782,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.902,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 450
+  }
+ },
+ {
+  "label": "组装机排 管道 × 4 / 组装机2型 / 电力机械臂×2 出×2 / 基础传送带 / 双排",
+  "entities": 44,
+  "w": 8,
+  "h": 13,
+  "outPerMin": 360,
+  "perTile": 3.462,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.721,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 360
+  }
+ },
+ {
+  "label": "组装机排 生产科技包（紫瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 39,
+  "perTile": 0.244,
+  "efficiency": 1.011,
+  "trend": 0.857,
+  "working": 1,
+  "powerMW": 1.009,
+  "powerFixed": 0,
+  "fed": {
+   "rail": 447,
+   "electric-furnace": 14,
+   "productivity-module": 13
+  }
+ },
+ {
+  "label": "组装机排 生产科技包（紫瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 72,
+  "w": 11,
+  "h": 14,
+  "outPerMin": 36,
+  "perTile": 0.234,
+  "efficiency": 0.933,
+  "trend": 1,
+  "working": 0.917,
+  "powerMW": 0.924,
+  "powerFixed": 0,
+  "fed": {
+   "rail": 380,
+   "electric-furnace": 12,
+   "productivity-module": 12
+  }
+ },
+ {
+  "label": "组装机排 产能插件 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 66,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 18,
+  "perTile": 0.129,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.96,
+  "powerFixed": 0,
+  "fed": {
+   "electronic-circuit": 90,
+   "advanced-circuit": 90
+  }
+ },
+ {
+  "label": "组装机排 产能插件 × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 108,
+  "w": 20,
+  "h": 13,
+  "outPerMin": 36,
+  "perTile": 0.138,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.921,
+  "powerFixed": 0,
+  "fed": {
+   "advanced-circuit": 180,
+   "electronic-circuit": 180
+  }
+ },
+ {
+  "label": "组装机排 铁轨 × 5 / 组装机2型 / 高速机械臂×1 出×2 / 高速传送带 / 单排",
+  "entities": 81,
+  "w": 17,
+  "h": 8,
+  "outPerMin": 720,
+  "perTile": 5.294,
+  "efficiency": 0.8,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.928,
+  "powerFixed": 0,
+  "fed": {
+   "stone": 360,
+   "steel-plate": 360,
+   "iron-stick": 360
+  }
+ },
+ {
+  "label": "组装机排 铁轨 × 10 / 组装机2型 / 高速机械臂×1 出×2 / 高速传送带 / 双排",
+  "entities": 130,
+  "w": 17,
+  "h": 14,
+  "outPerMin": 1074,
+  "perTile": 4.513,
+  "efficiency": 0.597,
+  "trend": 0.996,
+  "working": 0.75,
+  "powerMW": 1.397,
+  "powerFixed": 0,
+  "fed": {
+   "stone": 538,
+   "steel-plate": 538,
+   "iron-stick": 538
+  }
+ },
+ {
+  "label": "组装机排 基础传送带 × 5 / 组装机2型 / 高速机械臂×2 出×2 / 高速传送带 / 单排",
+  "entities": 65,
+  "w": 17,
+  "h": 7,
+  "outPerMin": 900,
+  "perTile": 7.563,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.089,
+  "powerFixed": 0,
+  "fed": {
+   "iron-gear-wheel": 450,
+   "iron-plate": 450
+  }
+ },
+ {
+  "label": "组装机排 基础传送带 × 10 / 组装机2型 / 高速机械臂×2 出×2 / 高速传送带 / 双排",
+  "entities": 110,
+  "w": 17,
+  "h": 13,
+  "outPerMin": 1800,
+  "perTile": 8.145,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 2.183,
+  "powerFixed": 0,
+  "fed": {
+   "iron-gear-wheel": 900,
+   "iron-plate": 900
+  }
+ },
+ {
+  "label": "组装机排 效能科技包（黄瓶） × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 45,
+  "perTile": 0.281,
+  "efficiency": 1.167,
+  "trend": 0.875,
+  "working": 1,
+  "powerMW": 0.954,
+  "powerFixed": 0,
+  "fed": {
+   "low-density-structure": 43,
+   "processing-unit": 29,
+   "flying-robot-frame": 14
+  }
+ },
+ {
+  "label": "组装机排 效能科技包（黄瓶） × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 84,
+  "perTile": 0.3,
+  "efficiency": 1.089,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.906,
+  "powerFixed": 0,
+  "fed": {
+   "processing-unit": 56,
+   "low-density-structure": 83,
+   "flying-robot-frame": 27
+  }
+ }
+]

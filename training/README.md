@@ -34,7 +34,7 @@ license:   蓝图和工具用: 可公开 / 只本机
 
 ## 4. 可公开 / 只本机
 - 自己做的、核实过的: 可公开, 随训练集一起发布。
-- 别人的蓝图没写许可、朋友的基地没授权: 只本机, 放 `data\training-private\`, 结构和这里一样, 程序合并读。
+- 别人的蓝图没写许可、联机服务器玩家的基地没授权: 只本机, 放 `data\training-private\`, 结构和这里一样, 程序合并读 (`core/run/training.ts`)。
 
 ## 5. 班次怎么变成经验
 ```
@@ -48,43 +48,41 @@ license:   蓝图和工具用: 可公开 / 只本机
 - 模型动手时: 按触发键把对应的经验、配比、蓝图递上, 每个角色每种东西一次。
 - 班末: 产出进待核实区, 写统计 (这班用了哪些条目、带出了多少次)。
 
-## 7. 目录树 (草图, 2026-11-07; `←` 后面是旧项目里的来源, 原样复制改名, 条目格式边搬边定, 不先写条目程序)
+## 7. 目录树 (2026-11-07 搬进来的; `←` 后面是旧项目里的来源, 原样复制改名, 条目格式边搬边定)
 ```
-training/                        递给模型的全部积累; 独立一块, 界面里可换目录
+training/                        递给模型的全部积累; 独立一块, 界面里可换目录 (环境变量 TRAINING_DIR)
   README.md                      本规范
   knowledge/                     游戏事实
     verified/
-      facts.json                 沙盘实验写入的事实, 每条带出处和版本            ← knowledge/facts.json
-      facts.md                   同一份给人和模型读 (由 .json 生成)              ← knowledge/facts.md
-      points.md                  简报要点, 每条带 facts 出处                     ← knowledge/brief-points.md
-      names.json                 建筑 / 物品 / 科技的官方中文名                   ← 游戏导出 (lab-data/prototypes)
+      facts.json                 沙盘实验写入的事实, 每条带出处和版本            ← 旧项目 knowledge/facts.json
+      facts.md                   同一份给人和模型读                               ← knowledge/facts.md (以后由 .json 生成)
+      points.md                  要点, 每条带出处标签; 开班扫描按情况挑 (core/run/hints.ts)   ← knowledge/brief-points.md
     pending/
-      research/                  检索来的资料, 每篇带出处、日期、版本             ← docs/research/ 3 篇, 以后的检索
-      v1/                        第一版的主题 / 手册 / 目录, 一律待核             ← I:\fn\knowledge (topics 24, manuals 6, catalogs 10)
+      research/                  检索来的资料 (26 篇), 每篇带出处、日期、版本       ← docs/research/
   patterns/                      老玩家思路: 情况 → 做法 → 为什么 → 代价 → 关联 → 流派
-    verified/                    mindset production logistics layout defense combat planets progression (.md)   ← knowledge/patterns/
+    verified/                    mindset production logistics-choice layout-styles defense combat planets progression (.md)   ← knowledge/patterns/
     pending/
-  lessons/                       做动作时自动带出的提醒 (触发键 action / entity / item / recipe)
-    verified/seed.json           核过的种子                                        ← knowledge/lessons-seed.json
-    pending/learned.jsonl        各班模型自己记的, 每条带班次编号                   ← lab-data/play/lessons-learned.jsonl + knowledge/lessons-learned.jsonl
-  blueprints/                    蓝图 + 实测读数
+  lessons/                       做动作时自动带出的提醒 (触发键 action / entity / item / recipe; core/run/lessons.ts)
+    verified/seed.json           核过的种子 (68 条)                                ← knowledge/lessons-seed.json
+    pending/learned.jsonl        各班模型自己记的, 每条带模型名和班次; 班末自动追加   ← lessons-learned.jsonl 两份合一 (195 条)
+  blueprints/                    蓝图 + 实测读数 (./bp 那块接上才递给模型)
     verified/
-      <名字>.txt                 蓝图字符串
-      <名字>.json                说明 + 实测 (产量 / 吃料 / 电, 哪次实验)          ← knowledge/blueprints/ (自己的 5 个积木 + 社区 7 份)
+      community/                 社区蓝图 7 份 (各自的许可见 LICENSE)              ← knowledge/blueprints/community/
+      generated/                 自己的积木 5 个 (.txt + .feed.json 实测)           ← knowledge/blueprints/generated/
       index.jsonl                索引 (程序读)
     pending/
-    LICENSES.md                  社区蓝图各自的许可
-  tools/                         模型写的、验证过有用的脚本
-    verified/fhlib.py                                                             ← lab-data/play/team-tools-keep/
-    pending/
+  tools/                         模型写的、验证过有用的脚本 (还没有)
+    verified/  pending/
   manuals/                       给模型的
-    brief.md                     简报模板 (世界 / 规矩 / 工具三节; 和平、星球、目标等真实值由程序填)   ← src/play/brief-zh.md + ours-brief.ts + run.ts BRIEF
-    notes.md                     笔记模板 (现在在做 / 坐标 / 计划 / 教训 / 日志)   ← run.ts NOTES
-    commands.md                  命令手册索引 (正文 = commands/cli 的 fh help)     ← 派对手册 (MIT, NOTICE)
+    brief.md                     简报模板 (占位符 WORLD / PLAYER / GOAL / REF_INDEX 由 core/run/brief.ts 填)
+    notes.md                     笔记模板 (现在在做 / 坐标和认领 / 约定 / 里程碑 / 教训 / 日志)
+    ref/                         ./fh help 主题 的手册: 派对的 9 个主题 + index.md + topics.tsv (MIT, LICENSE 在里面)   ← factorio-ai-party agent/ref
 
 data/training-private/           只本机 (不上传), 结构同 training/, 程序合并读
-  blueprints/pending/            社区蓝图数据集 660 份 + 预览图 + 索引 (许可没逐份查)   ← lab-data/datasets/
-  blueprints/friend/             朋友的基地蓝图和世界导出 (要他点头才公开)          ← lab-data/blueprints/, friend-world/
-  patterns/pending/case-friend-nauvis.md                                            ← knowledge/patterns/
+  blueprints/datasets/           社区蓝图数据集 660 份 + 预览图 + 索引 (许可没逐份查)
+  blueprints/friend/             联机服务器玩家的基地蓝图和世界导出 (要他点头才公开)
+  patterns/pending/、knowledge/pending/research/   联机服务器玩家基地的案例和问题
+  v1/                            第一版的知识 (主题 24、手册 6、目录 10、日志、剧本): 有人名和服务器信息, 清过才能进公开区
 ```
-不进训练集: 第一版 `I:\fn\data\` (作废的目标文件、界面导出, 删)、游戏导出数据 (归 `data/`)。大脑驱动的树见 `docs/brains.md`, 两者一起搬 (第二块)。
+角色目录里: `ref/` = manuals/ref + 正式区的思路 (pattern-*.md) + facts.md + names.tsv (游戏导出的官方中文名, 不进训练集); `./know` 查全部 (commands/know.ts); 做动作时带出教训 (core/run/deliver.ts)。
+不进训练集: 游戏导出数据 (归 `data/`)、第一版 `I:\fn\data\` (作废)。大脑驱动的树见 `docs/brains.md`。

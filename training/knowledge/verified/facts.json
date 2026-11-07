@@ -1,0 +1,6094 @@
+{
+  "belts.sideload.shape-and-lane": {
+    "id": "belts.sideload.shape-and-lane",
+    "topic": "传送带",
+    "claim": "侧向汇入: 被汇入那格的上游要有朝它送的带子 (或两侧都有汇入), 否则它变成弯道; 真正的侧向汇入只把物品放到靠近来向的那一道",
+    "verdict": "verified",
+    "summary": "只有南边顶上来: 弯; 南北都顶: 直; 西边有上游 + 南边顶: 直, 送上来的 2 个全在右道 (左道 0、右道 2)",
+    "measured": {
+      "only_south": "right",
+      "both_sides": "straight",
+      "upstream_and_south": "straight",
+      "lanes": {
+        "left": 0,
+        "right": 2
+      }
+    },
+    "refs": [
+      "CLAUDE.md 游戏事实 (2026-10-31 审查改)",
+      "rules-review 第 4 节 ②"
+    ],
+    "sources": [
+      {
+        "title": "本机 2.1.24 沙盘实测 (2026-10-31 规则审查)",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Transport belts/Physics (Side-loading)",
+        "url": "https://wiki.factorio.com/Transport_belts/Physics",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/sideload.ts"
+  },
+  "belts.throughput.express-transport-belt": {
+    "id": "belts.throughput.express-transport-belt",
+    "topic": "传送带",
+    "claim": "极速传送带 (蓝带)满载每秒运 45 个物品 (两道合计)",
+    "verdict": "verified",
+    "summary": "60 秒进箱 2700 个, 每秒 45.00 个",
+    "measured": {
+      "c0": 716,
+      "c1": 3416,
+      "perSecond": 45
+    },
+    "refs": [
+      "production.md P1",
+      "production.md P7"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 传送带 speed (每 tick 移动的格数), 每格每道 4 个物品",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Transport belts/Physics",
+        "url": "https://wiki.factorio.com/Transport_belts/Physics",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "belts.throughput.fast-transport-belt": {
+    "id": "belts.throughput.fast-transport-belt",
+    "topic": "传送带",
+    "claim": "高速传送带 (红带)满载每秒运 30 个物品 (两道合计)",
+    "verdict": "verified",
+    "summary": "60 秒进箱 1800 个, 每秒 30.00 个",
+    "measured": {
+      "c0": 416,
+      "c1": 2216,
+      "perSecond": 30
+    },
+    "refs": [
+      "production.md P1",
+      "production.md P7"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 传送带 speed (每 tick 移动的格数), 每格每道 4 个物品",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Transport belts/Physics",
+        "url": "https://wiki.factorio.com/Transport_belts/Physics",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "belts.throughput.transport-belt": {
+    "id": "belts.throughput.transport-belt",
+    "topic": "传送带",
+    "claim": "基础传送带 (黄带)满载每秒运 15 个物品 (两道合计)",
+    "verdict": "verified",
+    "summary": "60 秒进箱 900 个, 每秒 15.00 个",
+    "measured": {
+      "c0": 118,
+      "c1": 1018,
+      "perSecond": 15
+    },
+    "refs": [
+      "production.md P1",
+      "production.md P7"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 传送带 speed (每 tick 移动的格数), 每格每道 4 个物品",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Transport belts/Physics",
+        "url": "https://wiki.factorio.com/Transport_belts/Physics",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "belts.throughput.turbo-transport-belt": {
+    "id": "belts.throughput.turbo-transport-belt",
+    "topic": "传送带",
+    "claim": "超速传送带 (绿带)满载每秒运 60 个物品 (两道合计)",
+    "verdict": "verified",
+    "summary": "60 秒进箱 3600 个, 每秒 60.00 个",
+    "measured": {
+      "c0": 1016,
+      "c1": 4616,
+      "perSecond": 60
+    },
+    "refs": [
+      "production.md P1",
+      "production.md P7"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 传送带 speed (每 tick 移动的格数), 每格每道 4 个物品",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Transport belts/Physics",
+        "url": "https://wiki.factorio.com/Transport_belts/Physics",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "biochamber.bacteria-cultivation.productivity-on-all-four": {
+    "autoFixes": 0,
+    "id": "biochamber.bacteria-cultivation.productivity-on-all-four",
+    "topic": "生物室",
+    "claim": "铁细菌培养 (1 铁细菌 + 1 生物结晶 → 4 铁细菌): 生物室 +50% 产能对 4 个全部生效, 平均每次出 6 个, 不是只对净增的 3 个 (那样是 5.5 个)",
+    "verdict": "verified",
+    "summary": "做了 10 次, 出 60 个铁细菌 (含变回铁矿的 0 个), 平均每次 6.00 个; 产能对 4 个全算应是 60, 只算净增 3 个应是 55",
+    "measured": {
+      "crafts": 10,
+      "got": 60,
+      "total": {
+        "iron-bacteria": 60
+      },
+      "expected": {
+        "base": 40,
+        "bonus": 20,
+        "total": 60,
+        "perCraft": 6
+      },
+      "netOnly": 55,
+      "ignored": 0,
+      "last": {
+        "got": {
+          "iron-bacteria": 8
+        },
+        "left": 0,
+        "fuel": 14,
+        "status": "item_ingredient_shortage",
+        "progress": 0,
+        "bonus": -6.161737786669619e-15,
+        "net": -1
+      }
+    },
+    "refs": [
+      "gleba.md G17 (生物室 +50% 对 4 个全部生效)",
+      "README 第二轮待核实 #7 (产能对培养是否全算)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Copper bacteria / Iron bacteria",
+        "url": "https://wiki.factorio.com/Copper_bacteria",
+        "credibility": 2
+      },
+      {
+        "title": "本机原型: recipe.lua iron-bacteria-cultivation 产物 4 个, 没有 ignored_by_productivity",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber2.ts"
+  },
+  "biochamber.bootstrap.nutrient-recipes-outside-biochamber": {
+    "id": "biochamber.bootstrap.nutrient-recipes-outside-biochamber",
+    "topic": "生物室",
+    "claim": "生物室自举靠的是能在生物室之外做的配方: 变质物→营养素 和 玉玛果/果冻果加工 可以在组装机里 (或手搓) 做, 果泥→营养素、生物结晶→营养素、生物结晶 只能在生物室里做 (没有营养素就先用组装机把变质物或果子变成营养素)",
+    "verdict": "verified",
+    "summary": "变质物制营养素: 组装机/手搓/生物室 (organic,crafting); 玉玛果泥制营养素: 生物室 (organic); 生物结晶制营养素: 生物室 (organic); 异虫卵制营养素: 组装机/手搓/生物室 (organic,crafting); 玉玛果加工: 组装机/手搓/生物室 (organic,crafting); 果冻果加工: 组装机/手搓/生物室 (organic,crafting); 生物结晶: 生物室 (organic)",
+    "measured": {
+      "nutrients-from-spoilage": {
+        "category": "organic,crafting",
+        "assembler": true,
+        "biochamber": true,
+        "hand": true
+      },
+      "nutrients-from-yumako-mash": {
+        "category": "organic",
+        "assembler": false,
+        "biochamber": true,
+        "hand": false
+      },
+      "nutrients-from-bioflux": {
+        "category": "organic",
+        "assembler": false,
+        "biochamber": true,
+        "hand": false
+      },
+      "nutrients-from-biter-egg": {
+        "category": "organic,crafting",
+        "assembler": true,
+        "biochamber": true,
+        "hand": true
+      },
+      "yumako-processing": {
+        "category": "organic,crafting",
+        "assembler": true,
+        "biochamber": true,
+        "hand": true
+      },
+      "jellynut-processing": {
+        "category": "organic,crafting",
+        "assembler": true,
+        "biochamber": true,
+        "hand": true
+      },
+      "bioflux": {
+        "category": "organic",
+        "assembler": false,
+        "biochamber": true,
+        "hand": false
+      }
+    },
+    "refs": [
+      "lessons-v1 #6 (第一版生物室没营养素起不来)",
+      "knowledge/patterns/planets.md 句芒 落地 5 件事"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: 各配方的 category 和 组装机 / 角色 / 生物室 的 crafting_categories",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber.ts"
+  },
+  "biochamber.idle.nutrients-spoil-in-fuel-slot": {
+    "id": "biochamber.idle.nutrients-spoil-in-fuel-slot",
+    "topic": "生物室",
+    "claim": "没活干的生物室里营养素照样腐坏 (2.5 分钟 50%, 5 分钟全坏); 坏掉的变质物不留在燃料槽里 (实测记下它的去向), 生物室变成没燃料的状态",
+    "verdict": "verified",
+    "summary": "停工的生物室: 2.5 分钟营养素腐坏 50%; 5 分钟后燃料槽里营养素 0 个, 变质物进了烧尽物槽 10 个 (状态 no_fuel)",
+    "measured": {
+      "half": {
+        "nutrients": 10,
+        "spoil": 0.5,
+        "spoilage": 0,
+        "spoilage_burnt": 0,
+        "spoilage_out": 0,
+        "spoilage_ground": 0,
+        "status": "no_recipe",
+        "tick": 14625
+      },
+      "end": {
+        "nutrients": 0,
+        "spoilage": 0,
+        "spoilage_burnt": 10,
+        "spoilage_out": 0,
+        "spoilage_ground": 0,
+        "status": "no_fuel",
+        "tick": 24225
+      }
+    },
+    "refs": [
+      "lessons-v1 #6",
+      "knowledge/patterns/production.md P-prod-19 (变质物营养素备用机)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: nutrients spoil 18000 tick → spoilage; spoilage 没有 fuel_value",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber.ts"
+  },
+  "biochamber.no-electricity.burns-nutrients": {
+    "autoFixes": 0,
+    "id": "biochamber.no-electricity.burns-nutrients",
+    "topic": "生物室",
+    "claim": "生物室不用电, 只烧营养素: 不接任何电网也照常开工; 燃料槽里没有营养素就停 (状态\"没燃料\")",
+    "verdict": "verified",
+    "summary": "能源类型 burner, 场地里电线杆和电源 0 个; 有营养素的那台 10 秒出 60 个玉玛果泥 (营养素 10 → 7, 不在任何电网: true); 不给营养素的那台出 0 个, 状态 no_fuel",
+    "measured": {
+      "energy": "burner",
+      "poles": 0,
+      "mash": {
+        "fed": 60,
+        "dry": 0
+      },
+      "fedEnd": {
+        "got": {
+          "yumako-mash": 4
+        },
+        "left": 0,
+        "fuel": 7,
+        "status": "item_ingredient_shortage",
+        "progress": 0,
+        "bonus": 1.554312234475219e-14,
+        "net": -1
+      },
+      "dryEnd": {
+        "got": {},
+        "left": 20,
+        "fuel": 0,
+        "status": "no_fuel",
+        "progress": 0,
+        "bonus": 0,
+        "net": -1
+      }
+    },
+    "refs": [
+      "gleba.md 本机速查 (生物室烧营养素 500kW)",
+      "lessons-v1 #6 (生物室自举)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: biochamber energy_source type = burner, fuel_categories = nutrients",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber2.ts"
+  },
+  "biochamber.nutrients-from-bioflux.one-to-twelve": {
+    "autoFixes": 0,
+    "id": "biochamber.nutrients-from-bioflux.one-to-twelve",
+    "topic": "生物室",
+    "claim": "生物结晶制营养素: 5 个生物结晶出 40 个营养素, 加上生物室固有的 +50% 产能平均出 60 个, 也就是 1 个生物结晶换 12 个营养素",
+    "verdict": "verified",
+    "summary": "50 个生物结晶做了 10 次, 出 600 个营养素 (配方 400 + 产能白送 200; 机器产能 +50%), 1 个换 12.00 个",
+    "measured": {
+      "crafts": 10,
+      "got": 600,
+      "expected": {
+        "base": 400,
+        "bonus": 200,
+        "total": 600,
+        "perCraft": 60
+      },
+      "ratio": 12,
+      "productivity": 0.5,
+      "last": {
+        "got": {
+          "nutrients": 80
+        },
+        "left": 0,
+        "fuel": 17,
+        "status": "item_ingredient_shortage",
+        "progress": 0,
+        "bonus": -1.2212453270876722e-14,
+        "net": -1
+      }
+    },
+    "refs": [
+      "gleba.md 本机速查 (生物室自带 +50% 产能)",
+      "knowledge/patterns/planets.md 句芒 (营养素从生物结晶来)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: recipe.lua nutrients-from-bioflux 5 生物结晶 → 40 营养素; biochamber base_effect productivity 0.5",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber2.ts"
+  },
+  "biochamber.nutrients-fuel-rate.base-productivity": {
+    "id": "biochamber.nutrients-fuel-rate.base-productivity",
+    "topic": "生物室",
+    "claim": "生物室以营养素为燃料: 开工时每分钟吃 15 个 (500kW ÷ 2MJ); 固有 +50% 产能: 1 个玉玛果出 3 个玉玛果泥 (配方 2 个 × 1.5)",
+    "verdict": "verified",
+    "summary": "60 秒: 加工 125 次 (开工 42 秒), 吃 84 个玉玛果出 250 个果泥 (每果 2.98), 营养素烧掉 10.4 个 = 每开工 1 分钟 14.8 个",
+    "measured": {
+      "start": {
+        "nutrients": 49,
+        "spoilage_in_fuel": 0,
+        "burning": 1749444.4444444466,
+        "yumako_left": 49,
+        "mash": 0,
+        "seeds": 0,
+        "finished": 0,
+        "status": "working",
+        "tick": 36070
+      },
+      "end": {
+        "nutrients": 39,
+        "spoilage_in_fuel": 0,
+        "burning": 976666.6666667421,
+        "yumako_left": 42,
+        "mash": 250,
+        "seeds": 3,
+        "finished": 125,
+        "status": "full_output",
+        "tick": 39670
+      },
+      "yumakoUsed": 84,
+      "nutrientsUsed": 10.386388888888852,
+      "mashPerFruit": 2.9761904761904763,
+      "workingMinutes": 0.7,
+      "perWorkingMinute": 14.837698412698362
+    },
+    "refs": [
+      "lessons-v1 #6 (生物室自举)",
+      "knowledge/patterns/production.md P-prod-05 (产能插件给贵的中间品)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: biochamber energy_usage 500kW、燃料类别 nutrients (2MJ)、base_effect productivity 0.5; yumako-processing 1 玉玛果 → 2 玉玛果泥",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber.ts"
+  },
+  "biochamber.pentapod-egg.productivity-net-only": {
+    "autoFixes": 0,
+    "id": "biochamber.pentapod-egg.productivity-net-only",
+    "topic": "生物室",
+    "claim": "五足虫卵繁殖是催化配方 (1 五足虫卵 + 30 营养素 + 60 水 → 2 五足虫卵, 其中 1 个不吃产能): 生物室 +50% 产能只加在净增的那 1 个上, 平均每次出 2.5 个",
+    "verdict": "verified",
+    "summary": "做了 4 次 (吃掉 4 个卵), 出 10 个五足虫卵, 平均每次 2.50 个; 只算净增 1 个应是 10, 2 个全算应是 12",
+    "measured": {
+      "crafts": 4,
+      "got": 10,
+      "total": {
+        "pentapod-egg": 10
+      },
+      "expected": {
+        "base": 8,
+        "bonus": 2,
+        "total": 10,
+        "perCraft": 2.5
+      },
+      "allCount": 12,
+      "ignored": 1,
+      "last": {
+        "got": {
+          "pentapod-egg": 3
+        },
+        "left": 0,
+        "fuel": 12,
+        "status": "item_ingredient_shortage",
+        "progress": 0,
+        "bonus": 4.9027448767446915e-14,
+        "net": -1
+      }
+    },
+    "refs": [
+      "gleba.md G8 (产能只加在净增的 1 个上, 平均 2.5 个)"
+    ],
+    "sources": [
+      {
+        "title": "官方论坛: 五足虫卵产能",
+        "url": "https://forums.factorio.com/viewtopic.php?p=656615",
+        "date": "2024-12",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型: recipe.lua pentapod-egg 产物 2 个, ignored_by_productivity = 1",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/biochamber2.ts"
+  },
+  "blueprint.absolute-snapping.exact": {
+    "id": "blueprint.absolute-snapping.exact",
+    "topic": "蓝图",
+    "claim": "游戏外按世界坐标设计、编成绝对吸附蓝图 (格子左上 = 蓝图 (0,0)), 鼠标偏开几格拍下, 每个建筑仍落在设计的那一格、方向不变",
+    "verdict": "verified",
+    "summary": "设计 15 件, 鼠标偏开 (2.3, -1.7) 拍下, 15 件全部落在设计的格子上、方向一致",
+    "measured": {
+      "cell": {
+        "w": 34,
+        "h": 20
+      },
+      "origin": {
+        "x": 46,
+        "y": -14
+      },
+      "cursor": {
+        "x": 65.3,
+        "y": -5.7
+      },
+      "ghosts": 15,
+      "built": 15,
+      "missing": [],
+      "extra": [],
+      "wrongDirection": []
+    },
+    "refs": [
+      "第一版 knowledge/topics/blueprint-tools.md 绝对吸附 (2.1.23 试放)",
+      "用户要求"
+    ],
+    "sources": [
+      {
+        "title": "第一版实测: 绝对吸附下实体坐标按格子左上原样使用 (2.1.23, 366 件铁轨模块 365 件对)",
+        "credibility": 3
+      },
+      {
+        "title": "本机 API 文件: LuaItemCommon.build_blueprint",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/blueprint-snap.ts"
+  },
+  "calc.electric-drain-one-thirtieth": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "assembling-machine-2",
+        "x": 64.5,
+        "y": 0.5,
+        "status": "no_recipe"
+      }
+    ],
+    "id": "calc.electric-drain-one-thirtieth",
+    "topic": "电",
+    "claim": "电力机器没写待机耗电时 = 满负荷耗电的 1/30 (组装机2型 150kW → 待机 5kW); 计算器按这条算 (原型 API 没给默认值, 待核实)",
+    "verdict": "verified",
+    "summary": "没配方的组装机2型: 引擎 electric_drain = 5000W, 电网统计 10 秒平均 5000W; 满负荷 150kW 的 1/30 = 5000W",
+    "measured": {
+      "drainW": 5000,
+      "measuredW": 5000.000152587891
+    },
+    "refs": [
+      "docs/calc.md 待核实"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: assembling-machine-2 energy_usage 150kW, energy_source 没写 drain",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/calc-rules.ts"
+  },
+  "calc.quality-beacon-effectivity": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "assembling-machine-3",
+        "x": 247.5,
+        "y": 0.5,
+        "status": "item_ingredient_shortage"
+      },
+      {
+        "name": "assembling-machine-3",
+        "x": 263.5,
+        "y": 0.5,
+        "status": "item_ingredient_shortage"
+      }
+    ],
+    "id": "calc.quality-beacon-effectivity",
+    "topic": "品质",
+    "claim": "分享塔品质提高分享效率 (原型: 每级 +0.2, 普通 1.5 → 传说 2.5; wiki: 传说分享塔是普通的 1.66 倍): 1 座塔装 2 个普通速度插件 3 给组装机3型的加速 普通 +150%、传说 +250%",
+    "verdict": "verified",
+    "summary": "1 座分享塔 (2 个普通速度插件 3) 给组装机3型的加速: 普通塔 +150.0%、传说塔 +250.0% (×1.67)",
+    "measured": {
+      "bonus": {
+        "normal": 1.5,
+        "legendary": 2.5
+      }
+    },
+    "refs": [
+      "beacons.sqrt-rule (分享塔递减已核实)",
+      "docs/calc.md"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Quality",
+        "url": "https://wiki.factorio.com/Quality",
+        "date": "2026-08-27",
+        "credibility": 2
+      },
+      {
+        "title": "本机原型: beacon distribution_effectivity 1.5, distribution_effectivity_bonus_per_quality_level 0.2",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/calc-rules.ts"
+  },
+  "calc.quality-machine-speed": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "assembling-machine-2",
+        "x": 118.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-2",
+        "x": 122.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-2",
+        "x": 126.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-2",
+        "x": 130.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-2",
+        "x": 134.5,
+        "y": 0.5,
+        "status": "no_power"
+      }
+    ],
+    "id": "calc.quality-machine-speed",
+    "topic": "品质",
+    "claim": "机器品质每级 +30% 合成速度 (wiki Quality 原文 +30% crafting speed): 组装机2型 0.75 → 精良 0.975 / 稀有 1.2 / 史诗 1.425 / 传说 1.875 (传说是第 5 级)",
+    "verdict": "verified",
+    "summary": "普通 0.750 (×1.00)、精良 0.975 (×1.30)、稀有 1.200 (×1.60)、史诗 1.425 (×1.90)、传说 1.875 (×2.50)",
+    "measured": {
+      "speed": {
+        "normal": 0.75,
+        "uncommon": 0.975,
+        "rare": 1.2000000000000002,
+        "epic": 1.4249999999999998,
+        "legendary": 1.875
+      },
+      "ratios": {
+        "normal": 1,
+        "uncommon": 1.3,
+        "rare": 1.6000000000000003,
+        "epic": 1.8999999999999997,
+        "legendary": 2.5
+      }
+    },
+    "refs": [
+      "docs/calc.md 待核实 (计算器按 1 + 0.3 × 等级)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Quality",
+        "url": "https://wiki.factorio.com/Quality",
+        "date": "2026-08-27",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/calc-rules.ts"
+  },
+  "calc.quality-module-positive-only": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "assembling-machine-3",
+        "x": 182.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-3",
+        "x": 187.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-3",
+        "x": 192.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-3",
+        "x": 197.5,
+        "y": 0.5,
+        "status": "no_power"
+      }
+    ],
+    "id": "calc.quality-module-positive-only",
+    "topic": "品质",
+    "claim": "插件品质只放大正面效果, 每级 +30% (wiki: +30% positive module effects): 传说速度插件 3 速度 +50% → +125%, 它的耗能 +70% 不变; 传说产能插件 3 产能 +10% → +25%, 它的减速和耗能不变",
+    "verdict": "verified",
+    "summary": "速度插件 3: 普通 速度 50.0% 耗能 70.0% / 传说 速度 125.0% 耗能 70.0%; 产能插件 3: 普通 产能 10.0% 速度 -15.0% 耗能 80.0% / 传说 产能 25.0% 速度 -15.0% 耗能 80.0%",
+    "measured": {
+      "r": [
+        {
+          "speed": 0.5,
+          "consumption": 0.7,
+          "productivity": 0
+        },
+        {
+          "speed": 1.25,
+          "consumption": 0.7,
+          "productivity": 0
+        },
+        {
+          "speed": -0.15,
+          "consumption": 0.8,
+          "productivity": 0.1
+        },
+        {
+          "speed": -0.15,
+          "consumption": 0.8,
+          "productivity": 0.25
+        }
+      ]
+    },
+    "refs": [
+      "docs/calc.md 待核实"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Quality",
+        "url": "https://wiki.factorio.com/Quality",
+        "date": "2026-08-27",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/calc-rules.ts"
+  },
+  "circuits.limit.inserter-stops-at-threshold": {
+    "autoFixes": 0,
+    "leaks": {
+      "outside": 3374,
+      "sample": [
+        "nauvis:tree-07(-53.1875,254.25)",
+        "nauvis:tree-07(-51.875,254.5625)",
+        "nauvis:tree-07(-50.6875,246.125)",
+        "nauvis:tree-07(-50.8125,250.75)",
+        "nauvis:tree-07(-48.1875,255.9375)",
+        "nauvis:tree-07(-45.6875,245.125)",
+        "nauvis:tree-07(-46.5625,249.3125)",
+        "nauvis:tree-07(-44,252.6875)"
+      ],
+      "recipes": []
+    },
+    "id": "circuits.limit.inserter-stops-at-threshold",
+    "topic": "电路",
+    "claim": "限产: 出料机械臂用线接到箱子 (读内容), 条件\"铁齿轮 < 50\"才工作, 箱子停在 50 个 (机械臂一次 1 个, 最多多 1); 不接电路的对照组一直往里放",
+    "verdict": "verified",
+    "summary": "60 秒后: 接了电路 (齿轮 < 50) 的箱子 50 个; 对照 (不接电路) 91 个",
+    "measured": {
+      "n": [
+        50,
+        91
+      ]
+    },
+    "refs": [
+      "lessons-v1 #7 (建材工厂没有上限)",
+      "logistics.md L9 (建材工厂限产)",
+      "docs/research/players/game-tips.md TT3 (箱子红叉限格是另一种办法)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Circuit network (机械臂按条件启用)",
+        "url": "https://wiki.factorio.com/Circuit_network",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/circuits.ts"
+  },
+  "circuits.split-wires.no-self-feedback": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "assembling-machine-2",
+        "x": 57.5,
+        "y": 0.5,
+        "status": "item_ingredient_shortage"
+      },
+      {
+        "name": "assembling-machine-2",
+        "x": 67.5,
+        "y": 0.5,
+        "status": "item_ingredient_shortage"
+      }
+    ],
+    "leaks": {
+      "outside": 415,
+      "sample": [
+        "nauvis:tree-07(-255.8125,-227.125)",
+        "nauvis:tree-07(-255.9375,-190.9375)",
+        "nauvis:tree-07(-255.9375,-188.5)",
+        "nauvis:tree-07(-255.9375,-184.4375)",
+        "nauvis:tree-07(-254.3125,-244.625)",
+        "nauvis:tree-07(-253.75,-238.125)",
+        "nauvis:tree-07(-254.75,-233.8125)",
+        "nauvis:tree-07(-254.75,-231.9375)"
+      ],
+      "recipes": []
+    },
+    "id": "circuits.split-wires.no-self-feedback",
+    "topic": "电路",
+    "claim": "2.1.7 取消了自减: 同一台组装机既按电路设配方、又把原料读到同一根线上, 会读回自己的输出, 配方来回跳; 把输入和输出分到不同颜色的线 (红进、绿出) 就稳定",
+    "verdict": "verified",
+    "summary": "180 tick: 同一根线的那台配方变了 90 次 (出现过 铜缆、电路板); 分线 (红进绿出) 的变了 0 次, 一直是 电路板",
+    "measured": {
+      "changes": [
+        90,
+        0
+      ],
+      "kinds": [
+        [
+          "copper-cable",
+          "electronic-circuit"
+        ],
+        [
+          "electronic-circuit"
+        ]
+      ]
+    },
+    "refs": [
+      "circuits.md C1、C2 (官方员工: 配方会疯狂闪烁, 是有意的)",
+      "lessons-v1 #7 (限产电路)"
+    ],
+    "sources": [
+      {
+        "title": "本机更新日志 2.1.7: 电路输入 / 输出可分红绿线, 取消自减",
+        "credibility": 1
+      },
+      {
+        "title": "官方论坛员工 boskid: 设配方 + 读原料同线会闪烁 (不是 bug)",
+        "url": "https://forums.factorio.com/",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/circuits.ts"
+  },
+  "compare.gleba.harvest-on-demand": {
+    "id": "compare.gleba.harvest-on-demand",
+    "topic": "生物室",
+    "claim": "句芒星农业塔用电路按库存开关 (\"按需收\") 比一直收少排很多孢子: 下游吃不完时, 孢子只随消耗走 (每 50 个果 15 孢子), 一直收的塔把长熟的全收下来, 孢子多出数倍、多收的果积压腐坏",
+    "verdict": "verified",
+    "summary": "各 20 分钟: 一直收 孢子 690 (收 46 次), 送到下游 706 个, 积压 1592 个; 按需收 孢子 255 (收 17 次), 送到 707 个, 积压 143 个 → 孢子 2.7 倍, 每个送到下游的果 0.98 vs 0.36 孢子",
+    "measured": {
+      "A": {
+        "onDemand": false,
+        "minutes": 20,
+        "delivered": 706,
+        "spores": 690,
+        "harvests": 46,
+        "towerSpores": 21.340000516735017,
+        "leftover": 1592,
+        "plants": 36,
+        "statuses": {
+          "working": 1,
+          "waiting_for_plants_to_grow": 4,
+          "not_enough_space_in_output": 15
+        }
+      },
+      "B": {
+        "onDemand": true,
+        "minutes": 20,
+        "delivered": 707,
+        "spores": 255,
+        "harvests": 17,
+        "towerSpores": 11.152222492266446,
+        "leftover": 143,
+        "plants": 35,
+        "statuses": {
+          "working": 1,
+          "waiting_for_plants_to_grow": 4,
+          "not_enough_space_in_output": 1,
+          "disabled_by_control_behavior": 14
+        }
+      },
+      "ratio": 2.7058823529411766,
+      "perFruitA": 0.9773371104815864,
+      "perFruitB": 0.3606789250353607
+    },
+    "refs": [
+      "knowledge/patterns/production.md P-prod-19",
+      "knowledge/patterns/planets.md 句芒 (G4)",
+      "docs/research/players gleba"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: 玉玛果树 18000 tick 成熟, 收一次 50 个果、15 孢子; 农业塔半径 3",
+        "credibility": 1
+      },
+      {
+        "title": "production.md P-prod-19 (论坛 / 视频: 用电路禁收获按库存开关, 不用机械臂限流)",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/compare-gleba-harvest.ts"
+  },
+  "compare.layout.direct-block-vs-belt": {
+    "id": "compare.layout.direct-block-vs-belt",
+    "topic": "布局",
+    "claim": "直连块 (炉出板直接塞进旁边的组装机, 联机服务器玩家的做法) 和过带 (板子上带、下游从带上取) 在板子够的前提下产量一样; 直连省掉全部带子, 代价是比例锁死 —— 1:1 配对时组装机闲一半 (电炉 0.625 板/秒, 组装机2型做齿轮吃 3 板/秒), 过带只要 1/4 的组装机",
+    "verdict": "verified",
+    "summary": "各 10 分钟: 直连: 齿轮 1500 (每分钟 150.0), 板 3000, 组装机 8 台开工率 27%, 带子 0 格, 机械臂 24, 占地 24×11; 过带: 齿轮 1500 (每分钟 150.0), 板 3000, 组装机 2 台开工率 88%, 带子 31 格, 机械臂 20, 占地 31×13",
+    "measured": {
+      "A": {
+        "kind": "block",
+        "minutes": 10,
+        "gears": 1500,
+        "plates": 3000,
+        "assemblers": 8,
+        "utilization": 0.26666666666666666,
+        "belts": 0,
+        "inserters": 24,
+        "area": {
+          "w": 24,
+          "h": 11
+        }
+      },
+      "B": {
+        "kind": "bus",
+        "minutes": 10,
+        "gears": 1500,
+        "plates": 3000,
+        "assemblers": 2,
+        "utilization": 0.875,
+        "belts": 31,
+        "inserters": 20,
+        "area": {
+          "w": 31,
+          "h": 13
+        }
+      },
+      "sameOutput": true
+    },
+    "refs": [
+      "knowledge/patterns/case-friend-nauvis.md P-friend-04",
+      "knowledge/patterns/layout-styles.md (主线 vs 直塞)"
+    ],
+    "sources": [
+      {
+        "title": "联机服务器的新地星基地 (炉区板子直接被两排组装机取走, 没有板材主线; 2026-10-31 导出, 本人同意参考)",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型: 电炉速度 2 (铁板 1.6 秒), 组装机2型速度 0.75 (齿轮 0.667 秒吃 2 板)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/compare-block-vs-bus.ts"
+  },
+  "compare.modules.productivity-vs-beacons": {
+    "id": "compare.modules.productivity-vs-beacons",
+    "topic": "插件",
+    "claim": "同样 4 个三级插件做内燃机: 4 个产能插件的机器每台产品少用约 29% 原料 (1/1.4), 但产量只有\"4 个速度插件 + 南北 2 座分享塔\"的约 1/9; 两种方案每台产品的耗电要实测 (思路库 production/联机服务器基地: 产能给贵的中间品、分享塔拿电换吞吐)",
+    "verdict": "verified",
+    "summary": "600 秒: A (4 产能) 每分钟 4.2 台、每台原料 2.86 件、每台耗电 22.7MJ; B (4 速度 + 2 分享塔) 每分钟 38.4 台 (A 的 9.1 倍)、每台原料 4.00 件、每台耗电 5.5MJ; 速度加成 A -60% / B 412%",
+    "measured": {
+      "seconds": 600,
+      "A": {
+        "crafts": 42,
+        "engines": 42,
+        "inputs": 120,
+        "mj": 955.2422906056595,
+        "perMin": 4.2,
+        "inputsPer": 2.857142857142857,
+        "mjPer": 22.743864062039513,
+        "speed": -0.6,
+        "prod": 0.4
+      },
+      "B": {
+        "crafts": 384,
+        "engines": 384,
+        "inputs": 1536,
+        "mj": 2126.183675602661,
+        "perMin": 38.4,
+        "inputsPer": 4,
+        "mjPer": 5.536936655215263,
+        "speed": 4.1213,
+        "prod": 0
+      }
+    },
+    "refs": [
+      "knowledge/patterns/production.md P-prod (产能插件 / 分享塔)",
+      "knowledge/patterns/case-friend-nauvis.md (产能 427 vs 分享塔 9)",
+      "facts modules.beacon.sqrt-rule"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 产能插件 3 (+10% 产能, -15% 速度, +80% 耗电), 速度插件 3 (+50% 速度, +70% 耗电), 分享塔 480kW、1.5/√n, 组装机3型 1.25 速、375kW",
+        "credibility": 1
+      },
+      {
+        "title": "沙盘已核实: 分享塔 1.5√n (modules.beacon.sqrt-rule)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/compare-modules.ts"
+  },
+  "compare.trains.wait-until-full-vs-timed": {
+    "id": "compare.trains.wait-until-full-vs-timed",
+    "topic": "火车",
+    "claim": "装货站等满再发车 (老手公认, 联机服务器基地也这么做): 同一列车、同样 6+6 台装卸机械臂、200 格来回, 等满发车送到的货比\"停 10 秒就走\"多得多; 实测给出倍数和每秒运量",
+    "verdict": "verified",
+    "summary": "各跑 8 分钟: 等满发车送到 12000 块 (每秒 25.0), 停 10 秒就走送到 7808 块 (每秒 16.3), 等满是定时的 1.5 倍",
+    "measured": {
+      "full": 12000,
+      "timed": 7808,
+      "perSecFull": 25,
+      "perSecTimed": 16.266666666666666,
+      "ratio": 1.5368852459016393,
+      "atLoad": {
+        "state": "wait_station",
+        "x": -11,
+        "y": 33,
+        "station": "装",
+        "speed": 0
+      },
+      "atUnload": {
+        "state": "wait_station",
+        "x": 139,
+        "y": 33,
+        "station": "卸",
+        "speed": 0
+      }
+    },
+    "refs": [
+      "knowledge/patterns/logistics-choice.md (车站设计)",
+      "knowledge/patterns/case-friend-nauvis.md P-friend (装货站满载才开站)",
+      "friend-questions.md 问题 2"
+    ],
+    "sources": [
+      {
+        "title": "联机服务器的新地星基地 (装货站上限 1 + 四节车厢的箱都够才开站)",
+        "credibility": 3
+      },
+      {
+        "title": "friend-questions.md 问题 2: \"装货等满再走\"是社区公认",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/compare-trains.ts"
+  },
+  "compare.turrets.laser-vs-gun-supply": {
+    "id": "compare.turrets.laser-vs-gun-supply",
+    "topic": "防御",
+    "claim": "同一条防线、同样 20 座炮塔、没有伤害研究: 机枪炮塔 (穿甲弹) 每波要吃掉几百个弹匣 (持续供弹线, 折成几千铁板), 激光炮塔只耗一两百 MJ 电 (折成几十块煤); 而且中大型撕咬虫面前穿甲机枪火力也不够 (墙和炮塔损失更大) —— 没有伤害研究时激光在补给和火力上都占优, 机枪要靠研究和贫铀弹才追上 (科技上限原则: 弹药能不能持续供上)",
+    "verdict": "verified",
+    "summary": "【20中+5大】机枪: 用时 36 秒, 墙损 5106 血, 炮塔损 2475 血 (拆 4.5 座), 钻过墙最多 8 只, 耗弹匣 614 (≈ 铁 3991 + 铜 614); 激光: 用时 14 秒, 墙损 774 血, 炮塔损 0 血 (拆 0.0 座), 钻过墙最多 0 只, 耗电 147MJ (≈ 煤 37 块) ‖ 【60中+20大】机枪: 用时 152 秒, 墙损 14971 血, 炮塔损 8000 血 (拆 20.0 座), 钻过墙最多 42 只, 有轮次没打完, 耗弹匣 1000 (≈ 铁 6500 + 铜 1000); 激光: 用时 29 秒, 墙损 10815 血, 炮塔损 3358 血 (拆 2.0 座), 钻过墙最多 13 只, 耗电 516MJ (≈ 煤 129 块) → 大波机枪损失更大",
+    "measured": {
+      "results": [
+        {
+          "turret": "gun-turret",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 36,
+          "survivors": 0,
+          "maxPast": 8,
+          "walls": 82,
+          "wallsLost": 10,
+          "wallDamage": 4848.800685882568,
+          "turretsLost": 5,
+          "turretDamage": 2975.000015258789,
+          "radarDamage": 0,
+          "magsUsed": 630,
+          "mj": 0
+        },
+        {
+          "turret": "laser-turret",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 14,
+          "survivors": 0,
+          "maxPast": 0,
+          "walls": 82,
+          "wallsLost": 0,
+          "wallDamage": 741.6001815795898,
+          "turretsLost": 0,
+          "turretDamage": 0,
+          "radarDamage": 0,
+          "magsUsed": 0,
+          "mj": 146.72
+        },
+        {
+          "turret": "gun-turret",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 36,
+          "survivors": 0,
+          "maxPast": 4,
+          "walls": 82,
+          "wallsLost": 10,
+          "wallDamage": 5362.400856018066,
+          "turretsLost": 4,
+          "turretDamage": 1975,
+          "radarDamage": 0,
+          "magsUsed": 598,
+          "mj": 0
+        },
+        {
+          "turret": "laser-turret",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 14,
+          "survivors": 0,
+          "maxPast": 0,
+          "walls": 82,
+          "wallsLost": 0,
+          "wallDamage": 806.4003219604492,
+          "turretsLost": 0,
+          "turretDamage": 0,
+          "radarDamage": 0,
+          "magsUsed": 0,
+          "mj": 146.72
+        },
+        {
+          "turret": "gun-turret",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 152,
+          "survivors": 43,
+          "maxPast": 42,
+          "walls": 82,
+          "wallsLost": 38,
+          "wallDamage": 15647.200727939606,
+          "turretsLost": 20,
+          "turretDamage": 8000,
+          "radarDamage": 500,
+          "magsUsed": 1000,
+          "mj": 0
+        },
+        {
+          "turret": "laser-turret",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 28,
+          "survivors": 0,
+          "maxPast": 7,
+          "walls": 82,
+          "wallsLost": 27,
+          "wallDamage": 11554.800821304321,
+          "turretsLost": 1,
+          "turretDamage": 2395,
+          "radarDamage": 0,
+          "magsUsed": 0,
+          "mj": 514.9388
+        },
+        {
+          "turret": "gun-turret",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 152,
+          "survivors": 41,
+          "maxPast": 41,
+          "walls": 82,
+          "wallsLost": 35,
+          "wallDamage": 14294.80067062378,
+          "turretsLost": 20,
+          "turretDamage": 8000,
+          "radarDamage": 500,
+          "magsUsed": 1000,
+          "mj": 0
+        },
+        {
+          "turret": "laser-turret",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 30,
+          "survivors": 0,
+          "maxPast": 13,
+          "walls": 82,
+          "wallsLost": 24,
+          "wallDamage": 10075.20076751709,
+          "turretsLost": 3,
+          "turretDamage": 4320,
+          "radarDamage": 0,
+          "magsUsed": 0,
+          "mj": 517.1708
+        }
+      ],
+      "gunMagsSmall": 614,
+      "laserCoalSmall": 36.68,
+      "laserHoldsSmall": true,
+      "laserCheaper": true,
+      "laserNotWeaker": true,
+      "bigLaserWorse": false,
+      "bigGunWorse": true
+    },
+    "refs": [
+      "knowledge/patterns/defense.md P-def-06 (A 机枪 + 墙 vs C 激光 + 墙)",
+      "knowledge/patterns/defense.md P-def-08/09 (补给链随炮塔变)",
+      "requirements 科技上限原则"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: 机枪炮塔射程 18 / 400 血, 激光炮塔射程 24 / 1000 血 / 一发 800kJ; 穿甲弹配方 2 普通弹匣 + 1 钢 + 2 铜 → 2",
+        "credibility": 1
+      },
+      {
+        "title": "defense.md P-def-06 的分歧 (论坛 2025-03): \"机枪已不是最好\" vs \"火焰 + 墙 + 重炮就够\"",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/compare-turrets.ts"
+  },
+  "compare.walls.dragon-teeth-vs-solid": {
+    "id": "compare.walls.dragon-teeth-vs-solid",
+    "topic": "防御",
+    "claim": "龙牙墙 (3 列错位短墙, 段间留孔) vs 2 厚实墙, 同样的激光炮塔: 炮塔打得过来的小波次, 龙牙墙的墙损更少 (减速、多开枪); 虫多到压过火力的大波次, 孔会把虫放到炮塔跟前, 炮塔损失远大于实墙 (网上说龙牙是减速不是挡住; 联机服务器基地用龙牙 + 两排激光)",
+    "verdict": "verified",
+    "summary": "【20中+5大】龙牙墙 93 段: 用时 14 秒, 墙损 567 血 (拆 0.5 段), 炮塔损 30 血 (拆 0.0 座), 钻过墙最多 1 只; 实墙 82 段: 用时 14 秒, 墙损 918 血 (拆 0.5 段), 炮塔损 0 血 (拆 0.0 座), 钻过墙最多 0 只 → 墙+炮塔总损失 龙牙 597 vs 实墙 918 ‖ 【60中+20大】龙牙墙 93 段: 用时 45 秒, 墙损 5178 血 (拆 10.0 段), 炮塔损 16103 血 (拆 15.0 座), 钻过墙最多 33 只; 实墙 82 段: 用时 31 秒, 墙损 11015 血 (拆 24.5 段), 炮塔损 4605 血 (拆 3.0 座), 钻过墙最多 21 只 → 墙+炮塔总损失 龙牙 21280 vs 实墙 15620",
+    "measured": {
+      "results": [
+        {
+          "kind": "teeth",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 14,
+          "survivors": 0,
+          "maxPast": 1,
+          "walls": 93,
+          "wallsLost": 1,
+          "wallDamage": 599.6001281738281,
+          "turretsLost": 0,
+          "turretDamage": 60,
+          "radarDamage": 0
+        },
+        {
+          "kind": "solid",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 14,
+          "survivors": 0,
+          "maxPast": 0,
+          "walls": 82,
+          "wallsLost": 1,
+          "wallDamage": 837.2002410888672,
+          "turretsLost": 0,
+          "turretDamage": 0,
+          "radarDamage": 0
+        },
+        {
+          "kind": "teeth",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 14,
+          "survivors": 0,
+          "maxPast": 0,
+          "walls": 93,
+          "wallsLost": 0,
+          "wallDamage": 535.2003021240234,
+          "turretsLost": 0,
+          "turretDamage": 0,
+          "radarDamage": 0
+        },
+        {
+          "kind": "solid",
+          "wave": "20中+5大",
+          "spawned": 25,
+          "seconds": 14,
+          "survivors": 0,
+          "maxPast": 0,
+          "walls": 82,
+          "wallsLost": 0,
+          "wallDamage": 998.4003677368164,
+          "turretsLost": 0,
+          "turretDamage": 0,
+          "radarDamage": 0
+        },
+        {
+          "kind": "teeth",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 42,
+          "survivors": 0,
+          "maxPast": 28,
+          "walls": 93,
+          "wallsLost": 10,
+          "wallDamage": 5235.200710296631,
+          "turretsLost": 14,
+          "turretDamage": 15050,
+          "radarDamage": 0
+        },
+        {
+          "kind": "solid",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 32,
+          "survivors": 0,
+          "maxPast": 21,
+          "walls": 82,
+          "wallsLost": 23,
+          "wallDamage": 9746.800624847412,
+          "turretsLost": 4,
+          "turretDamage": 6115,
+          "radarDamage": 0
+        },
+        {
+          "kind": "teeth",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 48,
+          "survivors": 0,
+          "maxPast": 33,
+          "walls": 93,
+          "wallsLost": 10,
+          "wallDamage": 5120.000839233398,
+          "turretsLost": 16,
+          "turretDamage": 17155,
+          "radarDamage": 0
+        },
+        {
+          "kind": "solid",
+          "wave": "60中+20大",
+          "spawned": 80,
+          "seconds": 30,
+          "survivors": 0,
+          "maxPast": 12,
+          "walls": 82,
+          "wallsLost": 26,
+          "wallDamage": 12282.40119934082,
+          "turretsLost": 2,
+          "turretDamage": 3095,
+          "radarDamage": 0
+        }
+      ],
+      "teethWins": 1,
+      "solidWins": 1,
+      "tLoss": 10938.75049495697,
+      "sLoss": 8268.700608253479
+    },
+    "refs": [
+      "knowledge/patterns/case-friend-nauvis.md P-friend-16",
+      "docs/research/players/friend-questions.md FQ6-1~FQ6-5",
+      "knowledge/patterns/defense.md"
+    ],
+    "sources": [
+      {
+        "title": "联机服务器的新地星基地 (龙牙墙 + 两排激光)",
+        "credibility": 3
+      },
+      {
+        "title": "官方论坛 \"dragon's teeth no longer working\" (2020-11): 原理是减速不是挡住",
+        "url": "https://forums.factorio.com/viewtopic.php?p=521792",
+        "date": "2020-11",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型: 墙壁 350 血 (激光 70% 抗性), 激光炮塔 1000 血、射程 24、40 tick 一发; 中型撕咬虫 75 血, 大型 375 血",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/compare-walls.ts"
+  },
+  "elevated.aquilo.supports-on-ammonia-ocean": {
+    "autoFixes": 0,
+    "id": "elevated.aquilo.supports-on-ammonia-ocean",
+    "topic": "玄冥星",
+    "claim": "玄冥星的氨海上能直接立高架支架, 不用填海也不用工程基座 (wiki 原文: and ammoniacal oceans on Aquilo without the need for landfill or foundation); 模组 Better Aquilo 的说明说\"深氨海不能直接建\", 两种说法冲突",
+    "verdict": "verified",
+    "summary": "玄冥星 (没研究支架地基): 氨海上支架放得下、另一种 (深色) 氨海放得下、碎冰放得下; 对照 氨海上地面直轨放不下 → 模组说明\"深氨海不能直接建\"不成立 (原版)",
+    "measured": {
+      "r": [
+        true,
+        true,
+        true,
+        false
+      ],
+      "tiles": [
+        "ammoniacal-ocean",
+        "ammoniacal-ocean-2",
+        "brash-ice"
+      ]
+    },
+    "refs": [
+      "trains.md T8、T14 (支架能立在玄冥星氨海)",
+      "planet-playbooks.md PB-A11 (模组说明: 深氨海不能)",
+      "elevated.fulgora.deep-oil-needs-foundations (雷神星深油海要研究)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Rail support",
+        "url": "https://wiki.factorio.com/Rail_support",
+        "date": "2026-09-30",
+        "credibility": 2
+      },
+      {
+        "title": "模组 Better Aquilo 说明 (经论坛摘要)",
+        "url": "https://mods.factorio.com/mod/BetterAquilo",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.fulgora.deep-oil-needs-foundations": {
+    "autoFixes": 0,
+    "leaks": {
+      "outside": 3,
+      "sample": [
+        "fulgora:fulgoran-ruin-attractor(-47.5,118.5)",
+        "fulgora:fulgoran-ruin-attractor(-30.5,123.5)",
+        "fulgora:fulgoran-ruin-attractor(-13.5,127.5)"
+      ],
+      "recipes": []
+    },
+    "id": "elevated.fulgora.deep-oil-needs-foundations",
+    "topic": "雷神星",
+    "claim": "雷神星的深油海上要研究\"支架地基\"才能立高架支架 (浅油海不用); 研究前放不下, 研究后放得下",
+    "verdict": "verified",
+    "summary": "研究前: 深油海上支架放不下、浅油海放得下; 研究支架地基后: 深油海放得下",
+    "measured": {
+      "before": [
+        false,
+        true
+      ],
+      "after": [
+        true,
+        true
+      ]
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT22 (在深海建支架需要额外研究)",
+      "fulgora.md (岛间铁路)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 雷神星导览; 本机原型: oil-ocean-deep 地块 collision_mask 含 rail_support; 科技 rail-support-foundations 效果 rail-support-on-deep-oil-ocean",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.gleba.supports-on-marsh": {
+    "autoFixes": 0,
+    "id": "elevated.gleba.supports-on-marsh",
+    "topic": "句芒星",
+    "claim": "句芒星的沼泽 (带水地块层的湿地) 上能直接立高架支架, 不用填海 (wiki 原文: Rail supports can be placed on top of ... marshes on Gleba)",
+    "verdict": "verified",
+    "summary": "句芒星沼泽: 玉玛湿地上支架放得下、绿泥湿地上支架放得下; 对照 湿地上地面直轨放不下",
+    "measured": {
+      "r": [
+        true,
+        true,
+        false
+      ]
+    },
+    "refs": [
+      "trains.md T8、T14 (高架是句芒星跨沼泽的主要办法)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Rail support",
+        "url": "https://wiki.factorio.com/Rail_support",
+        "date": "2026-09-30",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.no-train-stop-but-signals": {
+    "autoFixes": 0,
+    "id": "elevated.no-train-stop-but-signals",
+    "topic": "火车",
+    "claim": "高架轨上能放两种铁路信号, 但不能建车站 (车站必须在地面)",
+    "verdict": "verified",
+    "summary": "高架直轨旁: 车站放不下 (对照 地面直轨旁放得下); 铁路信号放上了、接在高架轨上; 连锁信号放上了、接在高架轨上 (信号要用 create_entity 带 rail_layer = 高架)",
+    "measured": {
+      "stop": false,
+      "groundStop": true,
+      "signal": true,
+      "chain": true
+    },
+    "refs": [
+      "knowledge/patterns/layout-styles.md P-style-09 (车站必须在地面)",
+      "logistics.md L26 (高架上不能建车站)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Railway (两种信号都能放在高架轨上, 车站不能)",
+        "url": "https://wiki.factorio.com/Railway",
+        "date": "2026-10-22",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.support.reach-and-placement": {
+    "autoFixes": 0,
+    "id": "elevated.support.reach-and-placement",
+    "topic": "火车",
+    "claim": "高架轨要靠坡道或支架撑着 (原型: 坡道 support_range 9、支架 11): 一段一段往外建时, 坡道高架端能伸出 8 格; 支架只撑它上方已经有轨之后往外 10 格 —— 提前放在轨尽头外面的支架当时不起作用, 等轨接到它上方才生效 (wiki 说的\"每 16 格一个支架\"是规划器一次摆放, 这里不测)",
+    "verdict": "verified",
+    "summary": "坡道高架端伸出 8 格; 放在轨尽头外 6 格的支架当时让轨多伸 0 格; 在尽头下面再放一个后伸了 16 格 (轨接过轨外那个支架, 它生效: 6 + 10), 下一个支架撑 10 格",
+    "measured": {
+      "rampElevEnd": 96,
+      "e0": 104,
+      "e1": 104,
+      "e2": 120,
+      "e3": 130
+    },
+    "refs": [
+      "megabase-logistics.md ML10 (每 16 格一个支架 vs 本机 support_range 11)",
+      "verify.md 第十四批 (高架支架间距待测)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: rail-support support_range 11、rail-ramp support_range 9",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Railway (每 16 格直轨一个支架)",
+        "url": "https://wiki.factorio.com/Railway",
+        "date": "2026-10-22",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.vulcanus.lava-gap-crossable": {
+    "autoFixes": 0,
+    "id": "elevated.vulcanus.lava-gap-crossable",
+    "topic": "祝融星",
+    "claim": "岩浆要很久以后才能填平, 但可以用高架铁路穿越 (提示原文); 支架立不了岩浆 (上一条), 只能近岸立支架、对岸放坡道 —— 实测能跨多宽 (只从一边接 / 两岸往中间接)",
+    "verdict": "verified",
+    "summary": "近岸支架 + 对岸坡道, 只从近岸往前接: 最宽跨过 10 格; 两岸同时往中间接: 最宽跨过 18 格 (6 格 单边过、10 格 单边过、14 格 两边对接过、18 格 两边对接过、20 格 过不去、22 格 过不去、24 格 过不去)",
+    "measured": {
+      "rows": [
+        {
+          "W": 6,
+          "rampDown": true,
+          "reached": 122,
+          "back": 122,
+          "need": 122,
+          "oneSide": true,
+          "bothSides": true
+        },
+        {
+          "W": 10,
+          "rampDown": true,
+          "reached": 126,
+          "back": 126,
+          "need": 126,
+          "oneSide": true,
+          "bothSides": true
+        },
+        {
+          "W": 14,
+          "rampDown": true,
+          "reached": 124,
+          "back": 126,
+          "need": 130,
+          "oneSide": false,
+          "bothSides": true
+        },
+        {
+          "W": 18,
+          "rampDown": true,
+          "reached": 124,
+          "back": 126,
+          "need": 134,
+          "oneSide": false,
+          "bothSides": true
+        },
+        {
+          "W": 20,
+          "rampDown": true,
+          "reached": 124,
+          "back": 128,
+          "need": 136,
+          "oneSide": false,
+          "bothSides": false
+        },
+        {
+          "W": 22,
+          "rampDown": true,
+          "reached": 124,
+          "back": 130,
+          "need": 138,
+          "oneSide": false,
+          "bothSides": false
+        },
+        {
+          "W": 24,
+          "rampDown": true,
+          "reached": 124,
+          "back": 132,
+          "need": 140,
+          "oneSide": false,
+          "bothSides": false
+        }
+      ],
+      "maxOne": 10,
+      "maxBoth": 18
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT26",
+      "elevated.vulcanus.lava-needs-supports (支架立不了岩浆)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 祝融星导览 (岩浆可以通过高架铁路穿越)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.vulcanus.lava-needs-supports": {
+    "autoFixes": 0,
+    "id": "elevated.vulcanus.lava-needs-supports",
+    "topic": "祝融星",
+    "claim": "祝融星的岩浆上地面铁路建不了 (岩浆地块带铁路碰撞层, 要到很晚才能填平), 高架支架能立在岩浆上, 所以跨岩浆河用高架 (支架能立在岩浆上是我从\"岩浆河用高架跨\"推的, 待核实)",
+    "verdict": "refuted",
+    "summary": "岩浆 (lava) 上: 地面直轨放不下、支架放不下 (支架碰撞层 is_lower_object,is_object,object,rail,rail_support); 对照 普通地面直轨放得下",
+    "measured": {
+      "r": [
+        false,
+        false,
+        true
+      ],
+      "why": {
+        "tile": "lava",
+        "mask": [
+          "is_lower_object",
+          "is_object",
+          "object",
+          "rail",
+          "rail_support"
+        ]
+      }
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT26 (岩浆可以通过高架铁路穿越)",
+      "vulcanus.md"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 祝融星导览; 本机原型: lava 地块 collision_mask 含 rail",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "elevated.water.bridge-instead-of-landfill": {
+    "autoFixes": 0,
+    "id": "elevated.water.bridge-instead-of-landfill",
+    "topic": "火车",
+    "claim": "新地星的水面上地面铁路建不了 (要先用填海材料填, 50 石头填 1 格), 但高架支架能立在水里: 坡道上去、支架撑着高架轨跨过水面、坡道下来, 列车能直接开过去, 不用填海",
+    "verdict": "verified",
+    "summary": "水上: 地面直轨放不下、支架放得下; 填海后地面直轨放得下; 40 格水面上搭桥用了 4 个支架 (x=50/60/70/80), 列车开到了东站",
+    "measured": {
+      "tests": [
+        false,
+        true,
+        true
+      ],
+      "supports": [
+        50,
+        60,
+        70,
+        80
+      ],
+      "arrived": true
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT38 (高架支架把高架轨撑在地面或水面上)",
+      "knowledge/patterns/layout-styles.md P-style-09",
+      "用户 (什么时候该用高架, 不然要填土地)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Railway (新地星的海里只有坡道和支架能建)",
+        "url": "https://wiki.factorio.com/Railway",
+        "date": "2026-10-22",
+        "credibility": 2
+      },
+      {
+        "title": "游戏内提示与技巧: 高架铁路 (本机 2.1.24)",
+        "credibility": 1
+      },
+      {
+        "title": "本机原型: landfill 配方 50 石头 → 1; 水地块带 water_tile 碰撞层",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/elevated.ts"
+  },
+  "fulgora.scrap-recycling.shared-probability": {
+    "id": "fulgora.scrap-recycling.shared-probability",
+    "topic": "雷神星",
+    "claim": "2.1 的废料回收是共享概率: 一个废料一次最多出一种产物 (合计 60% 出东西, 40% 什么都不出), 不再是每种产物各自掷骰",
+    "verdict": "verified",
+    "summary": "回收 251 个废料: 出东西 149 件 (59%, 预期约 60%), 一次出两种以上产物的有 0 次 (各自掷骰的话约 30 次)",
+    "measured": {
+      "crafts": 251,
+      "items": 149,
+      "multi": 0,
+      "yieldRatio": 0.5936254980079682
+    },
+    "refs": [
+      "fulgora.md F19",
+      "research README 第二轮 #2",
+      "wiki 废料页 (2026-10-06) 还写着各自掷骰"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: scrap-recycling 结果带 shared_probability 区间 (0~0.6)",
+        "credibility": 1
+      },
+      {
+        "title": "本机 changelog 2.1 (模组分节: shared_probability 字段)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/planets.ts"
+  },
+  "gleba.copper-bacteria.inoculation-chance": {
+    "id": "gleba.copper-bacteria.inoculation-chance",
+    "topic": "生物室",
+    "claim": "铜细菌引种配方 (3 玉玛果泥) 每次只有 10% 出 1 个铜细菌, 不是 100%",
+    "verdict": "verified",
+    "summary": "出结果 718 次 (生物室完成 718 次, 含 +50% 产能), 出铜细菌 69 个, 比例 9.6%",
+    "measured": {
+      "bacteria": 69,
+      "spoilage": 718,
+      "finished": 718,
+      "ratio": 0.09610027855153204
+    },
+    "refs": [
+      "lessons-v1 #5",
+      "gleba.md 本机速查: 关键配方",
+      "research README 第一轮 #7"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: copper-bacteria 配方结果 independent_probability 0.1",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Copper bacteria",
+        "url": "https://wiki.factorio.com/Copper_bacteria",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/bacteria.ts"
+  },
+  "gleba.overgrowth-soil.needs-biter-eggs": {
+    "id": "gleba.overgrowth-soil.needs-biter-eggs",
+    "topic": "生物室",
+    "claim": "每块玉玛果沃土要 10 个异虫卵, 解锁它的科技 (沃土) 前置包括虫卵处理 (没研究就一块都造不出)",
+    "verdict": "verified",
+    "summary": "配方要异虫卵 10 个 (另有 玉玛果种子×5、变质物×50、玉玛果人造土×2、水×100); 由科技\"沃土\"解锁, 前置: 虫卵处理、生产科技包（紫瓶）、效能科技包（黄瓶）",
+    "measured": {
+      "ingredients": {
+        "yumako-seed": 5,
+        "spoilage": 50,
+        "biter-egg": 10,
+        "artificial-yumako-soil": 2,
+        "water": 100
+      },
+      "tech": "overgrowth-soil",
+      "prerequisites": [
+        "biter-egg-handling",
+        "production-science-pack",
+        "utility-science-pack"
+      ]
+    },
+    "refs": [
+      "lessons-v1 #2"
+    ],
+    "sources": [
+      {
+        "title": "本机运行中的游戏原型 (prototypes.recipe / prototypes.technology)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/soil.ts"
+  },
+  "inserter.hand-size-full-research": {
+    "autoFixes": 0,
+    "id": "inserter.hand-size-full-research",
+    "topic": "机械臂",
+    "claim": "研究完全部机械臂运力科技 (集装机械臂、机械臂运力加成 1~7 级、堆叠机械臂、传送带容量 1、2) 后: 电力 / 高速 / 加长机械臂每手 4 个, 集装机械臂每手 12 个, 堆叠机械臂每手 16 个",
+    "verdict": "verified",
+    "summary": "研究后阵营加成 非集装 3、集装 11 (研究前 0 / 0); 每手最多 / 目标: 电力机械臂 4/4、高速机械臂 4/4、加长机械臂 4/4、集装机械臂 12/12、堆叠机械臂 16/16; 箱子到箱子每分钟搬: 电力机械臂 208、高速机械臂 600、加长机械臂 300、集装机械臂 1812、堆叠机械臂 2416",
+    "measured": {
+      "maxHeld": {
+        "inserter": 4,
+        "fast-inserter": 4,
+        "long-handed-inserter": 4,
+        "bulk-inserter": 12,
+        "stack-inserter": 16
+      },
+      "target": {
+        "inserter": 4,
+        "fast-inserter": 4,
+        "long-handed-inserter": 4,
+        "bulk-inserter": 12,
+        "stack-inserter": 16
+      },
+      "perMin": {
+        "inserter": 208,
+        "fast-inserter": 600,
+        "long-handed-inserter": 300,
+        "bulk-inserter": 1812,
+        "stack-inserter": 2416
+      },
+      "bonus": {
+        "inserter": 3,
+        "bulk": 11
+      }
+    },
+    "refs": [
+      "research/players/v1-knowledge.md V1K-49",
+      "facts inserter.hand-size-no-research",
+      "docs/search.md 测量条件 (按研究等级测)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型导出 (2.1.24): 科技效果 非集装加成 2 级 +1、7 级 +1、传送带容量 2 +1 (合计 +3); 集装加成 集装机械臂 +1、1~4 级各 +1、5~7 级各 +2 (合计 +11); stack-inserter 原型 stack_size_bonus 4",
+        "credibility": 1
+      },
+      {
+        "title": "第一版知识库 topics/source-facts.md (2026-10-30, 未核实) → v1-knowledge.md V1K-49",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/inserters.ts"
+  },
+  "inserter.hand-size-no-research": {
+    "autoFixes": 0,
+    "id": "inserter.hand-size-no-research",
+    "topic": "机械臂",
+    "claim": "没研究时 (阵营的抓取数加成都是 0), 电力机械臂、高速机械臂、加长机械臂、集装机械臂每手都只抓 1 个 (原型都没写 stack_size_bonus; 集装机械臂的大手只来自研究)",
+    "verdict": "verified",
+    "summary": "阵营加成 非集装 0、集装 0; 每手最多 / 目标: 电力机械臂 1/1、高速机械臂 1/1、加长机械臂 1/1、集装机械臂 1/1; 箱子到箱子每分钟搬: 电力机械臂 52、高速机械臂 150、加长机械臂 75、集装机械臂 151",
+    "measured": {
+      "maxHeld": {
+        "inserter": 1,
+        "fast-inserter": 1,
+        "long-handed-inserter": 1,
+        "bulk-inserter": 1
+      },
+      "target": {
+        "inserter": 1,
+        "fast-inserter": 1,
+        "long-handed-inserter": 1,
+        "bulk-inserter": 1
+      },
+      "perMin": {
+        "inserter": 52,
+        "fast-inserter": 150,
+        "long-handed-inserter": 75,
+        "bulk-inserter": 151
+      },
+      "bonus": {
+        "inserter": 0,
+        "bulk": 0
+      }
+    },
+    "refs": [
+      "docs/search.md 测量条件",
+      "docs/blueprint-dataset.md 喂料实测 (后期设计被低估)"
+    ],
+    "sources": [
+      {
+        "title": "本机 API 文件 runtime-api.json (2.1.24): LuaForce.inserter_stack_size_bonus = 非集装机械臂的抓取数加成; bulk_inserter_capacity_bonus = 集装机械臂一次能搬几个; LuaEntity.inserter_target_pickup_count = 当前每手目标数 (含科技)",
+        "credibility": 1
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): 四种机械臂都没有 stack_size_bonus 字段 (集装机械臂只有 bulk = true)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/inserters.ts"
+  },
+  "inserters.chest-to-chest.fast-inserter": {
+    "id": "inserters.chest-to-chest.fast-inserter",
+    "topic": "机械臂",
+    "claim": "高速机械臂从箱子搬到箱子 (没有手部容量研究) 每秒 2.5 个 (一来一回 24 tick; 旧版 wiki 和第一版记忆里的 0.83 / 2.31 / 1.15 已过时)",
+    "verdict": "verified",
+    "summary": "60 秒搬了 150 个, 每秒 2.50 个",
+    "measured": {
+      "c0": 12,
+      "c1": 162,
+      "perSecond": 2.5
+    },
+    "refs": [
+      "CLAUDE.md 机械臂方向 = 取货方向"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 机械臂 rotation_speed / extension_speed",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Inserters, 箱子到箱子速度表 (wiki 注明是 2.0.26 实测数据)",
+        "url": "https://wiki.factorio.com/Inserters",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "inserters.chest-to-chest.inserter": {
+    "id": "inserters.chest-to-chest.inserter",
+    "topic": "机械臂",
+    "claim": "电力机械臂从箱子搬到箱子 (没有手部容量研究) 每秒 0.86 个 (一来一回 70 tick; 旧版 wiki 和第一版记忆里的 0.83 / 2.31 / 1.15 已过时)",
+    "verdict": "verified",
+    "summary": "60 秒搬了 52 个, 每秒 0.87 个",
+    "measured": {
+      "c0": 4,
+      "c1": 56,
+      "perSecond": 0.8666666666666667
+    },
+    "refs": [
+      "CLAUDE.md 机械臂方向 = 取货方向"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 机械臂 rotation_speed / extension_speed",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Inserters, 箱子到箱子速度表 (wiki 注明是 2.0.26 实测数据)",
+        "url": "https://wiki.factorio.com/Inserters",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "inserters.chest-to-chest.long-handed-inserter": {
+    "id": "inserters.chest-to-chest.long-handed-inserter",
+    "topic": "机械臂",
+    "claim": "加长机械臂从箱子搬到箱子 (没有手部容量研究) 每秒 1.25 个 (一来一回 48 tick, 取放隔一格; 旧版 wiki 和第一版记忆里的 0.83 / 2.31 / 1.15 已过时)",
+    "verdict": "verified",
+    "summary": "60 秒搬了 75 个, 每秒 1.25 个",
+    "measured": {
+      "c0": 6,
+      "c1": 81,
+      "perSecond": 1.25
+    },
+    "refs": [
+      "CLAUDE.md 机械臂方向 = 取货方向"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 机械臂 rotation_speed / extension_speed",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Inserters, 箱子到箱子速度表 (wiki 注明是 2.0.26 实测数据)",
+        "url": "https://wiki.factorio.com/Inserters",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "inserters.from-moving-belt": {
+    "autoFixes": 0,
+    "id": "inserters.from-moving-belt",
+    "topic": "机械臂",
+    "claim": "机械臂从流动中的基础传送带垂直取货 (没有手部容量加成): 电力机械臂每秒约 0.94 个、加长机械臂约 1.18、高速机械臂约 2.50, 和箱子到箱子 (0.86 / 1.25 / 2.5) 差不多",
+    "verdict": "refuted",
+    "summary": "电力机械臂 每秒 0.95 (wiki 0.94); 加长机械臂 每秒 1.20 (wiki 1.18); 高速机械臂 每秒 2.82 (wiki 2.5)",
+    "measured": {
+      "rates": [
+        {
+          "name": "inserter",
+          "perSecond": 0.95,
+          "want": 0.94
+        },
+        {
+          "name": "long-handed-inserter",
+          "perSecond": 1.2,
+          "want": 1.18
+        },
+        {
+          "name": "fast-inserter",
+          "perSecond": 2.816666666666667,
+          "want": 2.5
+        }
+      ]
+    },
+    "refs": [
+      "verify.md 下一批 3 (机械臂从传送带取货的速度)",
+      "inserters.chest-to-chest.* (箱子到箱子已核实)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Inserters (Belt to chest 表, 基础传送带、物品以带速移动)",
+        "url": "https://wiki.factorio.com/Inserters",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/belts2.ts"
+  },
+  "logistics.active-provider.emptied-to-storage": {
+    "autoFixes": 0,
+    "id": "logistics.active-provider.emptied-to-storage",
+    "topic": "物流网",
+    "claim": "没人请求时, 空闲的物流机器人会把主动供货箱 (紫箱) 搬空进黄箱; 被动供货箱 (红箱) 里的货原地不动",
+    "verdict": "verified",
+    "summary": "240 秒后: 紫箱剩 0, 红箱剩 100, 黄箱收到 100",
+    "measured": {
+      "purple": 0,
+      "red": 100,
+      "yellow": 100
+    },
+    "refs": [
+      "logistics.md L2",
+      "knowledge/patterns/case-friend-nauvis.md (联机服务器的火车卸货用红箱)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Active provider chest",
+        "url": "https://wiki.factorio.com/Active_provider_chest",
+        "date": "2026-01-18",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics2.ts"
+  },
+  "logistics.dispatch.buffer-only-to-opted-in-requesters": {
+    "autoFixes": 0,
+    "id": "logistics.dispatch.buffer-only-to-opted-in-requesters",
+    "topic": "物流网",
+    "claim": "主动存货箱 (绿箱) 里的货只送给勾了\"允许从主动存货箱取货\"的优先集货箱 (蓝箱); 没勾的蓝箱只从黄箱 / 红箱 / 紫箱拿, 绿箱是唯一来源时它一块也拿不到",
+    "verdict": "verified",
+    "summary": "只有绿箱时: 没勾的蓝箱 0 块, 勾了的 30 块 (绿箱剩 70); 加黄箱后: 没勾的蓝箱 30 块 (黄箱剩 70, 绿箱剩 70)",
+    "measured": {
+      "only": {
+        "green": 70,
+        "A": 0,
+        "B": 30
+      },
+      "withStorage": {
+        "green": 70,
+        "yellow": 70,
+        "A": 30,
+        "B": 30
+      }
+    },
+    "refs": [
+      "logistics.md L4",
+      "第三批 logistics.pickup.buffer-before-storage (当时蓝箱勾了)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Logistic network / Storage chest / Active provider chest",
+        "url": "https://wiki.factorio.com/Logistic_network",
+        "date": "2026-01-18",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics2.ts"
+  },
+  "logistics.network.separate-when-ranges-dont-overlap": {
+    "autoFixes": 0,
+    "id": "logistics.network.separate-when-ranges-dont-overlap",
+    "topic": "物流网",
+    "claim": "两个机器人指令平台的物流范围不重叠就是两张独立的网 (相距 60 格, 各自半边长 25): 红箱在甲网、蓝箱在乙网, 一块也送不过去; 挪到范围重叠 (相距 40 格) 就是一张网, 照常送",
+    "verdict": "verified",
+    "summary": "相距 60 格 (范围不重叠): 蓝箱收到 0; 相距 40 格 (重叠 10 格): 收到 30",
+    "measured": {
+      "gap60": 0,
+      "gap40": 30
+    },
+    "refs": [
+      "knowledge/patterns/logistics-choice.md P-logi-03 (机器人网怎么分区)",
+      "logistics.md L3"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Logistic network (networks merge when roboport areas overlap)",
+        "url": "https://wiki.factorio.com/Logistic_network",
+        "date": "2026-01-18",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics3.ts"
+  },
+  "logistics.network.touching-ranges-connect": {
+    "autoFixes": 0,
+    "id": "logistics.network.touching-ranges-connect",
+    "topic": "物流网",
+    "claim": "两个机器人指令平台的物流范围边界刚好相接 (相距 50 格, 不重叠) 就连成一张网: 西边平台旁红箱里的货, 东边平台旁的蓝箱收得到; 相距 52 格 (中间空 2 格) 就是两张网",
+    "verdict": "verified",
+    "summary": "相距 50: 两台同一张网 (编号 3/3), 东边蓝箱收到 20; 相距 52 (对照): 不同网, 收到 0",
+    "measured": {
+      "touch": [
+        {
+          "x": 167,
+          "y": 0
+        },
+        {
+          "x": 217,
+          "y": 0
+        }
+      ],
+      "gap": [
+        {
+          "x": 166,
+          "y": 60
+        },
+        {
+          "x": 218,
+          "y": 60
+        }
+      ],
+      "net": {
+        "touch": {
+          "id1": 3,
+          "id2": 3
+        },
+        "gap": {
+          "id1": 5,
+          "id2": 6
+        }
+      },
+      "recv": {
+        "touch": 20,
+        "gap": 0
+      }
+    },
+    "refs": [
+      "logistics.md P-logi-03 (范围不重叠 = 两张网, 已核实 60 格)",
+      "src/blueprint/check-coverage.ts (刚好相接原先按两张网算)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Roboport (物流范围橙色边界相接即可连成一张网)",
+        "url": "https://wiki.factorio.com/Roboport",
+        "date": "2026-03-16",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics4.ts"
+  },
+  "logistics.pickup.active-provider-first": {
+    "id": "logistics.pickup.active-provider-first",
+    "topic": "物流网",
+    "claim": "机器人取货先找主动供货箱 (紫箱), 不看远近: 30 格外的紫箱先于 1 格内的被动供货箱 (红箱) 被取",
+    "verdict": "verified",
+    "summary": "蓝箱收到 30 块: 远处紫箱 (约 30 格) 被取 30 块, 旁边红箱 (1 格) 被取 0 块",
+    "measured": {
+      "active_far": 70,
+      "passive_near": 100,
+      "requester": 30
+    },
+    "refs": [
+      "lessons-v1 #1",
+      "logistics.md L1",
+      "logistics.md L2"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Logistic network (取货顺序)",
+        "url": "https://wiki.factorio.com/Logistic_network",
+        "date": "2026-01-18",
+        "credibility": 2
+      },
+      {
+        "title": "游戏内提示与技巧 (本机中文语言文件): 紫箱 → 绿箱 → 黄箱 → 红箱",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/logistics.ts"
+  },
+  "logistics.pickup.buffer-before-storage": {
+    "id": "logistics.pickup.buffer-before-storage",
+    "topic": "物流网",
+    "claim": "取货时主动存货箱 (绿箱) 先于被动存货箱 (黄箱), 跨档不看远近 (游戏内提示的说法; 官方 wiki 写两者同档、按远近)",
+    "verdict": "refuted",
+    "summary": "主试: 远处绿箱 (15 格) 被取 0, 近处黄箱 (5 格) 被取 30, 最近红箱 (1 格) 被取 0; 对照: 近处绿箱被取 30, 远处黄箱被取 0 → 黄箱和绿箱按远近取, 绿箱不跨档优先; 官方 wiki 的同档说法成立",
+    "measured": {
+      "main": {
+        "buffer_far": 100,
+        "storage_near": 70,
+        "passive_nearest": 100,
+        "requester": 30
+      },
+      "control": {
+        "buffer_near": 70,
+        "storage_far": 100,
+        "requester": 30
+      }
+    },
+    "refs": [
+      "logistics.md L1",
+      "logistics.md L6",
+      "research README 需要核实的分歧"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Logistic network (取货顺序)",
+        "url": "https://wiki.factorio.com/Logistic_network",
+        "date": "2026-01-18",
+        "credibility": 2
+      },
+      {
+        "title": "游戏内提示与技巧 (本机中文语言文件): 紫箱 → 绿箱 → 黄箱 → 红箱",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/logistics.ts"
+  },
+  "logistics.pickup.ignores-plain-chests": {
+    "id": "logistics.pickup.ignores-plain-chests",
+    "topic": "物流网",
+    "claim": "物流机器人不从普通箱 (钢箱) 取货: 蓝箱旁边 1 格的钢箱装满铁板, 机器人宁可去 15 格外的红箱拿; 只有钢箱时一块也不送",
+    "verdict": "verified",
+    "summary": "钢箱 (1 格) 被取 0, 红箱 (15 格) 被取 30; 只有钢箱时蓝箱收到 0",
+    "measured": {
+      "main": {
+        "steel_near": 100,
+        "passive_far": 70,
+        "requester": 30
+      },
+      "control": {
+        "steel_only": 100,
+        "requester": 0
+      }
+    },
+    "refs": [
+      "requirements.md 物流网和火车 (2026-10-31 放宽)",
+      "联机服务器的新地星基地: 车站两头用普通箱"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Logistic network (只有物流箱参与物流网)",
+        "url": "https://wiki.factorio.com/Logistic_network",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/logistics.ts"
+  },
+  "logistics.pickup.landing-pad-after-passive": {
+    "autoFixes": 0,
+    "id": "logistics.pickup.landing-pad-after-passive",
+    "topic": "物流网",
+    "claim": "货运着陆平台作为货源排在红箱之后: 平台就在蓝箱旁边、红箱在 20 格外, 机器人仍先去红箱取 (第一轮被推翻: 先取了平台; 加对照 平台远、红箱近 分清是\"和红箱同档按远近\"还是\"平台优先\")",
+    "verdict": "refuted",
+    "summary": "平台在蓝箱旁、红箱 20 格外: 平台被取 30、红箱 0; 对照 红箱在蓝箱旁、平台远: 平台被取 30、红箱 0 → 平台比红箱优先",
+    "measured": {
+      "p": {
+        "count": 70,
+        "spoil": 0
+      },
+      "r": {
+        "count": 100,
+        "spoil": 0
+      },
+      "q": {
+        "count": 30,
+        "spoil": 0
+      },
+      "p2": {
+        "count": 70,
+        "spoil": 0
+      },
+      "r2": {
+        "count": 100,
+        "spoil": 0
+      }
+    },
+    "refs": [
+      "logistics.md L1 (物流接驳站列在红箱之后)",
+      "logistics.md L23"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Logistic network / Cargo landing pad",
+        "url": "https://wiki.factorio.com/Cargo_landing_pad",
+        "date": "2026",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics3.ts"
+  },
+  "logistics.pickup.rightmost-slot-first": {
+    "autoFixes": 0,
+    "id": "logistics.pickup.rightmost-slot-first",
+    "topic": "物流网",
+    "claim": "物流机器人从箱子取货取最右边的那一格, 不看新鲜度: 红箱第 1 格放新鲜玉玛果、第 2 格放腐坏 50% 的, 送到蓝箱的是腐坏的那批 (旧货容易烂在缓冲箱里)",
+    "verdict": "verified",
+    "summary": "蓝箱收到 10 个玉玛果, 腐坏 57% → 来自第 2 格 (腐坏的那批)",
+    "measured": {
+      "r": {
+        "count": 10,
+        "spoil": 0.5671296296296297
+      }
+    },
+    "refs": [
+      "logistics.md L10",
+      "knowledge/patterns/logistics-choice.md P-logi-05 (会腐坏的东西不囤)"
+    ],
+    "sources": [
+      {
+        "title": "官方论坛 (机器人不看新鲜度, 先取最右一格)",
+        "url": "https://forums.factorio.com/viewtopic.php?p=701792",
+        "date": "2025-09 ~ 2026-08",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics3.ts"
+  },
+  "logistics.roboport.construction-range-55": {
+    "autoFixes": 0,
+    "id": "logistics.roboport.construction-range-55",
+    "topic": "物流网",
+    "claim": "机器人指令平台的建设范围是以它为中心半边长 55 的方块 (110×110, 比物流范围 25 大得多): 离中心 54.5 格的虚影会被建设机器人建好, 56.5 格的不建",
+    "verdict": "verified",
+    "summary": "原型建设半径 55 (物流半径 25); 90 秒后: 东 49.5 格建好了、东 54.5 格建好了、西 56.5 格仍是虚影、西 60.5 格仍是虚影",
+    "measured": {
+      "rp": {
+        "x": 64,
+        "y": 0,
+        "construction": 55,
+        "logistics": 25
+      },
+      "points": [
+        {
+          "x": 113.5,
+          "y": 0.5
+        },
+        {
+          "x": 118.5,
+          "y": 0.5
+        },
+        {
+          "x": 7.5,
+          "y": 0.5
+        },
+        {
+          "x": 3.5,
+          "y": 0.5
+        }
+      ],
+      "res": [
+        {
+          "chest": true,
+          "ghost": false
+        },
+        {
+          "chest": true,
+          "ghost": false
+        },
+        {
+          "chest": false,
+          "ghost": true
+        },
+        {
+          "chest": false,
+          "ghost": true
+        }
+      ]
+    },
+    "refs": [
+      "logistics.md 本机速查 (建设范围半径 55)",
+      "verify.md 下一批 3 (检查器: 机器人指令平台覆盖)",
+      "docs/research/players/game-tips.md TT13 (范围内的虚影由机器人自动建)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: roboport construction_radius 55、logistic_radius 25 (entities.lua)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics4.ts"
+  },
+  "logistics.roboport.logistics-range-25": {
+    "autoFixes": 0,
+    "id": "logistics.roboport.logistics-range-25",
+    "topic": "物流网",
+    "claim": "机器人指令平台的物流范围是以它为中心半边长 25 的方块 (50×50): 蓝箱在 24 格处能收到货, 在 27 格处收不到 (不在网里)",
+    "verdict": "verified",
+    "summary": "24 格处的蓝箱收到 30, 27 格处的收到 0",
+    "measured": {
+      "n": {
+        "count": 30,
+        "spoil": 0
+      },
+      "f": {
+        "count": 0
+      }
+    },
+    "refs": [
+      "本机原型 roboport logistics_radius 25 / construction_radius 55",
+      "src/blueprint/inspect.ts (检查器用 25)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: roboport logistics_radius 25",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics3.ts"
+  },
+  "logistics.robot.cargo-1-plus-research": {
+    "autoFixes": 0,
+    "id": "logistics.robot.cargo-1-plus-research",
+    "topic": "物流网",
+    "claim": "物流机器人没研究时一次只搬 1 件; 每级\"工人机器人货仓\"研究 +1 件 (3 级, 满级一次 4 件): 加成设成 2 后一次搬 3 件",
+    "verdict": "verified",
+    "summary": "没加成: 在飞的机器人最多带 1 件; 加成 2: 最多带 3 件; 原型里货仓研究 3 级、每级 +1/1/1, 满级一次 4 件",
+    "measured": {
+      "tech": {
+        "levels": 3,
+        "per": [
+          1,
+          1,
+          1
+        ]
+      },
+      "base": {
+        "max": 1,
+        "flying": 20
+      },
+      "plus2": {
+        "max": 3,
+        "flying": 20
+      }
+    },
+    "refs": [
+      "lab.md #35 (没研究货仓的物流机器人一次只搬 1 件)",
+      "knowledge/patterns/logistics-choice.md (机器人吞吐)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: technology.lua worker-robots-storage-1~3, 效果 worker-robot-storage modifier 1",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics4.ts"
+  },
+  "logistics.storage.insert-order": {
+    "autoFixes": 0,
+    "id": "logistics.storage.insert-order",
+    "topic": "物流网",
+    "claim": "机器人往黄箱存货的顺序: 过滤匹配的黄箱 > 已有同种物品的黄箱 > 空的没过滤的黄箱 > 装着别的东西的没过滤的黄箱; 远近不优先",
+    "verdict": "verified",
+    "summary": "紫箱 100 块铁板: 四种黄箱都在时, 过滤箱 (最远) 收到 100, 同种 0, 空箱 0, 杂物箱 (最近) 0; 去掉过滤箱: 同种 +100, 空箱 0, 杂物 0; 再去掉同种: 空箱 100, 杂物箱 0",
+    "measured": {
+      "t1": {
+        "purple": 0,
+        "filter": 100,
+        "same": 20,
+        "empty": 0,
+        "other": 0
+      },
+      "t2": {
+        "purple": 0,
+        "same": 120,
+        "empty": 0,
+        "other": 0
+      },
+      "t3": {
+        "purple": 0,
+        "empty": 100,
+        "other": 0
+      }
+    },
+    "refs": [
+      "logistics.md L5"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Storage chest (存入顺序)",
+        "url": "https://wiki.factorio.com/Storage_chest",
+        "date": "2026-01-18",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/logistics2.ts"
+  },
+  "m3.gleba-bio-core.hour-vs-calc": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "biochamber",
+        "x": 64.5,
+        "y": -5.5,
+        "status": "item_ingredient_shortage"
+      },
+      {
+        "name": "biochamber",
+        "x": 64.5,
+        "y": 0.5,
+        "status": "item_ingredient_shortage"
+      }
+    ],
+    "id": "m3.gleba-bio-core.hour-vs-calc",
+    "topic": "生物室",
+    "claim": "M3 完成标准: 句芒最小生物核心 (果子加工 → 生物结晶 → 营养素自给) 在沙盘里连续跑 1 小时, 生物结晶净产出和计算器 (src/calc) 算的相差不到 10%",
+    "verdict": "verified",
+    "summary": "计算器预测每分钟净产生物结晶 35.00; 沙盘 (预热 10 分钟后 50 分钟) 实测 34.60, 相差 -1.1%; 每 10 分钟 34.5 / 35.0 / 34.0 / 35.0 / 34.5; 结束时状态 {\"B3\":\"working\",\"B4\":\"item_ingredient_shortage\",\"A1\":\"working\",\"A2\":\"full_output\"}; 清走变质物 634、种子 74",
+    "measured": {
+      "predicted": 35,
+      "measured": 34.6,
+      "diff": -0.011428571428571389,
+      "halves": [
+        34.5,
+        35,
+        34,
+        35,
+        34.5
+      ],
+      "flow": {
+        "bioflux": {
+          "made": 36,
+          "used": 1.4
+        },
+        "yumako-mash": {
+          "made": 90,
+          "used": 90
+        },
+        "jelly": {
+          "made": 72,
+          "used": 72
+        },
+        "nutrients": {
+          "made": 16.8,
+          "used": 4.58
+        },
+        "spoilage": {
+          "made": 0,
+          "used": 0
+        },
+        "yumako": {
+          "made": 0,
+          "used": 45
+        },
+        "jellynut": {
+          "made": 0,
+          "used": 18
+        }
+      },
+      "end": {
+        "bioflux": 2064,
+        "spoilageInC": 0,
+        "status": {
+          "B3": "working",
+          "B4": "item_ingredient_shortage",
+          "A1": "working",
+          "A2": "full_output"
+        },
+        "removedSpoilage": 634,
+        "removedSeeds": 74,
+        "stats": {
+          "bioflux": {
+            "made": 2152,
+            "used": 85
+          },
+          "yumako-mash": {
+            "made": 5400,
+            "used": 5400
+          },
+          "jelly": {
+            "made": 4348,
+            "used": 4320
+          },
+          "nutrients": {
+            "made": 1000,
+            "used": 275
+          },
+          "spoilage": {
+            "made": 0,
+            "used": 0
+          },
+          "yumako": {
+            "made": 0,
+            "used": 2701
+          },
+          "jellynut": {
+            "made": 0,
+            "used": 1087
+          }
+        },
+        "spoil": {
+          "C_bioflux": 7.9,
+          "B3_in_jelly": 10.1,
+          "B4_in_bioflux": 9.7,
+          "B3_fuel": 55,
+          "signal_nutrients": 20,
+          "feed_disabled": "disabled_by_control_behavior",
+          "loop_nutrients": 20
+        }
+      },
+      "calcRows": [
+        {
+          "recipe": "yumako-processing",
+          "machines": 1,
+          "craftsPerMin": 45
+        },
+        {
+          "recipe": "jellynut-processing",
+          "machines": 0.4,
+          "craftsPerMin": 18
+        },
+        {
+          "recipe": "bioflux",
+          "machines": 0.3,
+          "craftsPerMin": 6
+        },
+        {
+          "recipe": "nutrients-from-bioflux",
+          "machines": 0.0033333333333333335,
+          "craftsPerMin": 0.2
+        }
+      ]
+    },
+    "refs": [
+      "docs/roadmap.md M3",
+      "docs/calc.md",
+      "plans/gleba-bio-core-lab.json",
+      "biochamber.* (生物室燃料和产能已核实)",
+      "spoilage.* (腐坏已核实)"
+    ],
+    "sources": [
+      {
+        "title": "本机计算器 (原型数据 + yalps 线性规划) 对沙盘实测",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/m3-bio-core.ts"
+  },
+  "modules.beacon.sqrt-rule": {
+    "id": "modules.beacon.sqrt-rule",
+    "topic": "插件",
+    "claim": "分享塔 2.0 递减规则: n 座塔 (各装 2 个速度插件 3) 给同一台机器的总加速 = 1.5 × √n × 100%, 即 1 / 2 / 4 / 8 座 = +150% / +212% / +300% / +424%",
+    "verdict": "verified",
+    "summary": "n=1: +150% (预期 150%), n=2: +212% (预期 212%), n=4: +300% (预期 300%), n=8: +424% (预期 424%)",
+    "measured": {
+      "n=1": {
+        "speed_bonus": 1.5,
+        "beacons": 1,
+        "status": 31,
+        "want": 1.5
+      },
+      "n=2": {
+        "speed_bonus": 2.1213,
+        "beacons": 2,
+        "status": 31,
+        "want": 2.121320343559643
+      },
+      "n=4": {
+        "speed_bonus": 3,
+        "beacons": 4,
+        "status": 31,
+        "want": 3
+      },
+      "n=8": {
+        "speed_bonus": 4.242,
+        "beacons": 8,
+        "status": 31,
+        "want": 4.242640687119286
+      }
+    },
+    "refs": [
+      "production.md P9",
+      "production.md P10",
+      "production.md P15 (B 站维基的\"一半效果\"已过时)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: beacon distribution_effectivity 1.5, profile[n] = 1/√n",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Beacon, Transmission strength 表",
+        "url": "https://wiki.factorio.com/Beacon",
+        "date": "2026-10-31",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/beacons.ts"
+  },
+  "power.accumulator.5MJ-300kW": {
+    "autoFixes": 0,
+    "id": "power.accumulator.5MJ-300kW",
+    "topic": "电",
+    "claim": "普通蓄电器容量 5MJ, 充电和放电都最多 300kW: 白天 600kW 太阳能给空蓄电器充 10 秒到 3MJ、20 秒充满; 黑夜里对 1.2MW 的负载 (4 座雷达) 也只能放 300kW, 10 秒后剩 2MJ",
+    "verdict": "verified",
+    "summary": "10 块太阳能板白天充 10 秒 3.00MJ, 20 秒 5.00MJ; 改成黑夜接 4 座雷达 (1.2MW) 放 10 秒后剩 2.00MJ",
+    "measured": {
+      "e10": 3000000,
+      "e20": 5000000,
+      "e30": 2000000
+    },
+    "refs": [
+      "nauvis.md N17 (太阳能 : 蓄电器配比的根据)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: accumulator buffer_capacity 5MJ, input/output_flow_limit 300kW",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/power.ts"
+  },
+  "power.boiler.1-to-2-to-200": {
+    "id": "power.boiler.1-to-2-to-200",
+    "topic": "电",
+    "claim": "2.0.7 起 1 水 = 10 蒸汽: 1 台锅炉 (1.8MW) 每秒吃 6 水、出 60 蒸汽, 正好带 2 台蒸汽机 (各 900kW, 第 3 台不多出电); 1 台抽取泵 (1200/秒) 供 200 台锅炉, 比例 1:200:400 (2.0 以前的 1:20:40 已过时; 第二轮检索把这条写反了)",
+    "verdict": "verified",
+    "summary": "1 锅炉 + 3 蒸汽机, 负载 2.7MW: 实发 1.80MW (预期 1.8, 第 3 台没用), 每秒吃水 6.0 (预期 6 → 1200/6 = 200 台锅炉一台抽取泵); 蒸汽机状态 working[steam=0]/working[steam=0]/working[steam=0]",
+    "measured": {
+      "seconds": 100,
+      "mw": 1.8000000234375,
+      "waterPerSec": 5.999997854232788,
+      "engines": [
+        "working[steam=0]",
+        "working[steam=0]",
+        "working[steam=0]"
+      ]
+    },
+    "refs": [
+      "nauvis.md 第 3 节 (原写\"本机仍是 1:20:40\", 错)",
+      "research README 第二轮\"已确认是错的说法\"里的抽取泵一条 (本身错了, 已改)"
+    ],
+    "sources": [
+      {
+        "title": "本机 changelog 2.0.7: 1 Water will now produce 10 Steam in boilers/heat exchangers; 原型: 水热容 2kJ、蒸汽 0.2kJ、锅炉 1.8MW / 165 度、蒸汽机 0.5 单位/tick、抽取泵 20 单位/tick",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Boiler (6 水/秒, 60 蒸汽/秒)",
+        "url": "https://wiki.factorio.com/Boiler",
+        "date": "2026-09-30",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/planets.ts"
+  },
+  "power.brownout.slows-proportionally": {
+    "autoFixes": 0,
+    "id": "power.brownout.slows-proportionally",
+    "topic": "电",
+    "claim": "电力不足时机器变慢: 1 块太阳能板 (60kW) 带一台组装机2型 (工作 150kW + 待机 5kW) 时, 做齿轮的速度约为满电时的 60/155 ≈ 39%; 加够太阳能板后恢复全速",
+    "verdict": "verified",
+    "summary": "1 块板 (按原型 60.0kW, 需求 155.0kW): 每分钟 36.0 个齿轮 = 满电的 40.0% (按发电/总需求应 38.7%, 先扣待机应 36.7%, 更接近发电/总需求); 加到 3 块 (180.0kW): 90.0 个 = 100.0%",
+    "measured": {
+      "b": {
+        "pole": {
+          "x": 253.5,
+          "y": 0.5
+        },
+        "asm": {
+          "x": 255.5,
+          "y": 0.5
+        },
+        "panels": [
+          {
+            "x": 251.5,
+            "y": 0.5
+          }
+        ],
+        "usage": 150000,
+        "drain": 5000,
+        "panel_w": 60000,
+        "speed": 0.75,
+        "energy": 0.5
+      },
+      "fullRate": 90,
+      "low": {
+        "made": 36.00000000000003,
+        "perMin": 36.00000000000003,
+        "ratio": 0.4000000000000003,
+        "same": true,
+        "net": 4,
+        "gen": 60000
+      },
+      "high": {
+        "made": 90.00000000000004,
+        "perMin": 90.00000000000004,
+        "ratio": 1.0000000000000004,
+        "same": true,
+        "net": 4,
+        "gen": 180000
+      },
+      "expectLow": 0.3870967741935484,
+      "expectLowAlt": 0.36666666666666664
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT18 (电力不足时机器变慢, 看电网统计的保障)",
+      "架构 (告警判据用\"保障\")"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 电力不足 (本机 2.1.24)",
+        "credibility": 1
+      },
+      {
+        "title": "本机原型: solar-panel 60kW、assembling-machine-2 150kW (待机默认 = 耗电的 1/30)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/power2.ts"
+  },
+  "power.heating-tower.burns-at-max": {
+    "id": "power.heating-tower.burns-at-max",
+    "topic": "电",
+    "claim": "供热塔到了最高温度 1000 度、没有地方用热时, 照样按 16MW 烧燃料 (白烧)",
+    "verdict": "verified",
+    "summary": "满温 1000→1000 度、没有用热的建筑时, 30 秒里仍烧掉 16MW 燃料",
+    "measured": {
+      "seconds": 30,
+      "fuelMW": 15.999999999999993,
+      "heatMW": 0,
+      "t0": 1000,
+      "t1": 1000
+    },
+    "refs": [
+      "lessons-v1 #4",
+      "gleba.md 本机速查: 供热塔",
+      "research README 第一轮 #5"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 供热塔 consumption 40MW、effectivity 2.5、specific_heat 5MJ、最高 1000 度",
+        "credibility": 1
+      },
+      {
+        "title": "游戏内科技说明: 即使达到最高温度也不会停止燃烧",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Heating tower",
+        "url": "https://wiki.factorio.com/Heating_tower",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/heating-tower.ts"
+  },
+  "power.heating-tower.output": {
+    "id": "power.heating-tower.output",
+    "topic": "电",
+    "claim": "普通品质供热塔每秒烧 16MW 燃料, 产 40MW 热 (不是 100MW)",
+    "verdict": "verified",
+    "summary": "实测燃料 16MW、产热 40MW (30 秒内从 24 度升到 264 度)",
+    "measured": {
+      "seconds": 30,
+      "fuelMW": 15.999999999999993,
+      "heatMW": 39.99999999999983,
+      "t0": 23.53333333333333,
+      "t1": 263.5333333333323
+    },
+    "refs": [
+      "lessons-v1 #3",
+      "gleba.md 本机速查: 供热塔"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 供热塔 consumption 40MW、effectivity 2.5、specific_heat 5MJ、最高 1000 度",
+        "credibility": 1
+      },
+      {
+        "title": "游戏内科技说明: 即使达到最高温度也不会停止燃烧",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Heating tower",
+        "url": "https://wiki.factorio.com/Heating_tower",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/heating-tower.ts"
+  },
+  "power.pipe.segment-max-320": {
+    "autoFixes": 0,
+    "id": "power.pipe.segment-max-320",
+    "topic": "电",
+    "claim": "2.0 的流体系统里一段连通的管道最长 320 格, 第 321 根按玩家规则放不下 (要隔段放泵或断开)",
+    "verdict": "refuted",
+    "summary": "按玩家规则连着放管道, 放了 1000 根都没碰到上限; 尽头再接地下管道可以",
+    "measured": {
+      "placed": 1000,
+      "underground_ok": true
+    },
+    "refs": [
+      "production.md P39",
+      "docs/research/players/changes-2.1.md (流体)"
+    ],
+    "sources": [
+      {
+        "title": "production.md P39 (玩家讨论 2.0/2.1 流体: 一段管道最长 320 格)",
+        "url": "https://forums.factorio.com/",
+        "date": "2025",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/power.ts"
+  },
+  "power.poles.supply-area": {
+    "id": "power.poles.supply-area",
+    "topic": "电",
+    "claim": "供电范围 (从杆子中心算的半边长): 小型电线杆 2.5 (5×5)、中型电线杆 3.5 (7×7)、远程输电塔 2 (4×4)、广域配电站 9 (18×18); 建筑只要有一格碰到范围就有电",
+    "verdict": "verified",
+    "summary": "小型电线杆: 范围内有电、范围外没电; 中型电线杆: 范围内有电、范围外没电; 远程输电塔: 范围内有电、范围外没电; 广域配电站: 范围内有电、范围外没电",
+    "measured": {
+      "small-electric-pole": {
+        "edge": 258.5,
+        "inside": "waiting_for_source_items",
+        "outside": "no_power"
+      },
+      "medium-electric-pole": {
+        "edge": 259.5,
+        "inside": "waiting_for_source_items",
+        "outside": "no_power"
+      },
+      "big-electric-pole": {
+        "edge": 257.5,
+        "inside": "waiting_for_source_items",
+        "outside": "no_power"
+      },
+      "substation": {
+        "edge": 264.5,
+        "inside": "waiting_for_source_items",
+        "outside": "no_power"
+      }
+    },
+    "refs": [
+      "蓝图布局 (电线杆覆盖)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: electric-pole supply_area_distance",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Electric pole",
+        "url": "https://wiki.factorio.com/Electric_pole",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/poles.ts"
+  },
+  "power.poles.wire-reach": {
+    "id": "power.poles.wire-reach",
+    "topic": "电",
+    "claim": "电线杆最大连线距离 (中心到中心): 小型电线杆 7.5、中型电线杆 9、远程输电塔 32、广域配电站 18; 再远 1 格就连不上",
+    "verdict": "verified",
+    "summary": "小型电线杆 (上限 7.5) 7.28 格通、7.62 格不通; 中型电线杆 (上限 9) 9.00 格通、10.00 格不通; 远程输电塔 (上限 32) 32.00 格通、33.00 格不通; 广域配电站 (上限 18) 18.00 格通、19.00 格不通",
+    "measured": {
+      "small-electric-pole": {
+        "at": {
+          "reach": true,
+          "dist": 7.280109889280518
+        },
+        "beyond": {
+          "reach": false,
+          "dist": 7.615773105863909
+        },
+        "limit": 7.5
+      },
+      "medium-electric-pole": {
+        "at": {
+          "reach": true,
+          "dist": 9
+        },
+        "beyond": {
+          "reach": false,
+          "dist": 10
+        },
+        "limit": 9
+      },
+      "big-electric-pole": {
+        "at": {
+          "reach": true,
+          "dist": 32
+        },
+        "beyond": {
+          "reach": false,
+          "dist": 33
+        },
+        "limit": 32
+      },
+      "substation": {
+        "at": {
+          "reach": true,
+          "dist": 18
+        },
+        "beyond": {
+          "reach": false,
+          "dist": 19
+        },
+        "limit": 18
+      }
+    },
+    "refs": [
+      "蓝图布局 (电线杆间距)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: electric-pole maximum_wire_distance",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Electric pole",
+        "url": "https://wiki.factorio.com/Electric_pole",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/poles.ts"
+  },
+  "power.pump.1200-per-second": {
+    "autoFixes": 0,
+    "id": "power.pump.1200-per-second",
+    "topic": "电",
+    "claim": "管道泵每秒最多送 1200 单位流体 (每 tick 20): 从永续管道往空储液罐泵 10 秒得到 12000",
+    "verdict": "verified",
+    "summary": "10 秒泵进储液罐 12000 单位水 (每秒 1200)",
+    "measured": {
+      "before": {
+        "water": 575,
+        "pump_status": "working",
+        "tick": 104443
+      },
+      "after": {
+        "water": 12575,
+        "pump_status": "working",
+        "tick": 105043
+      },
+      "moved": 12000
+    },
+    "refs": [
+      "production.md P39 (流体吞吐的实际限制在泵)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: pump pumping_speed 20 / tick",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/power.ts"
+  },
+  "power.reactor.burns-regardless-of-load": {
+    "autoFixes": 0,
+    "id": "power.reactor.burns-regardless-of-load",
+    "topic": "电",
+    "claim": "核反应堆有燃料就一直按 40MW 烧, 不按需降功率: 没人用热、温度到顶也照烧, 一根燃料棒 (8GJ) 200 秒烧完; 锅炉相反, 蒸汽没人用就停烧",
+    "verdict": "verified",
+    "summary": "反应堆 (没人用热): 100 秒时温度 415 度、燃料棒剩 4.00GJ; 220 秒时剩 0.00GJ、烧尽 1 根。锅炉 (没人用蒸汽): 烧热水用了 2 块煤, 100 ~ 220 秒煤 3 → 3 (停烧)",
+    "measured": {
+      "mid": {
+        "reactor_fuel": 0,
+        "reactor_burning": 3999955555.55386,
+        "reactor_temp": 414.9999999999661,
+        "reactor_spent": 0,
+        "boiler_coal": 3,
+        "boiler_burning": 1968000,
+        "tick": 97063
+      },
+      "end": {
+        "reactor_fuel": 0,
+        "reactor_burning": 0,
+        "reactor_temp": 815.0000000000001,
+        "reactor_spent": 1,
+        "boiler_coal": 3,
+        "boiler_burning": 1968000,
+        "tick": 104263
+      }
+    },
+    "refs": [
+      "nauvis.md N18 (用电路读温度控制送燃料棒)",
+      "knowledge/patterns/production.md (核电电路)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: nuclear-reactor consumption 40MW, uranium-fuel-cell 8GJ; boiler 1.8MW",
+        "credibility": 1
+      },
+      {
+        "title": "nauvis.md N18 (社区: 反应堆不按需烧, 要电路控棒)",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/power.ts"
+  },
+  "power.solar.ratio-24-panels-20-accumulators-per-MW": {
+    "autoFixes": 0,
+    "id": "power.solar.ratio-24-panels-20-accumulators-per-MW",
+    "topic": "电",
+    "claim": "新地星昼夜 7 分钟: 约 1MW 平均负载 (3 座雷达 0.9MW) 要约 24 块太阳能板 (60kW 峰值, 平均约 70%) 配约 20 个蓄电器 (100MJ) 才能整夜不断电; 蓄电器减到 8 个夜里就会断",
+    "verdict": "verified",
+    "summary": "24 块板 + 3 座雷达 (0.9MW) 跑 3 个昼夜 (第 1 个热身不计): 20 个蓄电器时断电 0/28 次采样 (储能最低 16MJ); 8 个蓄电器时断电 6/28 次 (最低 0MJ)",
+    "measured": {
+      "accs20": {
+        "starved": 0,
+        "samples": 28,
+        "minStoredMJ": 16.49483333683014
+      },
+      "accs8": {
+        "starved": 6,
+        "samples": 28,
+        "minStoredMJ": 0
+      }
+    },
+    "refs": [
+      "nauvis.md N17 (25 : 21, 每 MW 23.8 块板 + 100MJ)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Solar panel (ratio 0.84 accumulators per panel, 23.8 panels per MW)",
+        "url": "https://wiki.factorio.com/Solar_panel",
+        "date": "2026",
+        "credibility": 2
+      },
+      {
+        "title": "本机原型: solar-panel 60kW, accumulator 5MJ, nauvis day-night-cycle 25200 tick",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/power.ts"
+  },
+  "quality.science-pack.research-per-pack": {
+    "autoFixes": 0,
+    "leaks": {
+      "outside": 2578,
+      "sample": [
+        "nauvis:tree-07(-255.8125,-227.125)",
+        "nauvis:tree-07(-255.9375,-190.9375)",
+        "nauvis:tree-07(-255.9375,-188.5)",
+        "nauvis:tree-07(-255.9375,-184.4375)",
+        "nauvis:tree-08(-255.625,213.5)",
+        "nauvis:tree-08(-255.9375,218.375)",
+        "nauvis:tree-07(-254.3125,-244.625)",
+        "nauvis:tree-07(-253.75,-238.125)"
+      ],
+      "recipes": []
+    },
+    "id": "quality.science-pack.research-per-pack",
+    "topic": "品质",
+    "claim": "科技包品质按 1 + 等级放大研究量: 一瓶传说品质的自动化科技包顶 6 瓶普通的 (检索原文; 注意本机更新日志 2.1.7 把科技包从工具类改成了普通物品, 耐久机制可能已经没了)",
+    "verdict": "verified",
+    "summary": "自动化 (10 份, 每份 10 秒): 1 瓶普通推进 1.00 份, 1 瓶传说推进 6.00 份; 科技包原型类型 item",
+    "measured": {
+      "setup": {
+        "lab": {
+          "x": 64.5,
+          "y": 0.5
+        },
+        "units": 10,
+        "unit_ticks": 600,
+        "ptype": "item",
+        "pre": [
+          "automation-science-pack"
+        ]
+      },
+      "p1": 0.09999999999999998,
+      "p2": 0.7000000000000146,
+      "normal": 0.9999999999999998,
+      "legendary": 6.0000000000001465
+    },
+    "refs": [
+      "production.md 本机速查 (科技包属于工具类物品, 品质按 1 + 等级放大耐久, 待沙盘确认)",
+      "endgame-research.md (每包研究量)"
+    ],
+    "sources": [
+      {
+        "title": "检索 production.md 本机速查 (科技包是工具类、品质放大耐久); 本机更新日志 2.1.7: Changed all science packs to be plain items",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/m2-misc.ts"
+  },
+  "rails.elevated-curves-same-shapes": {
+    "autoFixes": 0,
+    "id": "rails.elevated-curves-same-shapes",
+    "topic": "火车",
+    "claim": "高架曲轨、高架半斜轨和地面同形: 同一套端点表拼出的 90° 弯和 S 弯换成高架版, 从坡道接出去按玩家规则一块块建 (够不着就在尽头下放支架), 每段两头照样接上",
+    "verdict": "verified",
+    "summary": "高架 90° 弯 8 段 (支架 3 个, 方向 0/14/12): 没接上的端头 1 (只有末端 1 个才对, 起点接坡道); 高架 S 弯 6 段 (支架 2 个): 没接上的端头 1; 用到 高架直轨 3、高架曲轨 A 2、高架曲轨 B 2、高架半斜轨 1",
+    "measured": {
+      "turn": {
+        "n": 8,
+        "dead": 1,
+        "names": {
+          "elevated-straight-rail": 4,
+          "elevated-curved-rail-a": 2,
+          "elevated-curved-rail-b": 2
+        },
+        "supports": {
+          "n": 3,
+          "items": [
+            {
+              "x": 197,
+              "y": 0,
+              "dir": 0
+            },
+            {
+              "x": 193,
+              "y": -9,
+              "dir": 14
+            },
+            {
+              "x": 184,
+              "y": -13,
+              "dir": 12
+            }
+          ]
+        }
+      },
+      "s": {
+        "n": 6,
+        "dead": 1,
+        "names": {
+          "elevated-straight-rail": 3,
+          "elevated-curved-rail-a": 2,
+          "elevated-half-diagonal-rail": 1
+        },
+        "supports": {
+          "n": 2,
+          "items": [
+            {
+              "x": 205,
+              "y": 0,
+              "dir": 0
+            },
+            {
+              "x": 208,
+              "y": -9,
+              "dir": 1
+            }
+          ]
+        }
+      }
+    },
+    "refs": [
+      "coverage.md 空白: 高架曲轨、高架半斜轨",
+      "src/blueprint/rail-geometry.ts (高架轨按同形地面轨查表)",
+      "elevated.support.reach-and-placement (支架撑法, 第十六批)"
+    ],
+    "sources": [
+      {
+        "title": "本机 2.1.24 沙盘读出的铁轨端点表 (npm run lab:dump → rail-geometry.json)",
+        "credibility": 1
+      },
+      {
+        "title": "官方开发周报 FFF #377 New new rails (新曲线半径 11 → 13 格; 曲线拆成两半; 半斜轨让 S 弯任意长)",
+        "url": "https://factorio.com/blog/post/fff-377",
+        "date": "2023-09-22",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/rails.ts"
+  },
+  "rails.s-bend-any-length": {
+    "autoFixes": 0,
+    "id": "rails.s-bend-any-length",
+    "topic": "火车",
+    "claim": "S 弯 = 半段曲轨 + n 段半斜轨 + 反向半段曲轨, 半斜轨走 22.5° 方向, 所以 S 弯可以任意长 (FFF #377: ANY length S-bend): 每多一段半斜轨, 横移多 2 格、前进多 4 格",
+    "verdict": "verified",
+    "summary": "0 段半斜轨: 横移 2 格、前进 14 格, 引擎核对没接上的端头 2 (首尾 2 个才对); 1 段半斜轨: 横移 4 格、前进 18 格, 引擎核对没接上的端头 2 (首尾 2 个才对); 2 段半斜轨: 横移 6 格、前进 22 格, 引擎核对没接上的端头 2 (首尾 2 个才对)",
+    "measured": {
+      "rows": [
+        {
+          "n": 0,
+          "shift": 2,
+          "ahead": 14,
+          "placed": {
+            "n": 5,
+            "dead": 2,
+            "moved": 0,
+            "names": {
+              "straight-rail": 3,
+              "curved-rail-a": 2
+            }
+          }
+        },
+        {
+          "n": 1,
+          "shift": 4,
+          "ahead": 18,
+          "placed": {
+            "n": 6,
+            "dead": 2,
+            "moved": 0,
+            "names": {
+              "straight-rail": 3,
+              "curved-rail-a": 2,
+              "half-diagonal-rail": 1
+            }
+          }
+        },
+        {
+          "n": 2,
+          "shift": 6,
+          "ahead": 22,
+          "placed": {
+            "n": 7,
+            "dead": 2,
+            "moved": 0,
+            "names": {
+              "straight-rail": 3,
+              "curved-rail-a": 2,
+              "half-diagonal-rail": 2
+            }
+          }
+        }
+      ]
+    },
+    "refs": [
+      "coverage.md 空白: 半对角铁轨 (half-diagonal-rail)"
+    ],
+    "sources": [
+      {
+        "title": "官方开发周报 FFF #377 New new rails (新曲线半径 11 → 13 格; 曲线拆成两半; 半斜轨让 S 弯任意长)",
+        "url": "https://factorio.com/blog/post/fff-377",
+        "date": "2023-09-22",
+        "credibility": 2
+      },
+      {
+        "title": "官方 wiki: Railway (2.0.7: 新铁轨形状、22.5° 轨道; 铁轨在 2 格网格上)",
+        "url": "https://wiki.factorio.com/Railway",
+        "date": "2026-10-22",
+        "credibility": 2
+      },
+      {
+        "title": "本机 2.1.24 沙盘读出的铁轨端点表 (npm run lab:dump → rail-geometry.json)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/rails.ts"
+  },
+  "rails.turn-90-radius-13": {
+    "autoFixes": 0,
+    "id": "rails.turn-90-radius-13",
+    "topic": "火车",
+    "claim": "2.0 的 90° 弯由 4 段曲轨拼成 (曲轨 A、B、B、A, 每段转 22.5°), 弯道半径 13 格 (1.1 是 11 格): 弯进弯出两个开口横竖各差 13 格; 列车能从直道开过弯道",
+    "verdict": "verified",
+    "summary": "90° 右弯 = 曲轨 A + 曲轨 B + 曲轨 B + 曲轨 A; 弯进弯出两个开口差 东 13 / 北 13 格; 整条 15 段引擎核对: 没接上的端头 2 个 (只有首尾 2 个才对)、被挪位置 0; 列车开过弯道停到了终点站",
+    "measured": {
+      "dx": 13,
+      "dy": 13,
+      "curves": [
+        "curved-rail-a",
+        "curved-rail-b",
+        "curved-rail-b",
+        "curved-rail-a"
+      ],
+      "placed": {
+        "n": 15,
+        "dead": 2,
+        "moved": 0,
+        "names": {
+          "straight-rail": 11,
+          "curved-rail-a": 2,
+          "curved-rail-b": 2
+        }
+      },
+      "arrived": true
+    },
+    "refs": [
+      "coverage.md 空白: 曲轨 (curved-rail-a / curved-rail-b)",
+      "lab.md #22 (铁轨端点表)"
+    ],
+    "sources": [
+      {
+        "title": "官方开发周报 FFF #377 New new rails (新曲线半径 11 → 13 格; 曲线拆成两半; 半斜轨让 S 弯任意长)",
+        "url": "https://factorio.com/blog/post/fff-377",
+        "date": "2023-09-22",
+        "credibility": 2
+      },
+      {
+        "title": "官方 wiki: Railway (2.0.7: 新铁轨形状、22.5° 轨道; 铁轨在 2 格网格上)",
+        "url": "https://wiki.factorio.com/Railway",
+        "date": "2026-10-22",
+        "credibility": 2
+      },
+      {
+        "title": "本机 2.1.24 沙盘读出的铁轨端点表 (npm run lab:dump → rail-geometry.json)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/rails.ts"
+  },
+  "smelting.stone-furnace.rate": {
+    "id": "smelting.stone-furnace.rate",
+    "topic": "熔炉",
+    "claim": "一台石炉每 3.2 秒出 1 块铁板 (每秒 0.3125 块), 所以 48 台石炉正好喂满一条黄带 (每秒 15 块)",
+    "verdict": "verified",
+    "summary": "64 秒出 20 块, 每秒 0.313 块; 48 台合计每秒 15.0 块",
+    "measured": {
+      "plates": 20,
+      "finished": 20,
+      "before": {
+        "plates": 0,
+        "finished": 0
+      },
+      "perSecond": 0.3125
+    },
+    "refs": [
+      "production.md P1"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: 石炉 crafting_speed 1, 铁板配方 3.2 秒",
+        "credibility": 1
+      },
+      {
+        "title": "秦大圣《异星工厂2.0+DLC》冶炼列比例 (B 站专栏)",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/belts.ts"
+  },
+  "space.landing-pad.one-per-surface": {
+    "autoFixes": 0,
+    "leaks": {
+      "outside": 12,
+      "sample": [
+        "nauvis:fish(57.5,26.3828125)",
+        "nauvis:fish(58.30859375,37.125)",
+        "nauvis:fish(64.046875,36.109375)",
+        "nauvis:fish(70.48828125,26.84375)",
+        "nauvis:fish(79.9140625,22.15625)",
+        "nauvis:fish(80.92578125,29.8515625)",
+        "nauvis:fish(85.86328125,32.3984375)",
+        "nauvis:fish(90.421875,14.29296875)"
+      ],
+      "recipes": []
+    },
+    "id": "space.landing-pad.one-per-surface",
+    "topic": "太空",
+    "claim": "每个表面只能建 1 个货运着陆平台: 已经有一个时, 按玩家摆放规则第二个放不下",
+    "verdict": "verified",
+    "summary": "先拆掉旧的 0 个; 第一个按玩家规则放得下; 有一个以后第二个放不下; 脚本硬建第二个建成了, 现在 2 个",
+    "measured": {
+      "old": 0,
+      "can1": true,
+      "can2": false,
+      "created": true,
+      "count": 2
+    },
+    "refs": [
+      "space-age.md 本机速查 (报错文字\"每个表面只能建造 N 个\", 原版 N 应为 1, 待沙盘确认)"
+    ],
+    "sources": [
+      {
+        "title": "本机中文语言文件: 每个表面只能建造 __1__ 个物流接驳站 / 货运着陆平台的报错",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/m2-misc.ts"
+  },
+  "splitters.even-split-and-overflow": {
+    "autoFixes": 0,
+    "id": "splitters.even-split-and-overflow",
+    "topic": "传送带",
+    "claim": "分流器把一条输入按 1:1 分到两个出口; 一个出口堵满、分不匀时全部走另一个出口 (提示与技巧 TT6)",
+    "verdict": "verified",
+    "summary": "基础传送带满载 (每秒 15) 进一个基础分流器: 两边都通时 北 7.50 / 南 7.50 每秒; 把南边收料箱堵死后 北 15.00 / 南 0.00",
+    "measured": {
+      "even": {
+        "北": {
+          "iron-plate": 7.5
+        },
+        "南": {
+          "iron-plate": 7.5
+        }
+      },
+      "blocked": {
+        "北": {
+          "iron-plate": 15
+        },
+        "南": {
+          "iron-plate": 0
+        }
+      }
+    },
+    "refs": [
+      "game-tips.md TT6",
+      "coverage.md 空白: 基础分流器"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      },
+      {
+        "title": "游戏内提示与技巧 TT6 分流器",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "splitters.filter-strict": {
+    "autoFixes": 0,
+    "id": "splitters.filter-strict",
+    "topic": "传送带",
+    "claim": "过滤分流器: 设定的物品全走指定出口, 其他物品全走另一个出口 (wiki 原文: All items of the set type will be redirected to that specific output and all other items are directed to the other output); 一边堵了也不改走另一边",
+    "verdict": "verified",
+    "summary": "过滤设铜板、走北 (输入 北铁板 / 南铜板 两条满带): 都通 → 北 铁板 0.00 / 铜板 15.00; 南 铁板 15.00 / 铜板 0.00; 堵北 → 北 铁板 0.00 / 铜板 0.00; 南 铁板 15.00 / 铜板 0.00; 堵南 → 北 铁板 0.00 / 铜板 15.00; 南 铁板 0.00 / 铜板 0.00 (每秒)",
+    "measured": {
+      "open": {
+        "北": {
+          "iron-plate": 0,
+          "copper-plate": 15
+        },
+        "南": {
+          "iron-plate": 15,
+          "copper-plate": 0
+        }
+      },
+      "northBlocked": {
+        "北": {
+          "iron-plate": 0,
+          "copper-plate": 0
+        },
+        "南": {
+          "iron-plate": 15,
+          "copper-plate": 0
+        }
+      },
+      "southBlocked": {
+        "北": {
+          "iron-plate": 0,
+          "copper-plate": 15
+        },
+        "南": {
+          "iron-plate": 0,
+          "copper-plate": 0
+        }
+      }
+    },
+    "refs": [
+      "fulgora.md F9 (雷神星分拣)",
+      "mindset.md M34 (寿司带取料)",
+      "game-tips.md TT6"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "splitters.input-priority": {
+    "autoFixes": 0,
+    "id": "splitters.input-priority",
+    "topic": "传送带",
+    "claim": "分流器设输入优先: 先吃指定那边的输入, 那条带上有空当才吃另一边 (wiki 原文: will only consume the other input once there is a gap on the prioritized input belt)",
+    "verdict": "verified",
+    "summary": "输入优先设\"左\" (北 = 铁板, 南 = 铜板, 都是满带, 出口只够一条带): 北出口 铁板 14.97 / 铜板 0.03 每秒 (铜板占 0.2%, 满带的空当里挤进去的); 断掉铁板料源后 铁板 0.00 / 铜板 15.00",
+    "measured": {
+      "both": {
+        "北": {
+          "iron-plate": 14.966666666666667,
+          "copper-plate": 0.03333333333333333
+        }
+      },
+      "cut": {
+        "北": {
+          "iron-plate": 0,
+          "copper-plate": 15
+        }
+      },
+      "priority": "left"
+    },
+    "refs": [
+      "game-tips.md TT6"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "splitters.keeps-lanes": {
+    "autoFixes": 0,
+    "id": "splitters.keeps-lanes",
+    "topic": "传送带",
+    "claim": "分流器保持车道: 只有一道有货的带子进分流器, 两个出口的货仍在同一道上 (wiki 原文: Splitters preserve the lanes of the items)",
+    "verdict": "verified",
+    "summary": "输入带 左道 0 / 右道 24 件 → 北出口 左 0 / 右 24, 南出口 左 0 / 右 24 (带上件数快照)",
+    "measured": {
+      "input": {
+        "left": 0,
+        "right": 24
+      },
+      "north": {
+        "left": 0,
+        "right": 24
+      },
+      "south": {
+        "left": 0,
+        "right": 24
+      }
+    },
+    "refs": [
+      "belts.sideload.shape-and-lane (侧向汇入只上靠近的那一道, 已核实)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      },
+      {
+        "title": "官方 wiki: Splitter",
+        "url": "https://wiki.factorio.com/Splitter",
+        "date": "2026-04-11",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "splitters.output-priority": {
+    "autoFixes": 0,
+    "id": "splitters.output-priority",
+    "topic": "传送带",
+    "claim": "分流器设输出优先: 全部先送到指定那边, 那边满了才送另一边 (wiki 原文: will only output on the other output once the specified output is full)",
+    "verdict": "verified",
+    "summary": "朝东的分流器输出优先设\"左\" (= 行进方向左手边 = 北): 两边都通时 北 15.00 / 南 0.00 每秒; 北边收料箱堵死后 北 0.00 / 南 15.00",
+    "measured": {
+      "open": {
+        "北": {
+          "iron-plate": 15
+        },
+        "南": {
+          "iron-plate": 0
+        }
+      },
+      "blocked": {
+        "北": {
+          "iron-plate": 0
+        },
+        "南": {
+          "iron-plate": 15
+        }
+      },
+      "priority": "left"
+    },
+    "refs": [
+      "game-tips.md TT6 (可以设输入或输出优先)",
+      "fulgora.md F9、F17 (分拣、溢出回收靠输出优先)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "splitters.speed-matches-belt": {
+    "autoFixes": 0,
+    "id": "splitters.speed-matches-belt",
+    "topic": "传送带",
+    "claim": "分流器的速度和同级传送带一样 (基础 / 高速 / 极速 / 超速 每条每秒 15 / 30 / 45 / 60), 两条满带进两条满带出, 分流器不是瓶颈",
+    "verdict": "verified",
+    "summary": "基础分流器 两出口合计每秒 30.00 (两条满带 30); 高速分流器 两出口合计每秒 60.00 (两条满带 60); 极速分流器 两出口合计每秒 90.00 (两条满带 90); 超速分流器 两出口合计每秒 120.00 (两条满带 120)",
+    "measured": {
+      "got": [
+        {
+          "splitter": "splitter",
+          "want": 30,
+          "perSecond": 30
+        },
+        {
+          "splitter": "fast-splitter",
+          "want": 60,
+          "perSecond": 60
+        },
+        {
+          "splitter": "express-splitter",
+          "want": 90,
+          "perSecond": 90
+        },
+        {
+          "splitter": "turbo-splitter",
+          "want": 120,
+          "perSecond": 120
+        }
+      ]
+    },
+    "refs": [
+      "belts.throughput.* (传送带吞吐已核实)",
+      "coverage.md 空白: 高速分流器、极速分流器; 只有检索: 超速分流器"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      },
+      {
+        "title": "本机 2.1.24 原型数据 (underground-belt.max_distance、splitter.speed)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "spoilage.crafting.inherits-freshness": {
+    "id": "spoilage.crafting.inherits-freshness",
+    "topic": "腐坏",
+    "claim": "配方只有一种会腐坏的原料时, 产物直接继承它的腐坏进度: 用腐坏了 50% 的玉玛果泥做营养素, 做出的营养素一出来就约 50%",
+    "verdict": "verified",
+    "summary": "原料玉玛果泥腐坏 50%, 做出 6 个营养素, 读到时腐坏 51.7%",
+    "measured": {
+      "input": 0.5,
+      "output": {
+        "count": 6,
+        "spoil": 0.5169444444444444,
+        "finished": 1
+      }
+    },
+    "refs": [
+      "knowledge-taxonomy 二: 腐坏",
+      "gleba.md 第 2 节 腐坏"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Spoilage mechanics (\"If the recipe only has one spoilable input, then the freshness percentage is transferred directly to the output\")",
+        "url": "https://wiki.factorio.com/Spoilage_mechanics",
+        "date": "2026-10-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/spoilage.ts"
+  },
+  "spoilage.crafting.multiple-spoilable-averaged": {
+    "id": "spoilage.crafting.multiple-spoilable-averaged",
+    "topic": "腐坏",
+    "claim": "配方有多种会腐坏的原料时 (生物结晶 = 15 玉玛果泥 + 12 果冻), 产物的新鲜度取原料的平均 (wiki 没说是按件数加权还是简单平均; 实测给出数值)",
+    "verdict": "verified",
+    "summary": "玉玛果泥 0% + 果冻 60% → 生物结晶 26.7% (简单平均 30.0%, 按件数加权 26.7%, 更接近按件数加权)",
+    "measured": {
+      "ref": {
+        "x": 64.5,
+        "y": 0.5,
+        "mash": 0,
+        "jelly": 0.6
+      },
+      "r": {
+        "count": 4,
+        "spoil": 0.26744212962962965,
+        "finished": 1
+      },
+      "simple": 0.3,
+      "weighted": 0.26666666666666666
+    },
+    "refs": [
+      "docs/verify.md 下一批 (多种会腐坏原料的配方)",
+      "logistics.md L21"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Spoilage mechanics (multiple spoilable inputs → averaged)",
+        "url": "https://wiki.factorio.com/Spoilage_mechanics",
+        "date": "2026-10-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage2.ts"
+  },
+  "spoilage.fruit.no-spoil-before-harvest": {
+    "id": "spoilage.fruit.no-spoil-before-harvest",
+    "topic": "腐坏",
+    "claim": "果子长在树上不腐坏: 玉玛果树熟了放 35 分钟不收, 收下来的果仍是新鲜的; 同一时间箱子里的玉玛果已腐坏过半 (60 分钟全坏)",
+    "verdict": "verified",
+    "summary": "树上挂了 35 分钟才收: 50 个玉玛果腐坏 0.1%; 同期箱子里的玉玛果腐坏 67%",
+    "measured": {
+      "p": {
+        "tree": {
+          "x": 124.5,
+          "y": 0.5
+        },
+        "chest": {
+          "x": 134.5,
+          "y": -6.5
+        }
+      },
+      "r": {
+        "harvested": 50,
+        "spoil": 0.0013425925925926174,
+        "chest_spoil": 0.6683333333333333,
+        "tree_alive": false,
+        "tick": 145782
+      }
+    },
+    "refs": [
+      "logistics.md L22",
+      "knowledge/patterns/production.md P-prod-19 (按需收)"
+    ],
+    "sources": [
+      {
+        "title": "官方论坛 (句芒做法: 果子采摘前不会腐坏)",
+        "url": "https://forums.factorio.com/viewtopic.php?p=701792",
+        "date": "2025-09",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型: 玉玛果树 18000 tick 成熟; 玉玛果 216000 tick 腐坏",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage2.ts"
+  },
+  "spoilage.inserter.spoiled-first-only-from-containers": {
+    "autoFixes": 0,
+    "id": "spoilage.inserter.spoiled-first-only-from-containers",
+    "topic": "腐坏",
+    "claim": "机械臂的\"腐坏优先\"只在从容器取货时生效: 从箱子取时先拿腐坏的那批 (腐坏的先被拿光, 新鲜的原样剩着); 从传送带取时拿到什么是什么 (先到跟前的新鲜果被拿走, 后面腐坏的剩在带上)",
+    "verdict": "verified",
+    "summary": "搬 2.5 秒: 箱子 (腐坏优先) 拿了腐坏 8 / 新鲜 0; 带子 (新鲜的在前) 设腐坏优先的拿了新鲜 5 / 腐坏 4, 不设的对照拿了新鲜 5 / 腐坏 4 → 对带子无效",
+    "measured": {
+      "r": {
+        "how": "spoiled-first/spoiled-first/none",
+        "placed_on_belt": 32,
+        "src": {
+          "x": 57.5,
+          "y": -4.5
+        },
+        "last": {
+          "x": 64.5,
+          "y": 4.5
+        },
+        "last2": {
+          "x": 64.5,
+          "y": 10.5
+        },
+        "belts": 8,
+        "x0": 57.5
+      },
+      "s": {
+        "A": {
+          "fresh": 20,
+          "spoiled": 12
+        },
+        "B": {
+          "fresh": 3,
+          "spoiled": 4
+        },
+        "B2": {
+          "fresh": 3,
+          "spoiled": 4
+        }
+      },
+      "takenA": {
+        "fresh": 0,
+        "spoiled": 8
+      },
+      "takenB": {
+        "fresh": 5,
+        "spoiled": 4
+      },
+      "takenB2": {
+        "fresh": 5,
+        "spoiled": 4
+      }
+    },
+    "refs": [
+      "logistics.md L21",
+      "knowledge/patterns/production.md P-prod-19 (垃圾槽 / 变质物处理)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Spoilage mechanics (inserter spoil priority)",
+        "url": "https://wiki.factorio.com/Spoilage_mechanics",
+        "date": "2026-10-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage3.ts"
+  },
+  "spoilage.nutrients.5-minutes-linear": {
+    "id": "spoilage.nutrients.5-minutes-linear",
+    "topic": "腐坏",
+    "claim": "营养素 5 分钟 (18000 tick) 腐坏成变质物, 中途腐坏进度和时间成正比 (2.5 分钟时约 50%)",
+    "verdict": "verified",
+    "summary": "2.5 分钟时 10 个营养素腐坏进度 50%; 5 分钟 10 秒时剩 0 个营养素、10 个变质物",
+    "measured": {
+      "half": {
+        "count": 10,
+        "spoil": 0.5,
+        "spoilage": 0,
+        "tick": 10745
+      },
+      "end": {
+        "count": 0,
+        "spoilage": 10,
+        "tick": 20345
+      }
+    },
+    "refs": [
+      "gleba.md 本机速查: 腐坏时间",
+      "knowledge-taxonomy 二: 腐坏"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: nutrients spoil_ticks 18000 → spoilage",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Spoilage mechanics",
+        "url": "https://wiki.factorio.com/Spoilage_mechanics",
+        "date": "2026-10-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/spoilage.ts"
+  },
+  "spoilage.pentapod-egg.hatches-15-minutes": {
+    "id": "spoilage.pentapod-egg.hatches-15-minutes",
+    "topic": "腐坏",
+    "claim": "五足虫卵放在箱子里 15 分钟 (54000 tick) 后不是变成变质物, 而是原地孵出大型早衰蠕动五足虫, 一个卵一只 (这就是\"会孵化的东西只走传送带\"的根据)",
+    "verdict": "verified",
+    "summary": "3 个卵: 7.5 分钟时还在 (进度 50%); 15 分钟后箱子里剩 0 个卵、0 个变质物, 箱子旁出现 大型早衰蠕动五足虫×3",
+    "measured": {
+      "half": {
+        "count": 3,
+        "spoil": 0.5,
+        "spoilage": 0,
+        "tick": 47345
+      },
+      "end": {
+        "count": 0,
+        "spoilage": 0,
+        "tick": 74945
+      },
+      "units": {
+        "big-wriggler-pentapod-premature": 3
+      }
+    },
+    "refs": [
+      "记忆 feedback-hatch-risk-logistics",
+      "gleba.md G9、G15",
+      "requirements 原则: 会孵化的东西"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: pentapod-egg spoil_ticks 54000, spoil_to_trigger_result",
+        "credibility": 1
+      },
+      {
+        "title": "官方 wiki: Spoilage mechanics (特殊腐坏物表: Spawns a premature wriggler)",
+        "url": "https://wiki.factorio.com/Spoilage_mechanics",
+        "date": "2026-10-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/spoilage.ts"
+  },
+  "spoilage.spoilage-as-fuel-250kJ": {
+    "autoFixes": 0,
+    "id": "spoilage.spoilage-as-fuel-250kJ",
+    "topic": "腐坏",
+    "claim": "变质物能当燃料 (250kJ 一个, 煤的 1/16): 供热塔吃下一个, 燃烧槽里就是 250kJ",
+    "verdict": "verified",
+    "summary": "供热塔收下 1 个变质物, 插入时燃烧槽 0kJ、燃料槽 1 个; 半秒后燃料槽 0 个 (烧掉了)",
+    "measured": {
+      "r": {
+        "inserted": 1,
+        "remaining": 0,
+        "in_slot": 1,
+        "x": 64.5,
+        "y": 0.5
+      },
+      "q": {
+        "remaining": 0,
+        "in_slot": 0,
+        "heat": 15.125,
+        "tick": 59565
+      },
+      "burning": 8000000
+    },
+    "refs": [
+      "knowledge/patterns/production.md P-prod-19 (卵线末端烧 / 多余的烧进供热塔)",
+      "logistics.md L22"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: spoilage fuel_value 250kJ",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage3.ts"
+  },
+  "spoilage.spoiled-input.blocks-machine-until-cleared": {
+    "autoFixes": 0,
+    "id": "spoilage.spoiled-input.blocks-machine-until-cleared",
+    "topic": "腐坏",
+    "claim": "机器里的原料坏了会被挪进输出槽当垃圾 (不留在输入槽); 没有出料臂时输出槽被变质物占着, 机器停在\"输出已满\"; 旁边不带过滤的出料臂会把变质物顺手清走, 机器照常开工 (G12 原话: 垃圾槽满了机器就停, 不带过滤的出料臂顺手清垃圾)",
+    "verdict": "verified",
+    "summary": "没出料臂: 果泥坏完后输入槽变质物 0、输出槽 4; 再给料 10 秒后状态 full_output, 做了 0 次; 有出料臂: 变质物被搬进箱子 4 个, 再给料 10 秒做了 1 次 (状态 item_ingredient_shortage)",
+    "measured": {
+      "noInserter": {
+        "spoiled": {
+          "mash": 0,
+          "spoilage_in_input": 0,
+          "spoilage_in_output": 4,
+          "status": "no_fuel",
+          "finished": 0,
+          "chest_spoilage": -1,
+          "mash_inserted": 4
+        },
+        "after": {
+          "mash": 0,
+          "spoilage_in_input": 0,
+          "spoilage_in_output": 4,
+          "status": "full_output",
+          "finished": 0,
+          "chest_spoilage": -1
+        }
+      },
+      "withInserter": {
+        "spoiled": {
+          "mash": 0,
+          "spoilage_in_input": 0,
+          "spoilage_in_output": 0,
+          "status": "no_fuel",
+          "finished": 0,
+          "chest_spoilage": 4,
+          "mash_inserted": 4
+        },
+        "after": {
+          "mash": 0,
+          "spoilage_in_input": 0,
+          "spoilage_in_output": 0,
+          "status": "item_ingredient_shortage",
+          "finished": 1,
+          "chest_spoilage": 4
+        }
+      }
+    },
+    "refs": [
+      "knowledge/patterns/planets.md P-planet-14 (G12: 变质原料堵住槽位, 不带过滤的出料臂顺手清垃圾)"
+    ],
+    "sources": [
+      {
+        "title": "planets.md 句芒 G12 (论坛 / 视频: 垃圾槽和出料臂清垃圾)",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage3.ts"
+  },
+  "spoilage.stack-merge.weighted-average": {
+    "id": "spoilage.stack-merge.weighted-average",
+    "topic": "腐坏",
+    "claim": "两堆新鲜度不同的同种物品并成一堆时, 新鲜度按件数加权平均 (10 个 50% + 30 个 10% → 40 个 20%), 整堆以后一起腐坏",
+    "verdict": "verified",
+    "summary": "10 个 50% + 30 个 10% 并成 40 个, 腐坏进度 20.0% (加权平均应为 20%)",
+    "measured": {
+      "ok": true,
+      "err": "nil",
+      "before": [
+        0.5,
+        0.09999999999999998
+      ],
+      "count": 40,
+      "spoil": 0.19999999999999996,
+      "slot2": 0,
+      "expect": 0.2
+    },
+    "refs": [
+      "logistics.md L21",
+      "knowledge/patterns/production.md (句芒线别囤)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Spoilage mechanics (stack merging)",
+        "url": "https://wiki.factorio.com/Spoilage_mechanics",
+        "date": "2026-10-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage2.ts"
+  },
+  "spoilage.timers.mash-3min-jelly-4min": {
+    "autoFixes": 0,
+    "id": "spoilage.timers.mash-3min-jelly-4min",
+    "topic": "腐坏",
+    "claim": "玉玛果泥 3 分钟 (10800 tick)、果冻 4 分钟 (14400 tick) 腐坏成变质物, 进度线性: 1.5 分钟时果泥 50%、果冻 37.5%",
+    "verdict": "verified",
+    "summary": "1.5 分钟: 果泥 50%、果冻 37.5%; 3 分钟 1 秒: 果泥剩 0、果冻剩 10; 4 分钟 1 秒: 果冻剩 0, 变质物 20",
+    "measured": {
+      "half": {
+        "mash": 10,
+        "mash_spoil": 0.5,
+        "jelly": 10,
+        "jelly_spoil": 0.375,
+        "spoilage": 0,
+        "tick": 50475
+      },
+      "m3": {
+        "mash": 0,
+        "jelly": 10,
+        "jelly_spoil": 0.7541666666666667,
+        "spoilage": 10,
+        "tick": 55935
+      },
+      "m4": {
+        "mash": 0,
+        "jelly": 0,
+        "spoilage": 20,
+        "tick": 59535
+      }
+    },
+    "refs": [
+      "gleba.md 本机速查: 腐坏时间",
+      "knowledge/patterns/logistics-choice.md P-logi-05 (运果子不运果泥)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型: yumako-mash spoil_ticks 10800, jelly 14400",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/spoilage3.ts"
+  },
+  "tips.aquilo.unheated-freeze-except-poles-solar-accumulators": {
+    "autoFixes": 0,
+    "id": "tips.aquilo.unheated-freeze-except-poles-solar-accumulators",
+    "topic": "玄冥星",
+    "claim": "玄冥星上没贴着热源的建筑会冻住, 例外是电线杆、太阳能板、蓄电器 (不冻)",
+    "verdict": "verified",
+    "summary": "小型电线杆 没冻、太阳能板 没冻、蓄电器 没冻、组装机1型 0 秒冻住、电力机械臂 0 秒冻住、基础传送带 0 秒冻住、铁箱 没冻",
+    "measured": {
+      "first": {
+        "assembling-machine-1": 0,
+        "inserter": 0,
+        "transport-belt": 0
+      },
+      "last": {
+        "small-electric-pole": "没冻",
+        "solar-panel": "没冻",
+        "accumulator": "没冻",
+        "assembling-machine-1": "冻住",
+        "inserter": "冻住",
+        "transport-belt": "冻住",
+        "iron-chest": "没冻"
+      }
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT29 (加热机械)",
+      "aquilo.md (加热和保温)",
+      "feedback: 玄冥星防冻"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 加热机械 (本机 2.1.24)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "tips.fast-replace.keeps-contents-and-recipe": {
+    "autoFixes": 0,
+    "id": "tips.fast-replace.keeps-contents-and-recipe",
+    "topic": "建造",
+    "claim": "快捷替换 (在同类同尺寸的实体上直接建) 保留里面的物品和配方: 组装机1型换成 2 型, 配方和原料、成品都还在; 木箱换成铁箱, 东西还在 (对照: 先拆再建就没了)",
+    "verdict": "verified",
+    "summary": "组装机1型 → 组装机2型: 配方 铁齿轮、原料 40/40、成品 3/3; 木箱 → 铁箱: 30/30; 对照 (先拆再建) 0; 旧实体剩 0 个",
+    "measured": {
+      "asm2": "assembling-machine-2",
+      "recipe": "iron-gear-wheel",
+      "plates": 40,
+      "gears": 3,
+      "chest": 30,
+      "chestName": "iron-chest",
+      "control": 0,
+      "oldGone": 0
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT21 (快捷替换)",
+      "M5 升级流程 (升级不用先拆)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 快捷替换 (本机 2.1.24)",
+        "credibility": 1
+      },
+      {
+        "title": "API: LuaSurface.create_entity 的 fast_replace = 模拟玩家快捷替换",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "tips.inserter.drops-on-far-lane": {
+    "autoFixes": 0,
+    "id": "tips.inserter.drops-on-far-lane",
+    "topic": "机械臂",
+    "claim": "机械臂往传送带上放货只放远端那一道: 东行带子北边的机械臂放在南道 (右道), 南边的放在北道 (左道)",
+    "verdict": "verified",
+    "summary": "东行带子: 左道 (北) 铁板 0、铜板 10; 右道 (南) 铁板 10、铜板 0",
+    "measured": {
+      "left": {
+        "copper-plate": 10
+      },
+      "right": {
+        "iron-plate": 10
+      }
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT1 (传送带运送线路)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 传送带运送线路 (本机 2.1.24)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "tips.inserter.insertion-limits": {
+    "autoFixes": 0,
+    "id": "tips.inserter.insertion-limits",
+    "topic": "机械臂",
+    "claim": "机械臂不会把目标装满: 机枪炮塔里有 10 发弹药 (原型 automated_ammo_count) 就不再装, 锅炉里有 5 个煤就不再装, 剩下的留给带子后面的",
+    "verdict": "verified",
+    "summary": "机械臂从永续箱一直喂 30 秒: 机枪炮塔里停在 10 发 (原型 automated_ammo_count 10), 锅炉里停在 5 个煤矿 (没接水, 不烧)",
+    "measured": {
+      "ammo": 10,
+      "coal": 5,
+      "limit": 10
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT2 (搬运限制)",
+      "feedback: 弹药靠传送带自动补 (一条弹药带串多座炮塔)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 搬运限制 (本机 2.1.24)",
+        "credibility": 1
+      },
+      {
+        "title": "本机原型: turrets.lua gun-turret automated_ammo_count = 10",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "tips.rail-gate.train-opens-it": {
+    "autoFixes": 0,
+    "id": "tips.rail-gate.train-opens-it",
+    "topic": "火车",
+    "claim": "闸门可以建在直轨上 (轨道两格各一个), 列车开过来闸门自动打开, 车不停, 开过去后闸门再关上",
+    "verdict": "verified",
+    "summary": "直轨上 2 个闸门 (朝向 0/0): 车来之前开着 0 个; 车经过时开着 2 个; 在闸门前后 15 格内停车 0 个采样点; 到了甲站; 过后 10 秒开着 0 个",
+    "measured": {
+      "gates": [
+        {
+          "x": 238.5,
+          "y": 32.5,
+          "dir": 0
+        },
+        {
+          "x": 238.5,
+          "y": 33.5,
+          "dir": 0
+        }
+      ],
+      "before": 0,
+      "openSeen": 2,
+      "stopsMidway": 0,
+      "stopsAt": [],
+      "arrived": true,
+      "after": 0
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT16 (铁路闸门)",
+      "knowledge/patterns/defense.md (墙穿铁路)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 铁路闸门 (本机 2.1.24)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "tips.spoil.quality-lasts-longer": {
+    "autoFixes": 0,
+    "id": "tips.spoil.quality-lasts-longer",
+    "topic": "腐坏",
+    "claim": "品质越高保质期越长: 保质期乘品质的 spoil_ticks_multiplier (默认 1 + 0.3×等级: 精良 1.3、稀有 1.6、史诗 1.9、传说 2.5), 同样时间里坏得按这个倍数慢",
+    "verdict": "verified",
+    "summary": "营养素 20 秒: normal 坏了 6.83% (慢 1.000 倍, 倍率 1); uncommon 坏了 5.26% (慢 1.300 倍, 倍率 1.2999999523162842); rare 坏了 4.27% (慢 1.600 倍, 倍率 1.600000023841858); epic 坏了 3.60% (慢 1.900 倍, 倍率 1.899999976158142); legendary 坏了 2.73% (慢 2.500 倍, 倍率 2.5)",
+    "measured": {
+      "rows": [
+        {
+          "q": "normal",
+          "spoil": 0.06833333333333336,
+          "mult": 1,
+          "ratio": 1
+        },
+        {
+          "q": "uncommon",
+          "spoil": 0.052566348989273044,
+          "mult": 1.2999999523162842,
+          "ratio": 1.299944444444445
+        },
+        {
+          "q": "rare",
+          "spoil": 0.04270833333333335,
+          "mult": 1.600000023841858,
+          "ratio": 1.6
+        },
+        {
+          "q": "epic",
+          "spoil": 0.03596596391707363,
+          "mult": 1.899999976158142,
+          "ratio": 1.8999444444444435
+        },
+        {
+          "q": "legendary",
+          "spoil": 0.02733333333333332,
+          "mult": 2.5,
+          "ratio": 2.500000000000002
+        }
+      ]
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT35 (变质)",
+      "本机更新日志 2.1.7 (QualityPrototype::spoil_ticks_multiplier)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 变质 (本机 2.1.24)",
+        "credibility": 1
+      },
+      {
+        "title": "本机 API 文档: QualityPrototype.spoil_ticks_multiplier 默认 = default_multiplier = 1 + 0.3 × level",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "tips.vulcanus.lava-destroys-items": {
+    "autoFixes": 0,
+    "id": "tips.vulcanus.lava-destroys-items",
+    "topic": "祝融星",
+    "claim": "祝融星上机械臂把东西放到岩浆地块上就清掉了 (一次放一整堆, 2.1.9 起): 箱子里 20 块铁板被搬空、地上什么都没留; 对照: 放到普通地面只能放下 1 件, 机械臂就停了",
+    "verdict": "verified",
+    "summary": "岩浆 (lava): 箱子剩 0/20, 地上 0; 对照 普通地面 (lab-dark-1): 箱子剩 18/20, 地上 1",
+    "measured": {
+      "r": [
+        {
+          "chest": {
+            "x": 60.5,
+            "y": -2.5
+          },
+          "tx": 62.5,
+          "ty": -2.5,
+          "tile": "lava"
+        },
+        {
+          "chest": {
+            "x": 60.5,
+            "y": 2.5
+          },
+          "tx": 62.5,
+          "ty": 2.5,
+          "tile": "lab-dark-1"
+        }
+      ],
+      "m": [
+        {
+          "left": 0,
+          "ground": 0
+        },
+        {
+          "left": 18,
+          "ground": 1
+        }
+      ]
+    },
+    "refs": [
+      "docs/research/players/game-tips.md TT27 (岩浆加工)",
+      "vulcanus.md (石矿出口和岩浆)"
+    ],
+    "sources": [
+      {
+        "title": "游戏内提示与技巧: 岩浆加工 (本机 2.1.24)",
+        "credibility": 1
+      },
+      {
+        "title": "本机更新日志 2.1.9: 机械臂往岩浆里放会一次放一整堆",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "trains.disabled-en-route.still-goes": {
+    "autoFixes": 0,
+    "id": "trains.disabled-en-route.still-goes",
+    "topic": "火车",
+    "claim": "列车已经在去某站的路上时该站被停用 (电路停用或上限改 0), 列车照样开到这个站并等完条件, 不改去别的同名站; 只有出发时目的站已经停用, 才挑另一个启用的同名站",
+    "verdict": "verified",
+    "summary": "出发前停用 (对照) → 到远站、停了 3.0 秒; 途中电路停用 → 到近站、停了 3.0 秒 (停用后要去的站: 近站); 途中上限改 0 → 到近站、停了 3.0 秒 (停用后要去的站: 近站)",
+    "measured": {
+      "出发前停用 (对照)": {
+        "at": "远站",
+        "waitedTicks": 180
+      },
+      "途中电路停用": {
+        "at": "近站",
+        "waitedTicks": 180,
+        "goalBefore": "近站",
+        "goalAfter": "近站"
+      },
+      "途中上限改 0": {
+        "at": "近站",
+        "waitedTicks": 180,
+        "goalBefore": "近站",
+        "goalAfter": "近站"
+      }
+    },
+    "refs": [
+      "logistics.md L14 (停用 = 上限 0)",
+      "trains.md T20 (半路状态)",
+      "verify.md 下一批原写作\"在途中被停用就改去另一个同名站\", 和 wiki 原文相反, 以实测为准"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Train stop (列车在途中或已停站时车站被停用, 列车照样开到站并完成等待条件; 上限在途中改变也一样; 目的站已停用才选同名的启用站)",
+        "url": "https://wiki.factorio.com/Train_stop",
+        "date": "2026-03-13",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains3.ts"
+  },
+  "trains.disabled-stop.no-skip": {
+    "id": "trains.disabled-stop.no-skip",
+    "topic": "火车",
+    "claim": "停用车站 = 上限 0: 2.0 起列车不再跳站, 目的地没有可用的同名站就原地显示\"目的地已满\"等着, 时刻表停在那一条不往下走; 车站上限设 0 和电路停用效果一样; 重新启用后列车照常开过去",
+    "verdict": "verified",
+    "summary": "甲站上限 0: 40 秒后 destination_full, 时刻表仍在第 1 条, 启用后到站; 电路停用: destination_full, 时刻表仍在第 1 条, 启用后到站 (都没跳到乙)",
+    "measured": {
+      "limit0": {
+        "set": {
+          "limit": 0
+        },
+        "after10s": {
+          "state": "destination_full",
+          "current": 1,
+          "station": "乙"
+        },
+        "after40s": {
+          "state": "destination_full",
+          "current": 1,
+          "station": "乙"
+        },
+        "reenabled_reached_jia": true
+      },
+      "circuit-off": {
+        "set": {
+          "limit": 4294967295,
+          "enabled": false,
+          "wired": true
+        },
+        "after10s": {
+          "state": "destination_full",
+          "current": 1,
+          "station": "乙"
+        },
+        "after40s": {
+          "state": "destination_full",
+          "current": 1,
+          "station": "乙"
+        },
+        "reenabled_reached_jia": true
+      }
+    },
+    "refs": [
+      "logistics.md L14",
+      "trains.md README 第二轮 #10"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki Train stop (Train limit / 停用)",
+        "url": "https://wiki.factorio.com/Train_stop",
+        "date": "2026-03-13",
+        "credibility": 2
+      },
+      {
+        "title": "B 站维基 车站",
+        "url": "https://wiki.biligame.com/factorio/车站",
+        "date": "2026-10-30",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains.ts"
+  },
+  "trains.interrupt.appends-temporary-stop": {
+    "id": "trains.interrupt.appends-temporary-stop",
+    "topic": "火车",
+    "claim": "中断触发时只把目标站作为临时站追加进时刻表 (记录标 temporary), 主时刻表的记录原样保留; 临时站到过就删掉, 列车接着去原来的下一站; 条件不再成立就不再触发",
+    "verdict": "verified",
+    "summary": "到站顺序 甲→丙→乙→甲→乙 (每站时刻表条数 2/3/2/2/2); 主表 2 条始终保留, 临时站出现过; 装上铁板 13 块后不再触发",
+    "measured": {
+      "visits": [
+        "甲",
+        "丙",
+        "乙",
+        "甲",
+        "乙"
+      ],
+      "recordCounts": [
+        2,
+        3,
+        2,
+        2,
+        2
+      ],
+      "sawTemp": true,
+      "originalsKept": true,
+      "plates": 13,
+      "rig": {
+        "x": 55.5,
+        "y": 34.5
+      }
+    },
+    "refs": [
+      "logistics.md L15",
+      "trains.md T19"
+    ],
+    "sources": [
+      {
+        "title": "官方论坛员工答复 (中断只追加临时站)",
+        "url": "https://forums.factorio.com/viewtopic.php?p=627674",
+        "date": "2024-10-30",
+        "credibility": 2
+      },
+      {
+        "title": "FFF-389 列车中断",
+        "url": "https://factorio.com/blog/post/fff-389",
+        "date": "2023-12-15",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains.ts"
+  },
+  "trains.interrupt.ignored-while-temporary-stop": {
+    "id": "trains.interrupt.ignored-while-temporary-stop",
+    "topic": "火车",
+    "claim": "时刻表里只要有临时站 (手动或脚本派的), 列车就不检查中断: 燃料已经低于加油条件, 去临时站的路上不加油; 临时站到过以后, 下一次离站才触发加油中断",
+    "verdict": "verified",
+    "summary": "煤 10 (< 25) 时插临时站丙: 到站顺序 丙→加油; 去丙的路上加油 0 次, 到过丙之后加油 1 次 (结束时煤 9/9)",
+    "measured": {
+      "visits": [
+        "丙",
+        "加油"
+      ],
+      "refuelBeforeTemp": 0,
+      "refuelAfterTemp": 1,
+      "end": {
+        "state": "wait_station",
+        "station": "加油",
+        "records": [
+          {
+            "station": "加油",
+            "temporary": true
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          },
+          {
+            "station": "乙",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          9,
+          9
+        ],
+        "x": 368,
+        "y": 97,
+        "speed": 0
+      }
+    },
+    "refs": [
+      "trains.md T21 (官方员工: 有意的)",
+      "knowledge/patterns/logistics-choice.md P-logi-08 (遥控过的车不会自己去加油)"
+    ],
+    "sources": [
+      {
+        "title": "官方论坛员工答复 (临时站存在时不检查中断)",
+        "url": "https://forums.factorio.com/viewtopic.php?p=668817",
+        "date": "2025-04",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains2.ts"
+  },
+  "trains.limit.counts-en-route": {
+    "autoFixes": 0,
+    "id": "trains.limit.counts-en-route",
+    "topic": "火车",
+    "claim": "车站上限把在途的车也算进去: 上限 1 的站, 第一列车还在路上就占了名额, 第二列车显示\"目的地已满\"原地等; 第一列车停站期间仍占着; 离站后也不立刻释放, 要整列开出车站所在的区段 (车尾过了下一个信号) 名额才放出来, 第二列车才出发",
+    "verdict": "verified",
+    "summary": "丙站上限 1: A 出发前计数 0; A 在路上时计数 1 (预约 1), B 是 destination_full; A 停站时 B 仍是 destination_full、计数 1; A 离站那一刻计数 1, B 在 A 离站后 2.83 秒 变成 on_the_path (那时 A 车尾约在 x=39.5, S1 在 x=39.5: 刚开出丙区段)",
+    "measured": {
+      "before": {
+        "count": 0,
+        "reservations": 0,
+        "limit": 1
+      },
+      "aEnRoute": {
+        "state": "on_the_path",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          49
+        ],
+        "x": 72.34765625,
+        "y": 33,
+        "speed": 0.11916935355525896
+      },
+      "stopEnRoute": {
+        "count": 1,
+        "reservations": 1,
+        "limit": 1
+      },
+      "bEnRoute": {
+        "state": "destination_full",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          50
+        ],
+        "x": 100,
+        "y": 33,
+        "speed": 0
+      },
+      "aThen": {
+        "state": "arrive_station",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          49
+        ],
+        "x": 54.72265625,
+        "y": 33,
+        "speed": 0.20421063353051191
+      },
+      "bParked": {
+        "state": "destination_full",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          50
+        ],
+        "x": 100,
+        "y": 33,
+        "speed": 0
+      },
+      "stopParked": {
+        "count": 1,
+        "reservations": 1,
+        "limit": 1
+      },
+      "aLeft": 770,
+      "stopAtLeave": {
+        "count": 1,
+        "reservations": 1,
+        "limit": 1
+      },
+      "bGo": 940,
+      "bAtGo": {
+        "state": "on_the_path",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          49
+        ],
+        "x": 99.921875,
+        "y": 33,
+        "speed": 0.017263854880314636
+      },
+      "aAtGo": {
+        "west": 22.00390625,
+        "east": 36.00390625,
+        "has_path": true,
+        "goal": {
+          "name": "甲",
+          "x": 15,
+          "y": 31
+        }
+      },
+      "s1": {
+        "x": 39.5,
+        "y": 31.5
+      }
+    },
+    "refs": [
+      "logistics.md L14 (在途和停站的车都计入上限)",
+      "trains.md T19 (出车站区段才释放预约)",
+      "knowledge/patterns/logistics-choice.md P-logi-09 (通用车网靠优先级 + 上限)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Train stop (只有设定数量的列车能把这个站预约为目的地)",
+        "url": "https://wiki.factorio.com/Train_stop",
+        "date": "2026-03-13",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains3.ts"
+  },
+  "trains.refuel-interrupt.needs-wait-condition": {
+    "id": "trains.refuel-interrupt.needs-wait-condition",
+    "topic": "火车",
+    "claim": "加油中断的目标站不写等待条件 → 列车到站立刻走, 机械臂没机会装燃料, 燃料仍低、中断反复触发 (死循环); 目标站加\"静止 5 秒\"后机械臂能装上, 中断就不再触发",
+    "verdict": "verified",
+    "summary": "不写等待条件: 3 分钟触发 20 次, 结束时机车煤 13/13 (on_the_path); 写\"静止 5 秒\": 触发 1 次, 结束时煤 146/145",
+    "measured": {
+      "no-wait": {
+        "triggers": 20,
+        "stopsAtFuel": 0,
+        "fuelEnd": [
+          13,
+          13
+        ],
+        "minFuel": 13,
+        "visits": "甲→乙→甲→乙→甲→乙→甲→乙→甲→乙→甲→乙",
+        "stateEnd": "on_the_path"
+      },
+      "inactivity-5s": {
+        "triggers": 1,
+        "stopsAtFuel": 1,
+        "fuelEnd": [
+          146,
+          145
+        ],
+        "minFuel": 20,
+        "visits": "甲→加油→乙→甲→乙→甲→乙→甲→乙→甲→乙→甲",
+        "stateEnd": "wait_station"
+      },
+      "rig": [
+        {
+          "x": 112.5,
+          "y": 34.5
+        },
+        {
+          "x": 126.5,
+          "y": 34.5
+        }
+      ]
+    },
+    "refs": [
+      "trains.md T22 ①"
+    ],
+    "sources": [
+      {
+        "title": "官方论坛 (加油中断无限循环的原因和解法)",
+        "url": "https://forums.factorio.com/viewtopic.php?p=643367",
+        "date": "2024-11-10",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains.ts"
+  },
+  "trains.same-name-unreachable.no-path-not-full": {
+    "autoFixes": 0,
+    "id": "trains.same-name-unreachable.no-path-not-full",
+    "topic": "火车",
+    "claim": "同名车站里够得着的都满了、但还有一个够不着且有空位时, 列车显示\"无路可走\"而不是\"目的地已满\"; 把那个够不着的站拆掉, 就变回\"目的地已满\"",
+    "verdict": "verified",
+    "summary": "本场丙站上限 1 被 A 占着 (A arrive_station); 另有一个够不着、有空位的丙: B 是 no_path; 拆掉那个孤站后 B 是 destination_full",
+    "measured": {
+      "withLone": {
+        "state": "no_path",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          50
+        ],
+        "x": 420,
+        "y": 33,
+        "speed": 0
+      },
+      "without": {
+        "state": "destination_full",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          50
+        ],
+        "x": 420,
+        "y": 33,
+        "speed": 0
+      },
+      "aState": {
+        "state": "arrive_station",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          49
+        ],
+        "x": 370.63671875,
+        "y": 33,
+        "speed": 0.07342962524058269
+      }
+    },
+    "refs": [
+      "lab.md #44 (第十二批回归里看到的)",
+      "trains.md T20、T25 (无路可走 / 目的地已满)"
+    ],
+    "sources": [
+      {
+        "title": "本项目第十二批回归的意外读数 (待核实的推断)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/tips.ts"
+  },
+  "trains.signal.holds-follower-at-red": {
+    "autoFixes": 0,
+    "id": "trains.signal.holds-follower-at-red",
+    "topic": "火车",
+    "claim": "铁路信号把铁轨分成区段, 一个区段里同时只有一列车: 前方区段有车时信号是红灯, 后车停在信号前 (状态\"等信号\"), 不进区段; 前车整列开出那个区段后信号变绿, 后车才走",
+    "verdict": "verified",
+    "summary": "A 停在丙时 B 停在 S2 前等信号 (S1/S2/S3 = open/closed/closed), B 车头最西到 x=139.9 (S2 在 x=135.5), 没进丙区段; S2 在 A 尾部车厢中心到 x=100.0 (S1 在 x=103.5) 时变绿, B 随后起步; A 停在甲后 B 又停在 S1 前",
+    "measured": {
+      "bHeldAt": {
+        "west": 140,
+        "east": 154,
+        "has_path": true,
+        "goal": {
+          "name": "甲",
+          "x": 79,
+          "y": 31
+        },
+        "signal": {
+          "x": 135.5,
+          "y": 31.5
+        }
+      },
+      "lightsWhileHeld": [
+        "open",
+        "closed",
+        "closed"
+      ],
+      "minBWest": 139.90234375,
+      "bEnteredEarly": false,
+      "s2Open": 1820,
+      "bMoved": 1820,
+      "aAtOpen": {
+        "west": 86.00390625,
+        "east": 100.00390625,
+        "has_path": true,
+        "goal": {
+          "name": "甲",
+          "x": 79,
+          "y": 31
+        }
+      },
+      "bAtS1": {
+        "west": 108,
+        "east": 122,
+        "has_path": true,
+        "goal": {
+          "name": "甲",
+          "x": 79,
+          "y": 31
+        },
+        "signal": {
+          "x": 103.5,
+          "y": 31.5
+        }
+      },
+      "aEnd": {
+        "state": "wait_station",
+        "station": "甲",
+        "records": [
+          {
+            "station": "丙",
+            "temporary": false
+          },
+          {
+            "station": "甲",
+            "temporary": false
+          }
+        ],
+        "current": 2,
+        "fuel": [
+          49
+        ],
+        "x": 82,
+        "y": 33,
+        "speed": 0
+      },
+      "s1": {
+        "x": 103.5,
+        "y": 31.5
+      },
+      "s2": {
+        "x": 135.5,
+        "y": 31.5
+      }
+    },
+    "refs": [
+      "trains.md T1、T2 (信号和区段)",
+      "docs/research/players/game-tips.md TT15 (基础铁路信号: 同一条铁轨上跑多列车)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Tutorial:Train signals",
+        "url": "https://wiki.factorio.com/Tutorial:Train_signals",
+        "date": "2023-02-03",
+        "credibility": 2
+      },
+      {
+        "title": "游戏内提示与技巧: 基础铁路信号 (本机 2.1.24)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains3.ts"
+  },
+  "trains.single-headed.cannot-reverse": {
+    "autoFixes": 0,
+    "id": "trains.single-headed.cannot-reverse",
+    "topic": "火车",
+    "claim": "自动模式下列车只能朝车头方向开: 只有一台朝西机车的单头车去东边的站是\"无路可走\", 原地不动; 往西 (车头方向) 的站照常能到; 东头加一台朝东的机车 (两台机车朝向相反) 后前后都能开",
+    "verdict": "verified",
+    "summary": "单头车 (车头朝西) 去东边乙站: 20 秒后 no_path, 有路=false, 挪了 0.0 格; 去西边甲站到了; 加朝东车头 (共 2 台) 后去乙站到了",
+    "measured": {
+      "back": {
+        "state": "no_path",
+        "records": [
+          {
+            "station": "乙",
+            "temporary": false
+          }
+        ],
+        "current": 1,
+        "fuel": [
+          50
+        ],
+        "x": 186,
+        "y": 33,
+        "speed": 0
+      },
+      "backX": {
+        "west": 186,
+        "east": 193,
+        "has_path": false
+      },
+      "moved": 0,
+      "fwd": true,
+      "locos": 2,
+      "dblAtYi": true
+    },
+    "refs": [
+      "mindset.md M41 (单车头 + 环线 vs 双车头 + 终点站)",
+      "trains.md 检索缺口 (双头车还是环线没找到 2.0 之后的来源)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Railway (列车自动行驶时只能往前开; 两台朝向不同的机车连在一起才能前后都开; 无路可走时检查是否只往前开就能到)",
+        "url": "https://wiki.factorio.com/Railway",
+        "date": "2026-10-22",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains3.ts"
+  },
+  "trains.stop-priority.highest-first": {
+    "autoFixes": 0,
+    "id": "trains.stop-priority.highest-first",
+    "topic": "火车",
+    "claim": "同名车站按优先级 (0~255, 默认 50) 派车: 列车去优先级最高的那个, 哪怕它更远; 优先级相同才挑最近的",
+    "verdict": "verified",
+    "summary": "远站 100 / 近站 50 → 去了远站; 都是 50 → 去了近站; 远站 50 / 近站 100 → 去了近站",
+    "measured": {
+      "远站 100 / 近站 50": "远站",
+      "都是 50": "近站",
+      "远站 50 / 近站 100": "近站"
+    },
+    "refs": [
+      "logistics.md L13",
+      "knowledge/patterns/logistics-choice.md P-logi-09 (通用车网靠优先级 + 上限)"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Train stop (Priority)",
+        "url": "https://wiki.factorio.com/Train_stop",
+        "date": "2026-03-13",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/trains2.ts"
+  },
+  "undergrounds.braiding-by-tier": {
+    "autoFixes": 0,
+    "id": "undergrounds.braiding-by-tier",
+    "topic": "传送带",
+    "claim": "不同等级的地下传送带在同一条线上可以交织, 各配各的 (wiki 原文: Different types of underground belts can be braided together along the same line of tiles); 不同等级的两头不配对",
+    "verdict": "verified",
+    "summary": "一行里 基础入口 0、高速入口 1、高速出口 3、基础出口 5 (基础要越过两个高速件): 基础接上基础、高速接上高速; 对照 基础入口 + 高速出口 (隔 2 格): 不配对",
+    "measured": {
+      "basic": true,
+      "fast": true,
+      "mixed": false
+    },
+    "refs": [
+      "wiki Belt transport system: braiding"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "undergrounds.max-distance": {
+    "autoFixes": 0,
+    "id": "undergrounds.max-distance",
+    "topic": "传送带",
+    "claim": "地下传送带两头之间最多隔 4 / 6 / 8 / 10 格 (基础 / 高速 / 极速 / 超速; wiki 原文 4、6、8 是本体三种, 超速按本机原型 max_distance 11)",
+    "verdict": "verified",
+    "summary": "基础地下传送带: 隔 4 格接上, 隔 5 格接不上; 高速地下传送带: 隔 6 格接上, 隔 7 格接不上; 极速地下传送带: 隔 8 格接上, 隔 9 格接不上; 超速地下传送带: 隔 10 格接上, 隔 11 格接不上",
+    "measured": {
+      "res": [
+        {
+          "name": "underground-belt",
+          "max": 5,
+          "at_max": {
+            "gap": 4,
+            "paired": true
+          },
+          "beyond": {
+            "gap": 5,
+            "paired": false
+          }
+        },
+        {
+          "name": "fast-underground-belt",
+          "max": 7,
+          "at_max": {
+            "gap": 6,
+            "paired": true
+          },
+          "beyond": {
+            "gap": 7,
+            "paired": false
+          }
+        },
+        {
+          "name": "express-underground-belt",
+          "max": 9,
+          "at_max": {
+            "gap": 8,
+            "paired": true
+          },
+          "beyond": {
+            "gap": 9,
+            "paired": false
+          }
+        },
+        {
+          "name": "turbo-underground-belt",
+          "max": 11,
+          "at_max": {
+            "gap": 10,
+            "paired": true
+          },
+          "beyond": {
+            "gap": 11,
+            "paired": false
+          }
+        }
+      ]
+    },
+    "refs": [
+      "coverage.md 空白: 基础地下传送带、高速地下传送带; 只有检索: 超速地下传送带"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      },
+      {
+        "title": "官方 wiki: Splitter",
+        "url": "https://wiki.factorio.com/Splitter",
+        "date": "2026-04-11",
+        "credibility": 2
+      },
+      {
+        "title": "本机 2.1.24 原型数据 (underground-belt.max_distance、splitter.speed)",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "undergrounds.sideload-entrance-one-lane": {
+    "autoFixes": 0,
+    "id": "undergrounds.sideload-entrance-one-lane",
+    "topic": "传送带",
+    "claim": "传送带从侧面顶到地下传送带入口上, 只有一道进得去 (入口格里有带子的那一半收货, 有隧道口的那一半挡住), 另一道停住 —— 常用来只取一道; 顶到普通带子上 (对照) 两道都进",
+    "verdict": "verified",
+    "summary": "顶到北向地下带入口: 铁板 2.50 / 铜板 0.00 每秒, 只进了铁板 (喂料带南道, 对着入口有带子的南半格); 对照 (普通带子): 铁板 2.50 / 铜板 2.50",
+    "measured": {
+      "underground": {
+        "iron-plate": 2.5,
+        "copper-plate": 0
+      },
+      "control": {
+        "iron-plate": 2.5,
+        "copper-plate": 2.5
+      }
+    },
+    "refs": [
+      "belts.sideload.shape-and-lane",
+      "wiki Belt transport system: lane blocking"
+    ],
+    "sources": [
+      {
+        "title": "官方 wiki: Belt transport system (Splitters / Underground belts)",
+        "url": "https://wiki.factorio.com/Belt_transport_system",
+        "date": "2026-01-14",
+        "credibility": 2
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-01",
+    "experiment": "experiments/splitters.ts"
+  },
+  "v1.biter-egg-25-per-big-biter": {
+    "autoFixes": 0,
+    "id": "v1.biter-egg-25-per-big-biter",
+    "topic": "腐坏",
+    "claim": "异虫卵放 30 分钟 (108000 tick) 后孵出大型撕咬虫, 每 25 个卵孵 1 只 (不是一个卵一只), 不留变质物 (第一版 gleba-production 的说法; 仓库检索 D14 没写数量)",
+    "verdict": "verified",
+    "summary": "50 个异虫卵: 第 29 分 50 秒还剩 50 个; 30 分 1 秒后箱子里剩 0 个卵、0 个变质物, 箱子旁出现 大型撕咬虫×2",
+    "measured": {
+      "before": {
+        "eggs": 50,
+        "spoilage": 0,
+        "units": {}
+      },
+      "after": {
+        "eggs": 0,
+        "spoilage": 0,
+        "units": {
+          "big-biter": 2
+        }
+      }
+    },
+    "refs": [
+      "v1-knowledge.md V1K-X6",
+      "research/players/defense.md D14",
+      "facts spoilage.pentapod-egg.hatches-15-minutes (五足虫卵是一个一只)"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/gleba-production.md、source-facts.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): item biter-egg: spoil_ticks 108000, spoil_to_trigger_result items_per_trigger 25 → create-entity big-biter",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.boompuff-explodes-on-death": {
+    "autoFixes": 0,
+    "id": "v1.boompuff-explodes-on-death",
+    "topic": "句芒",
+    "claim": "高爆泡泡被打死时会爆, 伤到几格内的己方建筑 (第一版: 手清时炸毁过建筑和箱子; 原型每颗种子只有 5 点爆炸伤害)",
+    "verdict": "verified",
+    "summary": "打死: 木箱 (满血 100) 2 格 85、4 格 90、8 格 100; 挨着的另一棵 35.399993896484375/50。脚本挖掉 (mine 成功): 木箱 2 格 80、4 格 90、8 格 100 → 挖也会爆",
+    "measured": {
+      "rows": [
+        {
+          "who": "die",
+          "d": 2,
+          "x": 54.5,
+          "y": -5.5,
+          "hp": 85
+        },
+        {
+          "who": "die",
+          "d": 4,
+          "x": 54.5,
+          "y": -3.5,
+          "hp": 90
+        },
+        {
+          "who": "die",
+          "d": 8,
+          "x": 54.5,
+          "y": 0.5,
+          "hp": 100
+        },
+        {
+          "who": "mine",
+          "d": 2,
+          "x": 74.5,
+          "y": -5.5,
+          "hp": 80
+        },
+        {
+          "who": "mine",
+          "d": 4,
+          "x": 74.5,
+          "y": -3.5,
+          "hp": 90
+        },
+        {
+          "who": "mine",
+          "d": 8,
+          "x": 74.5,
+          "y": 0.5,
+          "hp": 100
+        }
+      ],
+      "c_hp": 35.399993896484375,
+      "c_max": 50,
+      "mined": true
+    },
+    "refs": [
+      "v1-knowledge.md V1K-14",
+      "patterns/planets.md P-planet-67"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/new-base-build-ops.md (联机观察) (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): tree boompuff: 50 血, dying_explosion boompuff-explosion; minable 带 mining_trigger",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.explosive-rocket-hits-own-walls": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "rocket-turret",
+        "x": 64.5,
+        "y": 12.5,
+        "status": "no_ammo"
+      }
+    ],
+    "id": "v1.explosive-rocket-hits-own-walls",
+    "topic": "防御",
+    "claim": "火箭炮塔打爆破火箭弹时, 范围伤害会炸到目标旁边自己的墙 (普通火箭弹只打目标本身, 不伤墙) (第一版: 敌人贴墙时爆破火箭弹会炸自己的墙)",
+    "verdict": "verified",
+    "summary": "一排 7 块石墙 (每块 350 血), 靶子紧贴墙北边: 普通火箭弹打掉靶子用 2 发, 墙掉血 0; 换爆破火箭弹打掉同样的靶子用 3 发, 墙又掉血 1323",
+    "measured": {
+      "normal": {
+        "walls": [
+          350,
+          350,
+          350,
+          350,
+          350,
+          350,
+          350
+        ],
+        "target_alive": false,
+        "ammo_left": 8
+      },
+      "explosive": {
+        "walls": [
+          161,
+          161,
+          161,
+          161,
+          161,
+          161,
+          161
+        ],
+        "target_alive": false,
+        "ammo_left": 7
+      },
+      "normalLoss": 0,
+      "expLoss": 1323,
+      "wall_max": 350,
+      "walls": 7
+    },
+    "refs": [
+      "v1-knowledge.md V1K-X2",
+      "research/players/defense.md D22",
+      "patterns/defense.md 分歧 10"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/source-facts.md、defense.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): projectile explosive-rocket: 直接 50 爆炸 + 半径 6.5 范围 100 爆炸 (范围伤害没写阵营过滤); rocket: 直接 200 爆炸; 石墙 350 血, 爆炸抗性 -10 / 30%",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.platform-weight-includes-cargo": {
+    "autoFixes": 0,
+    "id": "v1.platform-weight-includes-cargo",
+    "topic": "太空平台",
+    "claim": "太空平台的重量包括枢纽里的货物: 往枢纽装货, 平台重量按 物品重量 × 数量 增加 (第一版运行时读到一艘船 608 吨里约 524 吨是货; 仓库检索 changes-2.1 / P-style-17 说只算基座和枢纽)",
+    "verdict": "refuted",
+    "summary": "空平台 60000; 枢纽装 1000 块 铁板 后 60000 (+0), 再装 1000 块 60000 (+0); 物品原型里铁板每块重 1000 → 1000 块应 +1000000。对照: 再铺 10 格地基 (原有 100 格) → 62000 (+2000)",
+    "measured": {
+      "w0": 60000,
+      "w1": 60000,
+      "w2": 60000,
+      "w3": 62000,
+      "item": 1000,
+      "tilesAdded": 10,
+      "tilesHad": 100
+    },
+    "refs": [
+      "v1-knowledge.md V1K-X1",
+      "research/players/changes-2.1.md 第 4 节",
+      "patterns/layout-styles.md P-style-17"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/space-platform.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机 API 文件 (2.1.24): LuaSpacePlatform.weight = The total weight of the platform; LuaItemPrototype.weight",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.quality-and-productivity-same-machine": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "assembling-machine-3",
+        "x": 248.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-3",
+        "x": 254.5,
+        "y": 0.5,
+        "status": "no_power"
+      },
+      {
+        "name": "assembling-machine-3",
+        "x": 260.5,
+        "y": 0.5,
+        "status": "no_power"
+      }
+    ],
+    "id": "v1.quality-and-productivity-same-machine",
+    "topic": "品质",
+    "claim": "品质插件和产能插件可以装在同一台机器上, 两种加成同时生效 (第一版说不能同机兼得; 仓库检索 QA15 说按比例混配)",
+    "verdict": "verified",
+    "summary": "组装机3型 (铁齿轮): 产能 ×2 + 品质 ×2 → 产能 20.0%、品质 5.0%、速度 -40.0%; 对照 只有产能 ×2 → 产能 20.0%, 只有品质 ×2 → 品质 5.0% (LuaEntity.effects 原值, 品质一栏的单位按 API 原样)",
+    "measured": {
+      "mixed": {
+        "productivity": 0.2,
+        "quality": 0.05,
+        "speed": -0.4
+      },
+      "prod": {
+        "productivity": 0.2,
+        "quality": 0,
+        "speed": -0.3
+      },
+      "qual": {
+        "productivity": 0,
+        "quality": 0.05,
+        "speed": -0.1
+      }
+    },
+    "refs": [
+      "v1-knowledge.md V1K-X4",
+      "research/players/quality-advanced.md QA15"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/quality.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机 API 文件 (2.1.24): LuaEntity.effects = 作用在这个实体上的效果",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.railgun-hits-own-beyond-target": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "gun-turret",
+        "x": 129,
+        "y": -12,
+        "status": "no_ammo"
+      }
+    ],
+    "id": "v1.railgun-hits-own-beyond-target",
+    "topic": "防御",
+    "claim": "磁轨炮塔的炮弹打穿目标后继续沿直线飞, 伤到目标后面的己方建筑 (第一版: 炮弹线长 50 格, 线上己方的东西都挨打)",
+    "verdict": "verified",
+    "summary": "磁轨炮塔打了 1 发, 靶子被打掉; 炮口和靶子之间: 一排 5 块墙里 2 块被打掉、0 块掉血 (满血 350)、箱子 被打掉; 靶子后面 5 格的箱子 被打掉; 偏开 6 格的对照墙没掉血",
+    "measured": {
+      "target_alive": false,
+      "walls": [
+        {
+          "dx": -1,
+          "hp": 350
+        },
+        {
+          "dx": -2,
+          "hp": 350
+        },
+        {
+          "dx": 2,
+          "hp": 350
+        },
+        {
+          "dx": 6,
+          "hp": 350
+        }
+      ],
+      "ammo_left": 4,
+      "between": 0,
+      "beyond": 0,
+      "wall_max": 350,
+      "chest_max": 350,
+      "ty": 12.5,
+      "gy": -12
+    },
+    "refs": [
+      "v1-knowledge.md V1K-12",
+      "patterns/defense.md P-def-20"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/source-facts.md、defense.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): railgun-ammo 的 ammo_type 是 line 类攻击 (长 50、宽 1); railgun-turret 射程 40、最近 3.5、左右只能转 0.2 圈",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.railgun-hits-own-walls": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "gun-turret",
+        "x": 65,
+        "y": -12,
+        "status": "no_ammo"
+      }
+    ],
+    "id": "v1.railgun-hits-own-walls",
+    "topic": "防御",
+    "claim": "磁轨炮塔的炮弹是直线穿透攻击, 打到炮口和目标之间的己方墙壁 / 建筑 (第一版: 磁轨炮塔绝不能放在墙后)",
+    "verdict": "verified",
+    "summary": "磁轨炮塔打了 1 发, 靶子被打掉; 炮口和靶子之间: 一排 5 块墙里 2 块被打掉、0 块掉血 (满血 350)、箱子 被打掉; 靶子后面 5 格的箱子 被打掉; 偏开 6 格的对照墙没掉血",
+    "measured": {
+      "target_alive": false,
+      "walls": [
+        {
+          "dx": -1,
+          "hp": 350
+        },
+        {
+          "dx": -2,
+          "hp": 350
+        },
+        {
+          "dx": 2,
+          "hp": 350
+        },
+        {
+          "dx": 6,
+          "hp": 350
+        }
+      ],
+      "ammo_left": 4,
+      "between": 0,
+      "beyond": 0,
+      "wall_max": 350,
+      "chest_max": 350,
+      "ty": 12.5,
+      "gy": -12
+    },
+    "refs": [
+      "v1-knowledge.md V1K-12",
+      "patterns/defense.md P-def-20"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/source-facts.md、defense.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): railgun-ammo 的 ammo_type 是 line 类攻击 (长 50、宽 1); railgun-turret 射程 40、最近 3.5、左右只能转 0.2 圈",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.refuel-interrupt-dry-station": {
+    "autoFixes": 0,
+    "id": "v1.refuel-interrupt-dry-station",
+    "topic": "火车",
+    "claim": "加油站断油时: 加油中断只写\"燃料 < 25\" → 列车在加油站等完又触发, 一直停在加油站不走; 中断再加\"不在加油站\"条件 → 列车等完就离开、回主线, 到下一站又被叫回来 (第一版: 要加这个条件, 否则缺油时反复触发)",
+    "verdict": "verified",
+    "summary": "加油站断油, 各看 2 分钟: 只写\"燃料 < 25\" → 状态闪了 1 次 (中断在站上重新触发), 停在加油站 119 秒, 停靠 加油, 煤 19 → 19; 加\"不在加油站\" → 离开 8 次, 停在加油站 39 秒, 停靠 加油→乙→加油→甲→加油→乙→加油→甲→加油→乙, 煤 20 → 16 (结束时 on_the_path)",
+    "measured": {
+      "fuel-only": {
+        "leftFuel": 1,
+        "secondsAtFuel": 119,
+        "visits": "加油",
+        "fuelStart": 19,
+        "fuelEnd": 19,
+        "stateEnd": "wait_station"
+      },
+      "fuel-and-not-at-station": {
+        "leftFuel": 8,
+        "secondsAtFuel": 39,
+        "visits": "加油→乙→加油→甲→加油→乙→加油→甲→加油→乙",
+        "fuelStart": 20,
+        "fuelEnd": 16,
+        "stateEnd": "on_the_path"
+      }
+    },
+    "refs": [
+      "v1-knowledge.md V1K-X8",
+      "facts trains.refuel-interrupt.needs-wait-condition",
+      "research/players/trains.md T22"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/trains-advanced-wiki.md (来自 wiki 列车中断的排错说明) (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.tesla-chain-skips-own": {
+    "autoFixes": 0,
+    "preflight": [
+      {
+        "name": "gun-turret",
+        "x": 72,
+        "y": -18,
+        "status": "no_ammo"
+      },
+      {
+        "name": "gun-turret",
+        "x": 64,
+        "y": -10,
+        "status": "no_ammo"
+      }
+    ],
+    "id": "v1.tesla-chain-skips-own",
+    "topic": "防御",
+    "claim": "特斯拉炮塔的电弧从被打的敌人往外跳 (最多 10 跳、每跳 12 格) 只跳敌人, 不伤到敌人旁边的己方建筑 (第一版没查会不会跳到己方)",
+    "verdict": "verified",
+    "summary": "靶子 1 (射程内) 血 0/400; 靶子 2 (射程外, 离靶子 1 约 11 格) 血 0/400 → 电弧跳过去了; 靶子 1 旁边 3~4 格的 5 个己方木箱 0 个挨打 (满血 100)",
+    "measured": {
+      "chests": 5,
+      "t1": 0,
+      "t2": 0,
+      "chest_max": 100,
+      "t_max": 400,
+      "hit": 0
+    },
+    "refs": [
+      "v1-knowledge.md V1K-13",
+      "patterns/defense.md P-def-11"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/source-facts.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): chain-active-trigger chain-tesla-turret-chain: max_jumps 10、max_range_per_jump 12、fork_chance 0.05; tesla-turret 射程 30",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "v1.turret-idle-drain": {
+    "autoFixes": 0,
+    "id": "v1.turret-idle-drain",
+    "topic": "电",
+    "claim": "没有敌人时 (待机) 特斯拉炮塔每座耗电 1MW、激光炮塔每座 24kW (原型 drain): 防御电网要按待机算",
+    "verdict": "verified",
+    "summary": "没敌人时 10 秒平均 (电网统计): 特斯拉炮塔 1000.0kW、激光炮塔 24.00kW",
+    "measured": {
+      "teslaW": 999999.9609375,
+      "laserW": 24000
+    },
+    "refs": [
+      "v1-knowledge.md V1K-20",
+      "research/players/defense.md 第 1 节"
+    ],
+    "sources": [
+      {
+        "title": "第一版知识库 topics/logistics-power.md (2026-10-29~30, 未核实) → docs/research/players/v1-knowledge.md",
+        "credibility": 3
+      },
+      {
+        "title": "本机原型导出 data-raw-dump (2.1.24): tesla-turret energy_source.drain 1MW、buffer 15MJ; laser-turret drain 24kW、buffer 801kJ",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-11-02",
+    "experiment": "experiments/v1-claims.ts"
+  },
+  "vulcanus.acid-neutralisation.energy-per-calcite": {
+    "id": "vulcanus.acid-neutralisation.energy-per-calcite",
+    "topic": "祝融星",
+    "claim": "2.1 的酸中和: 1 个方解石 + 100 硫酸 → 1000 单位 500 度蒸汽, 经汽轮机约 97MJ 电; 所以 100MW 的酸中和电站每秒约吃 1 个方解石 (2.0 是这个的 10 倍)",
+    "verdict": "verified",
+    "summary": "600 秒里 10.0MW 负载吃了 62 个方解石, 每个方解石 97.0MJ 电 (预期 97); 折算 100MW 每秒 1.03 个方解石",
+    "measured": {
+      "seconds": 600,
+      "crafts": 62,
+      "mj": 6010.9268125,
+      "perCalcite": 96.95043245967742,
+      "mw": 10.018211354166667
+    },
+    "refs": [
+      "vulcanus.md V11~V13",
+      "research README 第二轮 #1",
+      "changes-2.1.md 第 5 节 (已改正)"
+    ],
+    "sources": [
+      {
+        "title": "本机原型数据: acid-neutralisation 配方 (2.1.24); 蒸汽热容 0.2kJ, 汽轮机 60/秒 上限 500 度",
+        "credibility": 1
+      },
+      {
+        "title": "本机 changelog 2.1.7: 酸中和液体量和时间缩小 10 倍",
+        "credibility": 1
+      }
+    ],
+    "game_version": "2.1.24",
+    "mods": "base 2.1.24 + space-age 2.1.24",
+    "date": "2026-10-31",
+    "experiment": "experiments/planets.ts"
+  }
+}

@@ -36,6 +36,9 @@ import { writeScan } from "./scan.ts";
 import { brainDriver, brainProblem, defaultModel, killBrain, runBrainTurn, type Driver } from "../brains/driver.ts";
 import { brainLoop } from "../brains/loop.ts";
 import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "../brains/hooks/context.ts";
+import { appendScanHints, collectNotesLessons, lessonDelivery } from "./deliver.ts";
+import { composeBrief } from "./brief.ts";
+import { loadZhNames } from "../../commands/chattags.ts";
 
 const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
@@ -257,12 +260,15 @@ try {
   const probeArgs = hostArgs({ defines: path.join(protoDir, "defines.json"), proto: path.join(protoDir, "data-raw-dump.json"), pid: clientPid, exe: gameExe, extra: ["--state", path.join(runDir, "ledger.lua"), ...(reveal ? ["--reveal"] : []), ...(readOnly ? ["--read-only"] : []), "--serve"] });
   const raw = JSON.parse(fs.readFileSync(path.join(protoDir, "data-raw-dump.json"), "utf8")) as { recipe?: Record<string, { energy_required?: number }> };
   const t = target;
+  // 教训: 训练集里核实过的种子 + 之前各班模型记的, 做对应动作时行动层在回复里带出 (动作不经过模组; core/run/deliver.ts)
+  const delivery = !useRcon && !readOnly && t ? lessonDelivery() : null;
+  if (delivery) log(`教训: 种子 ${delivery.curated} 条 + 之前各班的 ${delivery.learned} 条, 做对应动作时带出`);
   const actions = useRcon ? null : readOnly || !t ? readOnlyActions(() => broker!.tick()) : new PlayerActions({
     call: t.call, controls: () => t.controls!, defines: () => t.defines, tick: () => t.tick(),
     holdItem: (i) => t.holdItem(i), placeHeld: (at) => t.placeHeld(at), clearCursor: () => t.clearCursor(), ensureBody: () => t.ensureBody(), setRecipe: (at, r) => t.setRecipe(at, r),
     insertExact: (at, i, n, inv) => t.insertExactDirect(at, i, n, inv), takeExact: (at, i, n, inv) => t.takeExactDirect(at, i, n, inv), itemCount: (at, inv, i) => t.entityItemCount(at, inv, i),
     stacks: () => t.inventorySlots(), chatSend: (x) => t.chatSend(x), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
-    assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed },
+    assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed }, lessons: delivery?.pick,
   });
   if (useRcon) {
     const conn = rcon!;
@@ -291,8 +297,11 @@ try {
   }
 
   // 4. 角色目录: 简报 + ./fh (sh 和 ps1), 经管道; 模型手里没有 RCON
-  const brief = onlineBrief({ name, server: toServer, readOnly, steam: !!values["steam-pid"], rcon: useRcon, ownWorld: values["own-world"] }) + (values["goal-file"] && !readOnly ? `\n## 用户这一班给你的任务\n${fs.readFileSync(values["goal-file"], "utf8").trim()}\n` : "") + (driver ? COMPACT_INSTRUCTIONS : "");
-  setupWorkspace({ dir, name, pipe, brief, deadline });
+  // 简报 = 训练集的模板 (manuals/brief.md) + 世界真实值那一节 + 用户目标 + 手册目录; 大脑会话再加压缩说明
+  const world = onlineBrief({ name, server: toServer, readOnly, steam: !!values["steam-pid"], rcon: useRcon, ownWorld: values["own-world"] });
+  const goal = values["goal-file"] && !readOnly ? fs.readFileSync(values["goal-file"], "utf8") : undefined;
+  const ws = setupWorkspace({ dir, name, pipe, deadline, protoDir, brief: (refDir) => composeBrief({ world, name, refDir, goal }) + (driver ? COMPACT_INSTRUCTIONS : "") });
+  log(`手册目录 ref/ ${ws.refFiles} 个文件; ./know 查积累`);
   // 大脑会话的设置 (只在角色目录生效): 压缩点、钩子 (命令放行、读文件禁区、压缩前后、收件箱); .context-hooks 标记让钩子只在这里起作用
   const at = Number(values["compact-at"] ?? compactAt(model));
   if (driver) {
@@ -308,8 +317,14 @@ try {
   let scanNote = "";
   if (broker) {
     const b = broker;
-    try { log(`开班扫描: ${await writeScan((c) => b.evalLua(c), dir, runDir)}`); scanNote = "先读 world-scan.md (开班扫描: 按读数自动算的现状), "; }
-    catch (e) { log(`开班扫描没做成: ${(e as Error).message.slice(0, 200)}`); }
+    try {
+      log(`开班扫描: ${await writeScan((c) => b.evalLua(c), dir, runDir)}`);
+      scanNote = "先读 world-scan.md (开班扫描: 按读数自动算的现状和相关要点), ";
+      // 扫描的句子对得上的要点附在后面 (被动推送, 不等模型自己查)
+      const sj = JSON.parse(fs.readFileSync(path.join(runDir, "world-scan.json"), "utf8")) as { stage?: string; lines?: string[] };
+      const n = appendScanHints(path.join(dir, "world-scan.md"), [sj.stage ?? "", ...(sj.lines ?? [])]);
+      if (n) log(`开班扫描附了 ${n} 条要点`);
+    } catch (e) { log(`开班扫描没做成: ${(e as Error).message.slice(0, 200)}`); }
   }
 
   // 5. 大脑 (不叫模型时只等到点, 留给人在角色目录里试 ./fh)
@@ -338,9 +353,16 @@ try {
     clearInterval(watch);
   }
   const why = clientDown !== null ? `掉线 (${clientDown})` : fs.existsSync(stopFile) ? "STOP" : fs.existsSync(doneFile) ? "模型说任务做完了" : viewerAlive() ? "到点" : "客户端关了";
+  // 模型这班记的教训 (notes.md "## 教训") 收进训练集待核区, 留给以后的班 (通用的才记; 带坐标、只对这局有用的筛掉)
+  if (driver && !readOnly) {
+    try {
+      const m = collectNotesLessons(fs.readFileSync(path.join(dir, "notes.md"), "utf8"), loadZhNames(protoDir), model, runId);
+      log(`教训: 笔记里 ${m.candidates} 条, 收进待核区 ${m.added} 条${m.skipped.length ? ` (跳过 ${m.skipped.length}: ${m.skipped.slice(0, 2).map((s) => s.why).join(" / ")})` : ""}`);
+    } catch (e) { log(`收教训没做成: ${(e as Error).message.slice(0, 160)}`); }
+  }
   if (broker) {
-    log(`收工: ${why}; 走哪条路 ${JSON.stringify(Object.fromEntries(Object.entries(broker.stats.byAction).map(([k, v]) => [k, `${v.route}×${v.n} ${Math.round(v.ms / Math.max(v.n, 1))} 毫秒`])))}`);
-    fs.writeFileSync(path.join(runDir, "probe-stats.json"), JSON.stringify({ broker: broker.stats, probe: await broker.probeStats().catch((e: Error) => ({ error: e.message })) }, null, 1));
+    log(`收工: ${why}; 走哪条路 ${JSON.stringify(Object.fromEntries(Object.entries(broker.stats.byAction).map(([k, v]) => [k, `${v.route}×${v.n} ${Math.round(v.ms / Math.max(v.n, 1))} 毫秒`])))}${delivery ? `; 教训带出 ${delivery.stats().shown} 次 (${delivery.stats().distinct} 条)` : ""}`);
+    fs.writeFileSync(path.join(runDir, "probe-stats.json"), JSON.stringify({ broker: broker.stats, probe: await broker.probeStats().catch((e: Error) => ({ error: e.message })), lessons: delivery?.stats() ?? null }, null, 1));
   } else log(`收工: ${why}; RCON 发了 ${rconPipe?.stats.sent ?? 0} 条, 拒了 ${rconPipe?.stats.refused ?? 0} 条`);
   fs.writeFileSync(path.join(runDir, "end.json"), JSON.stringify({ why, endedAt: new Date().toISOString(), minutes: Math.round((Date.now() - t0) / 6000) / 10 }, null, 1));
 } catch (e) {

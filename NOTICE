@@ -15,6 +15,11 @@ commands/cli/
   model names). Our broker (commands/broker.ts) speaks its FH_SOCKET protocol; the command name stays fh because the
   reference manuals the models read use it.
 
+training/manuals/ref/
+  The reference manuals the models read with `./fh help TOPIC` (analysis, building, circuits-settings, movement-combat,
+  moving-items, space-age, team, waits-queues, index.md, topics.tsv) are copied from factorio-ai-party agent/ref (commit
+  a9a5556a, 2026-11-04; MIT License, see training/manuals/ref/LICENSE), unchanged except stream-people.md left out.
+
 core/brains/hooks/
   permit.ts ports the Bash permit rules of factorio-ai-party tools/permit.py and the examples of tools/test_permit.py
   (test/permit.test.ts); context.ts and hook.ts port the Claude Code parts of tools/context.py, agent/compact.md and

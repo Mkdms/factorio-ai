@@ -40,7 +40,7 @@ commands/                        (已有 fh)
 
 ## 搬的顺序
 1. ✅ `core/brains/driver.ts` + `claude-code.ts` + `loop.ts` + `hooks/` (permit / read-guard / context / hook), `online.ts` 叫大脑 → 一句试通 `npm run brains:probe` (证据见下)。
-2. `training/` 按树原样放进去 (复制改名, 不改格式), `brief.ts` + `deliver.ts` + `./know` 接上 → 真模型一班验收 (上面三样)。
+2. ✅ 代码部分 (2026-11-08): `training/` 按树放进去 (training/README.md 第 7 节), `brief.ts` (模板 + 世界真实值 + 手册目录)、`deliver.ts` (开班读教训 → 行动层带出 → 扫描附要点 → 班末收笔记)、`./know`、`./fh` 包装 (手册分段、聊天标签、封顶、附经验) 接上; 单元 27/27, 沙盘 (见证据)。**真模型一班验收还没跑 (花额度, 等用户说开)**。
 3. 其余驱动 (codex / grok / relay / agent-sdk / deepseek)、`supervisor.ts`、`human-chat.ts`、`core/records/`。
 4. `./calc` `./bp` `./plan` (连 src/calc、src/blueprint 一起)。
 条目格式 (training/README.md 第 3 节) 边搬边定, 搬完再统一; 每步有测试, 旧项目对应文件搬完就删。
@@ -57,4 +57,5 @@ npm run run:online -- --lab --brain claude --model opus --effort low --minutes 3
 ## 证据
 - 第 ① 步 (2026-11-07): 单元 `test/brains.test.ts` 6/6 (拦截、参数、跑一轮的会话号接力和假命令行、轮次循环的间隔 / 停 / 打断、试通判定、设置指向真实的 hook.ts)、`test/permit.test.ts` 5/5 (派对的例子 + 旧项目实跑被拒的命令都放行, 派对版的 3 个漏洞和 22 种绕法都拒, 钩子进程真跑)、`test/context.test.ts` 5/5 (压缩点换算、提醒、日志裁剪、会话日志读数、钩子进程: 收件箱 / 压缩后贴笔记 / 截止前 2 分钟拦自动压缩)、`test/read-guard.test.ts` 3/3。
 - 一句试通 `npm run brains:probe` (Claude Code 2.1.319 订阅, claude-haiku-5-5, low): 通, 8.5 秒, $0.0035; 模型跑了 `echo 收到` (echo 不在 --allowedTools 里, 是 permit 钩子放行的: context.log 有 permitted), post-tool 钩子记了 hooksSeen; 记录在 data/play/probe/2026-11-07T15-24-05。
-- `online.ts` 的参数检查: 无参数 / `--brain codex` / `--effort 坏` 各报对应的话退出码 2 (模块能加载)。带大脑的一班还没跑 (第 ② 步验收)。
+- `online.ts` 的参数检查: 无参数 / `--brain codex` / `--effort 坏` 各报对应的话退出码 2 (模块能加载)。
+- 第 ② 步代码部分 (2026-11-08): 单元 `test/lessons.test.ts` 8/8、`knowledge.test.ts` 3/3、`hints.test.ts` 8/8、`chattags.test.ts` 3/3、`ref-sections.test.ts` 3/3、`brief.test.ts` 3/3、`fh-wrapper.test.ts` 1/1; 沙盘 `test/sandbox/run.test.ts` 6/6 (44 秒, 不叫模型): 开班读到种子 68 条 + 之前各班的 70 条; 放木箱的回复带出 2 条教训 (建造前先清场 + 一条之前模型记的标"没核实"), 放石炉后面附"相关经验 (./know 石炉 看更多)"; 开班扫描后面附要点 (刚开局对得上); `./know 研究中心` (sh) 和 `know.ps1 地下管道 方向` 都查到; `./fh help building` 回目录, `./fh help pattern-production P-prod-01` 回那一段并记 journal; 简报模板填满, ref/ 有 building / pattern-production / facts / names.tsv。**真模型一班 (验收的三样) 还没跑。**

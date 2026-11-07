@@ -1,0 +1,179 @@
+[
+ {
+  "label": "化工厂排 塑料 × 3 / 化工厂 / 石油气进管、进料走远带 / 基础传送带",
+  "entities": 40,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 360,
+  "perTile": 4.675,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.738,
+  "powerFixed": 0,
+  "fed": {
+   "coal": 180
+  }
+ },
+ {
+  "label": "化工厂排 硫磺 × 3 / 化工厂 / 水进近管、石油气进远管 / 基础传送带",
+  "entities": 45,
+  "w": 10,
+  "h": 9,
+  "outPerMin": 360,
+  "perTile": 4,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.71,
+  "powerFixed": 0,
+  "fed": {}
+ },
+ {
+  "label": "化工厂排 硫酸 × 3 / 化工厂 / 水进管、硫酸出管 / 高速传送带",
+  "entities": 45,
+  "w": 10,
+  "h": 8,
+  "outPerMin": 8150,
+  "perTile": 101.875,
+  "efficiency": 0.906,
+  "trend": 0.988,
+  "working": 0.917,
+  "powerMW": 0.771,
+  "powerFixed": 0,
+  "fed": {
+   "sulfur": 817,
+   "iron-plate": 166
+  }
+ },
+ {
+  "label": "化工厂排 电池 × 3 / 化工厂 / 硫酸进管、进料走近带 / 基础传送带",
+  "entities": 40,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 45,
+  "perTile": 0.584,
+  "efficiency": 1,
+  "trend": 1.143,
+  "working": 1,
+  "powerMW": 0.67,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 45,
+   "copper-plate": 45
+  }
+ },
+ {
+  "label": "化工厂排 电池 × 6 / 化工厂 / 硫酸进管、进料走近带 / 基础传送带",
+  "entities": 77,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 90,
+  "perTile": 0.643,
+  "efficiency": 1,
+  "trend": 1.045,
+  "working": 1,
+  "powerMW": 1.341,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 90,
+   "copper-plate": 90
+  }
+ },
+ {
+  "label": "化工厂排 润滑油 × 3 / 化工厂 / 重油进管、润滑油出管 / 基础传送带",
+  "entities": 23,
+  "w": 9,
+  "h": 6,
+  "outPerMin": 1800,
+  "perTile": 33.333,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.651,
+  "powerFixed": 0,
+  "fed": {}
+ },
+ {
+  "label": "化工厂排 润滑油 × 6 / 化工厂 / 重油进管、润滑油出管 / 基础传送带",
+  "entities": 45,
+  "w": 18,
+  "h": 6,
+  "outPerMin": 3600,
+  "perTile": 33.333,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 1.302,
+  "powerFixed": 0,
+  "fed": {}
+ },
+ {
+  "label": "组装机排 电动机 × 3 / 组装机2型 / 润滑油进管、进料走近带 / 基础传送带",
+  "entities": 40,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 13,
+  "perTile": 0.169,
+  "efficiency": 0.963,
+  "trend": 0.857,
+  "working": 1,
+  "powerMW": 0.474,
+  "powerFixed": 0,
+  "fed": {
+   "engine-unit": 15,
+   "electronic-circuit": 26
+  }
+ },
+ {
+  "label": "组装机排 电动机 × 6 / 组装机2型 / 润滑油进管、进料走近带 / 基础传送带",
+  "entities": 77,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 28,
+  "perTile": 0.2,
+  "efficiency": 1.037,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.949,
+  "powerFixed": 0,
+  "fed": {
+   "engine-unit": 29,
+   "electronic-circuit": 56
+  }
+ },
+ {
+  "label": "组装机排 处理器 × 3 / 组装机2型 / 硫酸进管、进料走近带 / 基础传送带",
+  "entities": 40,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 15,
+  "perTile": 0.195,
+  "efficiency": 1.111,
+  "trend": 1.143,
+  "working": 1,
+  "powerMW": 0.516,
+  "powerFixed": 0,
+  "fed": {
+   "electronic-circuit": 259,
+   "advanced-circuit": 30
+  }
+ },
+ {
+  "label": "组装机排 处理器 × 5 / 组装机2型 / 硫酸进管、进料走近带 / 基础传送带",
+  "entities": 65,
+  "w": 17,
+  "h": 7,
+  "outPerMin": 25,
+  "perTile": 0.21,
+  "efficiency": 1.111,
+  "trend": 1.273,
+  "working": 0.983,
+  "powerMW": 0.855,
+  "powerFixed": 0,
+  "fed": {
+   "electronic-circuit": 464,
+   "advanced-circuit": 48
+  }
+ }
+]

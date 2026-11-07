@@ -1,0 +1,205 @@
+[
+ {
+  "label": "组装机排 机自科技包（红瓶） × 6 / 组装机1型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 66,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 36,
+  "perTile": 0.257,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.484,
+  "powerFixed": 0,
+  "fed": {
+   "iron-gear-wheel": 36,
+   "copper-plate": 36
+  }
+ },
+ {
+  "label": "组装机排 机自科技包（红瓶） × 12 / 组装机1型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 108,
+  "w": 20,
+  "h": 13,
+  "outPerMin": 72,
+  "perTile": 0.277,
+  "efficiency": 1,
+  "trend": 1,
+  "working": 1,
+  "powerMW": 0.967,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 72,
+   "iron-gear-wheel": 72
+  }
+ },
+ {
+  "label": "组装机排 物流科技包（绿瓶） × 6 / 组装机1型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 66,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 30,
+  "perTile": 0.214,
+  "efficiency": 1,
+  "trend": 1.143,
+  "working": 1,
+  "powerMW": 0.481,
+  "powerFixed": 0,
+  "fed": {
+   "transport-belt": 30,
+   "inserter": 30
+  }
+ },
+ {
+  "label": "组装机排 物流科技包（绿瓶） × 12 / 组装机1型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 108,
+  "w": 20,
+  "h": 13,
+  "outPerMin": 60,
+  "perTile": 0.231,
+  "efficiency": 1,
+  "trend": 1.143,
+  "working": 1,
+  "powerMW": 0.962,
+  "powerFixed": 0,
+  "fed": {
+   "inserter": 60,
+   "transport-belt": 60
+  }
+ },
+ {
+  "label": "组装机排 铁齿轮 × 3 / 组装机1型 / 电力机械臂×2 出×2 / 基础传送带 / 单排",
+  "entities": 39,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 163,
+  "perTile": 2.117,
+  "efficiency": 0.906,
+  "trend": 1.012,
+  "working": 0.889,
+  "powerMW": 0.281,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 328
+  }
+ },
+ {
+  "label": "组装机排 基础传送带 × 3 / 组装机1型 / 电力机械臂×2 出×2 / 基础传送带 / 单排",
+  "entities": 39,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 310,
+  "perTile": 4.026,
+  "efficiency": 0.861,
+  "trend": 0.987,
+  "working": 0.861,
+  "powerMW": 0.283,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 157,
+   "iron-gear-wheel": 155
+  }
+ },
+ {
+  "label": "组装机排 基础传送带 × 6 / 组装机1型 / 电力机械臂×2 出×2 / 基础传送带 / 双排",
+  "entities": 66,
+  "w": 11,
+  "h": 13,
+  "outPerMin": 614,
+  "perTile": 4.294,
+  "efficiency": 0.853,
+  "trend": 0.968,
+  "working": 0.833,
+  "powerMW": 0.564,
+  "powerFixed": 0,
+  "fed": {
+   "iron-gear-wheel": 311,
+   "iron-plate": 311
+  }
+ },
+ {
+  "label": "组装机排 电力机械臂 × 6 / 组装机1型 / 电力机械臂×1 出×2 / 基础传送带 / 单排",
+  "entities": 97,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 161,
+  "perTile": 1.006,
+  "efficiency": 0.447,
+  "trend": 1.012,
+  "working": 0.458,
+  "powerMW": 0.308,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 161,
+   "electronic-circuit": 159,
+   "iron-gear-wheel": 159
+  }
+ },
+ {
+  "label": "组装机排 电力机械臂 × 6 / 组装机1型 / 电力机械臂×1 出×2 / 基础传送带 / 双排",
+  "entities": 78,
+  "w": 11,
+  "h": 14,
+  "outPerMin": 189,
+  "perTile": 1.227,
+  "efficiency": 0.525,
+  "trend": 0.989,
+  "working": 0.472,
+  "powerMW": 0.355,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 188,
+   "electronic-circuit": 187,
+   "iron-gear-wheel": 185
+  }
+ },
+ {
+  "label": "组装机排 铜缆 × 3 / 组装机1型 / 电力机械臂×2 出×2 / 基础传送带 / 单排",
+  "entities": 39,
+  "w": 11,
+  "h": 7,
+  "outPerMin": 308,
+  "perTile": 4,
+  "efficiency": 0.856,
+  "trend": 0.974,
+  "working": 0.889,
+  "powerMW": 0.265,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 162
+  }
+ },
+ {
+  "label": "组装机排 铜缆 × 6 / 组装机1型 / 电力机械臂×2 出×2 / 基础传送带 / 双排",
+  "entities": 66,
+  "w": 11,
+  "h": 13,
+  "outPerMin": 608,
+  "perTile": 4.252,
+  "efficiency": 0.844,
+  "trend": 0.974,
+  "working": 0.889,
+  "powerMW": 0.526,
+  "powerFixed": 0,
+  "fed": {
+   "copper-plate": 324
+  }
+ },
+ {
+  "label": "组装机排 电路板 × 2 / 组装机1型 / 电力机械臂×2 出×2 / 基础传送带 / 单排",
+  "entities": 26,
+  "w": 8,
+  "h": 7,
+  "outPerMin": 53,
+  "perTile": 0.946,
+  "efficiency": 0.442,
+  "trend": 1.038,
+  "working": 0.375,
+  "powerMW": 0.106,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 54,
+   "copper-cable": 157
+  }
+ }
+]

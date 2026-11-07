@@ -1,6 +1,6 @@
 // 沙盘集成测试: 开班主循环在"干净的服务器" (不装任何模组, 当联机服务器的替身) 上不叫模型跑一班 (第一块的验收)。npm run test:sandbox
 // 要: data/client、data/venv、data/tools/pdb-dump.exe, .env 的 FACTORIO_VIEWER_DIR (独立版)。开一个游戏窗口。
-// 核的: 干净客户端进世界、注入、游戏外的模组起来、角色目录的 ./fh (sh 和 PowerShell 两版) 经管道能读能动、开班扫描写出来、放 STOP 正常收工、服务器没装模组也没有不同步。
+// 核的: 干净客户端进世界、注入、游戏外的模组起来、角色目录的 ./fh (sh 和 PowerShell 两版) 经管道能读能动、开班扫描写出来并附要点、放东西时回复带出教训、./know 和 ./fh help 手册能用、放 STOP 正常收工、服务器没装模组也没有不同步。
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -43,8 +43,12 @@ test("干净客户端进世界、注入、游戏外的模组起来, 角色目录
   assert.equal(where.player.name, "RunCheck");
   assert.equal(where.hasBody, true);
   assert.equal(where.surfaces.find((s) => s.here)?.name, "nauvis");
-  for (const f of ["fh", "fh.ps1", "AGENTS.md", "CLAUDE.md", "notes.md", "deadline.txt", "ref"]) assert.ok(fs.existsSync(path.join(roleDir, f)), `角色目录缺 ${f}`);
+  for (const f of ["fh", "fh.ps1", "know", "know.ps1", "AGENTS.md", "CLAUDE.md", "notes.md", "deadline.txt", "ref/building.md", "ref/pattern-production.md", "ref/facts.md", "ref/names.tsv"]) assert.ok(fs.existsSync(path.join(roleDir, f)), `角色目录缺 ${f}`);
   assert.doesNotMatch(fs.readFileSync(path.join(roleDir, "fh"), "utf8"), /rcon|password/i, "包装脚本里不能有 RCON 密码");
+  const brief = fs.readFileSync(path.join(roleDir, "CLAUDE.md"), "utf8");
+  assert.doesNotMatch(brief, /\{\{/, "简报模板没填满");
+  assert.match(brief, /## 先读这一节[\s\S]*`RunCheck`[\s\S]*## 手册主题[\s\S]*`pattern-production`/);
+  assert.match(out, /教训: 种子 \d+ 条/);
   console.log(`  ${out.split("\n").filter((l) => /客户端: |挂上|起来了|控制台命令/.test(l)).join("\n  ").slice(0, 800)}`);
 });
 
@@ -54,6 +58,7 @@ test("开班扫描写出来了 (Lua 跑在游戏外)", async () => {
   const md = fs.readFileSync(path.join(roleDir, "world-scan.md"), "utf8");
   assert.match(md, /## 现状/);
   assert.match(md, /在线 1 人/);
+  assert.match(md, /## 相关要点[\s\S]*\(P-/, "开班扫描后面要附要点 (刚开局对得上)");
   const json = readJson(path.join(runDir, "world-scan.json")) as { stage: string; lines: string[] };
   console.log(`  ${json.stage}; ${json.lines[0]}`);
 });
@@ -69,6 +74,12 @@ test("角色目录的 ./fh (sh 版) 经管道: 读走外面, 动作走玩家操�
   const built = await sh("call", "build", "--args", JSON.stringify({ item: "wooden-chest", position: { x: 0, y: 0 }, walk: true }), "--wait");
   console.log(`  build: ${JSON.stringify(built.result ?? built.error).slice(0, 200)}`);
   assert.ok(built.ok, JSON.stringify(built).slice(0, 400));
+  assert.ok(Array.isArray(built.result?.lessons) && built.result.lessons.length >= 1, `放东西的回复要带出教训: ${JSON.stringify(built.result).slice(0, 300)}`);
+  // 不是给程序读的回复 (没 --format): 放机器后面附相关经验; 查配方后面附经验
+  const { stdout: furnace } = await run(bashExe(), [path.join(roleDir, "fh"), "call", "build", "--args", JSON.stringify({ item: "stone-furnace", position: { x: 4, y: 0 }, walk: true }), "--wait"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true });
+  assert.match(furnace, /lessons/, "紧凑格式里也有 lessons 行");
+  assert.match(furnace, /相关经验 \(工具附的; \.\/know 石炉 看更多\)/, furnace.slice(-600));
+  assert.ok(!fs.existsSync(path.join(roleDir, ".fh-hints.err")), fs.existsSync(path.join(roleDir, ".fh-hints.err")) ? fs.readFileSync(path.join(roleDir, ".fh-hints.err"), "utf8") : "");
   const again = await sh("call", "inventory");
   assert.match(String(again.result?.inventory ?? ""), /wooden-chest\*3|wooden-chest 3/);
   const journal = fs.readFileSync(path.join(roleDir, "journal.jsonl"), "utf8").trim().split("\n");
@@ -80,6 +91,22 @@ test("角色目录的 fh.ps1 (PowerShell 版) 同样能用, JSON 参数不拆坏
   const r = JSON.parse(stdout) as { ok?: boolean; result?: Record<string, any> };
   assert.ok(r.ok, stdout.slice(0, 300));
   assert.ok(JSON.stringify(r.result).includes("wooden-chest"), JSON.stringify(r.result).slice(0, 300));
+});
+
+test("角色目录的 ./know 和 ./fh help: 查积累 (sh 和 ps1), 手册大的先回目录、按段看", async () => {
+  const { stdout: know } = await run(bashExe(), [path.join(roleDir, "know"), "研究中心"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true });
+  assert.match(know, /^\[(思路|事实|要点|教训|资料) /m, know.slice(0, 300));
+  assert.match(know, /还有 \d+ 条/);
+  const { stdout: knowPs } = await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(roleDir, "know.ps1"), "地下管道", "方向"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true });
+  assert.match(knowPs, /地下管道|pipe-to-ground/, knowPs.slice(0, 300));
+  const { stdout: toc } = await run(bashExe(), [path.join(roleDir, "fh"), "help", "building"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true });
+  assert.match(toc, /building 共 \d+ 字 \d+ 段, 整份读太占上下文/, toc.slice(0, 300));
+  const { stdout: sec } = await run(bashExe(), [path.join(roleDir, "fh"), "help", "pattern-production", "P-prod-01"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true });
+  assert.match(sec, /pattern-production 第 \d+\/\d+ 段[\s\S]*一条带满载/, sec.slice(0, 300));
+  const { stdout: topics } = await run(bashExe(), [path.join(roleDir, "fh"), "help"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true });
+  assert.match(topics, /building/);
+  assert.match(topics, /\.\/know 关键词/);
+  assert.match(fs.readFileSync(path.join(roleDir, "journal.jsonl"), "utf8"), /"event":"help"/, "查手册也记 journal");
 });
 
 test("放 STOP 正常收工: 记录齐全, 服务器没装模组、没有不同步, 游戏进程都关了", async () => {

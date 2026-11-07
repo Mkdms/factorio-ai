@@ -1,0 +1,195 @@
+{"rule":"队列开局 paused, 要 queue_resume; 队列运行中发直接动作(如 wait_until)会打断队列","keys":{"action":"wait_until"}}
+{"rule":"wait_until 只能放队列里; wait_ticks 直接调好像不真等","keys":{"action":"wait_until"}}
+{"rule":"拆建筑用 mine (name=实体名), pickup 只捡地上","keys":{"action":"mine"}}
+{"rule":"transfer 的 up_to 不可靠 (给不进去), 用 count; 队列一步失败后整队暂停","keys":{"action":"transfer"}}
+{"rule":"煤是瓶颈, 每对 采矿机+炉 吃 ~0.06 煤/秒","keys":{"item":"electric-mining-drill"}}
+{"rule":"队列运行中发直接动作(包括 dry_run belt_route、wait_ticks)会打断/暂停队列, 要 queue_resume","keys":{"action":"belt_route"}}
+{"rule":"inserter 的 build direction = 取货那一侧","keys":{"action":"build"}}
+{"rule":"燃烧矿机放在矿区边缘只盖 3 格煤, ~25 分钟就挖空; 源头矿机要放在矿多的地方","keys":{"item":"electric-mining-drill"}}
+{"rule":"红瓶机 (组装机1) 只出 0.1 瓶/秒; 5 秒/单位的科技会让研究中心断断续续缺瓶","keys":{"item":"science"}}
+{"rule":"fp research 是直接动作, 也会打断正在跑的队列","keys":{"action":"research"}}
+{"rule":"对绿瓶模块区域整片 construct 会让 fp 运行时崩溃 → 用 revive_ghost 逐个建, 或者 build","keys":{"action":"construct"}}
+{"rule":"build 的 inserter direction 不一定可靠: 建完立刻 inspect 看 pickup/drop, 不对就 rotate (2h12m 一次装反, 往炉子里塞铁板差点炼钢)","keys":{"action":"build","item":"iron-plate"}}
+{"rule":"动作会互相顶掉 (replaced): 走路采矿时别再发 wait_until / 第二个 mine; 用 sleep 等","keys":{"action":"wait_until"}}
+{"rule":"发任何新的定时动作 (wait_ticks 等) 会替换正在跑的动作 (build 等待手搓时也算); --wait 有时提前返回, 用 fp status 看 last/cra…","keys":{"action":"build"}}
+{"rule":"belt_route 只放虚影! 要 construct 或 revive_ghost 逐个建 (绿瓶区 construct 会崩, 用 revive_ghost)","keys":{"action":"belt_route"}}
+{"rule":"机械臂 direction 不可靠: build 后一定 inspect 看 inserter_line; rotate 的 direction = 放下那一侧; rotate 够不着会先走路 (定时), 后…","keys":{"action":"build","item":"inserter"}}
+{"rule":"craft transport-belt count 是配方次数 (count 40 = 80 条)","keys":{"action":"craft","recipe":"transport-belt"}}
+{"rule":"collect outputs_only 从炉子拿板: 一次拿到 铁200 铜200","keys":{"action":"collect","item":"stone-furnace"}}
+{"rule":"一条 bash 里连发两个要走路的 build, 第二个会顶掉第一个的走路 (replaced): 先 move_to --wait 再在够得着的地方连发 build","keys":{"action":"build"}}
+{"rule":"sleep 带 condition / wait_until 会打断正在跑的 collect / pickup; 定时动作后用不带条件的 sleep","keys":{"action":"wait_until"}}
+{"rule":"地下带 build/inspect 报 neighbours 错, 但东西其实建上了 (place_ghosts 会说 already built); build_path 末端拐弯会失败, 分段铺","keys":{"action":"build"}}
+{"rule":"煤矿只有一块, 空位用完了; 绿瓶模块压在煤矿上 (以后别把工厂盖在矿上)","keys":{"item":"coal"}}
+{"rule":"./bp file 报 EEXIST (bp 是脚本文件, 建不了 bp/ 目录) → 蓝图用不了, 改用 queue_submit 一串 build (build 的 builds 数组一次放多个…","keys":{"action":"queue_submit"}}
+{"rule":"队列跑着时别发 wait_until/wait_ticks/research (会打断队列); 读的动作 (status/observe/inspect/labs/power) 不打断","keys":{"action":"wait_until"}}
+{"rule":"bash 里不能写 for 循环 / $(...) / sed (权限拒), 多步就用 queue_submit","keys":{"action":"queue_submit"}}
+{"rule":"加研究中心/机器前先看电 (fp power)","keys":{"action":"power","item":"lab"}}
+{"rule":"地下传送带 build/inspect/observe 目前会报 neighbours 错 → observe 加 entity_names 过滤可以绕开","keys":{"action":"build","item":"transport-belt"}}
+{"rule":"研究中心是链式: 绿瓶入口太少会堵在带上 → 每排都要有从带直取的臂","keys":{"item":"lab"}}
+{"rule":"belt_route 只放虚影; craft transport-belt count 是配方次数","keys":{"action":"belt_route","recipe":"transport-belt"}}
+{"rule":"map/nearest 只认已开图区域 (走路开图); belt_flow 报错别用; power 只看身边电网; 手搓前先确认背包铁/铜板够 (否则 awaiting cr…","keys":{"action":"power","recipe":"copper-plate"}}
+{"rule":"燃烧矿机放在矿区边缘只盖 3 格煤, ~25 分钟就挖空","keys":{"item":"electric-mining-drill"}}
+{"rule":"一条道只放一种料: 煤混进铁道会堵死整条母线 (研究中心 16→2)。隔一阵 trace 母线尾。","keys":{"action":"trace","item":"lab"}}
+{"rule":"(8h) 换组装机: build 同位置放组装机2型 = 原地替换 (里面的料退回背包, 配方保留); upgrade 要机器人, 没用。","keys":{"action":"build","item":"assembling-machine-2"}}
+{"rule":"feed 用 area + fuel:\"coal\" 一次给全部燃料; transfer to_player 用 area 会把燃料也拿走, 拿煤只用 positions 指定箱子","keys":{"action":"feed","item":"wooden-chest"}}
+{"rule":"订单 coalfuel: 每2分钟给煤矿4台采矿机加煤。","keys":{"item":"coal"}}
+{"rule":"research 用 {\"research_queue\":[...]}; transfer 用 direction to_player/to_entity。","keys":{"action":"research"}}
+{"rule":"热能采矿机要放在有矿处; 先 drill_sites 查。","keys":{"item":"burner-mining-drill"}}
+{"rule":"mine 用 name+count 自动找邻近矿格。","keys":{"action":"mine"}}
+{"rule":"机械臂 direction = 取料那一边 (south: 从南取往北放)。","keys":{"item":"inserter"}}
+{"rule":"refuel 用 positions/area+count, 不带 item。build 清树会变 construct, 别紧接着发别的动作; 用 --wait 后再 ./fh wait。","keys":{"action":"refuel"}}
+{"rule":"belt_route 不收 clear_obstacles; 用 via 拐弯, 再 construct area --wait。","keys":{"action":"belt_route"}}
+{"rule":"transfer to_entity 不给 count 只放 1 个。","keys":{"action":"transfer"}}
+{"rule":"collect 用 positions 列表; mine 资源用 name; 超过 32 格加 walk:true。","keys":{"action":"collect"}}
+{"rule":"queued transfer 要写 direction。queue_repeat 没有 mode 参数, 直接替换。","keys":{"action":"transfer"}}
+{"rule":"队列里 transfer 一个正在手搓的物品会一直等手搓完成, 卡住整个循环 (78m 卡了 3 分钟)。循环里别放这种步骤。","keys":{"action":"transfer"}}
+{"rule":"常驻命令只能有一个无 when 的; 其它要加 when。队列里 transfer 要写 direction; on_fail 用 skip。","keys":{"action":"transfer"}}
+{"rule":"别站在会被放建筑的地方, 会被卡住 (mine 掉一个出来)。","keys":{"action":"mine"}}
+{"rule":"煤是瓶颈: 煤矿小 (113k), 热能机器越多越缺煤。电力采矿机省煤。","keys":{"item":"coal"}}
+{"rule":"研究中心之间可以用机械臂传瓶。","keys":{"item":"lab"}}
+{"rule":"手搓绿瓶会吃掉背包里的机械臂/传送带 (建材被吃光), 要建东西时先 cancel_craft。","keys":{"recipe":"inserter"}}
+{"rule":"机械臂 direction = 取料那边; y 越小越北, 别搞反。分流器出口不能侧面喂进地下带入口 (堵), 改成把另一条带走地下。","keys":{"item":"inserter"}}
+{"rule":"belt_route 只放虚影, 之后要 construct {area} 才真建。shell 循环被拒, 用 && 连。","keys":{"action":"belt_route"}}
+{"rule":"管道/地下管: 只能用 place_ghosts --args-file + construct; 绕水边放管会把自己围住, 先留地下管口。化工厂朝南时左入口=石油…","keys":{"action":"place_ghosts","item":"pipe"}}
+{"rule":"红瓶组装机出口会堆几百个: 定期 collect radius + feed area 喂研究中心。","keys":{"action":"collect","item":"lab"}}
+{"rule":"research 加队列用 {\"technology\":X,\"append\":true}。","keys":{"action":"research"}}
+{"rule":"机械臂 direction = 取料那边; y 越小越北。分流器出口不能侧面喂进地下带入口。","keys":{"item":"inserter"}}
+{"rule":"belt_route 只放虚影, 要 construct {area}; belt_route/construct 不收 clear_obstacles, build 收。","keys":{"action":"belt_route"}}
+{"rule":"煤侧装进矿带一侧: 煤在上游优先, 那侧采矿机全堵, 矿量减半; 只在矿多余时用 (铜列行, 铁列不行)。","keys":{"item":"electric-mining-drill"}}
+{"rule":"建机械臂前先看出料格是什么 (差点把机械臂放进铁板带)。","keys":{"item":"iron-plate"}}
+{"rule":"collect 用 radius / positions, 不收 position。手搓绿瓶会吃掉建材。","keys":{"action":"collect"}}
+{"rule":"research 加队列用 {\"technology\":X,\"append\":true}; 调序 {\"move\":X,\"to\":N} (N≤队列长度), 删 {\"remove\":X}。","keys":{"action":"research"}}
+{"rule":"组装机1 → 组装机2: 直接在同位置 build 组装机2 (快速替换, 里面的料保留)。","keys":{"action":"build","item":"assembling-machine-1"}}
+{"rule":"orders_pause 也会暂停 queue; 恢复后 `./fh queue resume`。常驻的 collect/feed 远处要加 \"walk\":true。","keys":{"action":"collect"}}
+{"rule":"move_to 参数是 {\"position\":{x,y}}; collect 箱子要 \"chests\":true; collect radius 以角色为中心。","keys":{"action":"move_to","item":"wooden-chest"}}
+{"rule":"第3班: 高级电路组装机 (组装机1) 12s 一个、化学包组装机1 48s 两个 → 化学包组装机是瓶颈, 3 台后约 8 个/分。","keys":{"item":"assembling-machine-1"}}
+{"rule":"和平模式不排军事科技 (动能伤害3 要灰瓶, 卡死研究中心 0/11)。排研究前看要什么瓶。火箭发射井前置已全完, 只差它…","keys":{"item":"science"}}
+{"rule":"组装机1 → 2: 同位置 build 直接替换, 料和配方保留。","keys":{"action":"build","item":"assembling-machine-1"}}
+{"rule":"research 排队: {\"research_queue\":[...]} 一次给整串; 已研究的会被跳过。","keys":{"action":"research"}}
+{"rule":"refuel: {\"area\":..., \"count\":N, \"from\":\"nearest\" 或箱子坐标, \"walk\":true}。","keys":{"action":"refuel","item":"wooden-chest"}}
+{"rule":"远处 (看不见的区块) 的箱子不能直接 transfer, 先 move_to 过去。","keys":{"action":"transfer","item":"wooden-chest"}}
+{"rule":"craft 的手搓队列很慢 (250 电路板 ~4 分钟), 能用组装机就别手搓。","keys":{"action":"craft","recipe":"electronic-circuit"}}
+{"rule":"被拒的 Bash (管道/heredoc python) 改用 Edit/Write 改笔记。","keys":{"item":"pipe"}}
+{"rule":"带子尽头必须有出口: 铜矿带尽头堵死后整条北道停住, 夹在里面的煤挡住炉子拿矿, 采矿机全部\"出口满\"。","keys":{"item":"copper-ore"}}
+{"rule":"常驻命令 fuel_below 会把燃料少的热能机械臂也算进去, 几乎一直成立 → 要配长冷却。","keys":{"item":"burner-inserter"}}
+{"rule":"常驻命令 (adv_feed/chem5) 会拿走我手搓的电路板/集成电路, 放料前先 orders_pause。","keys":{"recipe":"electronic-circuit"}}
+{"rule":"背包满了常驻命令的 transfer 会失败 3 次后自动关掉, 要 order_set 重开。","keys":{"action":"transfer"}}
+{"rule":"别从锅炉喂煤箱拿煤挪给别处。和平模式不排军事科技。机械臂 direction = 取料那边。","keys":{"item":"boiler"}}
+{"rule":"建前 orders_pause, 建后 orders_resume。belt_route 只放虚影。collect 用 area/positions, 走远要 walk:true。","keys":{"action":"belt_route"}}
+{"rule":"transfer 对箱子要用它的中心坐标 (iron-chest x.5,y.5), 不是整数角点。","keys":{"action":"transfer","item":"iron-chest"}}
+{"rule":"feed: recipe 和 items 不能同时给。","keys":{"action":"feed"}}
+{"rule":"research 用 research_queue 数组整体重排; remove 删一项。","keys":{"action":"research"}}
+{"rule":"蓝图细节: 侧向汇入要上游有带子朝它送, 否则变弯道; belt_route 规划好用, 但不收 clear_obstacles 参数 (树用 construct 清)。","keys":{"action":"belt_route","item":"transport-belt"}}
+{"rule":"transfer/feed 都会自动走过去; 一人只能有一条默认例程 order, 其余要 when 触发。","keys":{"action":"transfer"}}
+{"rule":"transfer 对箱子用中心坐标 (x.5,y.5)。feed: recipe 和 items 不能同时给; feed 的 recipe 参数不按配方筛机器。","keys":{"action":"transfer","item":"wooden-chest"}}
+{"rule":"手搓和走路并行: 背包里的铜缆+电路板+塑料手搓集成电路 = 多一台机器。cancel_craft 再重排可以插队。","keys":{"recipe":"copper-cable"}}
+{"rule":"带子一道混煤 + 炉子燃料满 → 煤堵死整道; 尽头加机械臂+箱子当出口立刻解开。","keys":{"item":"inserter"}}
+{"rule":"背包老被常驻命令塞满铁板 (gear_eng 收铁板), 满了很多命令会失败: 定期存箱。","keys":{"item":"iron-plate"}}
+{"rule":"collect 可以从机器 output slot 直接取货(红瓶机 403 个、电子电路机 input 171 个) → 卡死的机器可以这样掏空让它恢复生产。","keys":{"action":"collect"}}
+{"rule":"feed 可以直接喂实验室(lab 也算 machine): 红瓶/蓝瓶直接放进 11 个实验室, 立刻让缺包的实验室开工。","keys":{"action":"feed","item":"lab"}}
+{"rule":"feed 的 count 是\"目标存量\": 机器已有 ≥ count 就不给; 想强制补料要把 count 设得比现有库存大。机器输入槽满时 feed 也会…","keys":{"action":"feed"}}
+{"rule":"transfer direction=to_entity 可往机器/箱子放东西; 目标满了会 short 并说明\"recipe takes ...\"。","keys":{"action":"transfer","item":"wooden-chest"}}
+{"rule":"craft 会被 check_stock 拦(附近工厂有存货就拒 craft), 传 check_stock:false 可以强造。","keys":{"action":"craft"}}
+{"rule":"build 的 direction = 投放方向(不是取料方向): direction \"south\" 的插入器从北取往南丢; 建完必须 observe 核对 pickup/drop。","keys":{"action":"build"}}
+{"rule":"组装机 3x3: 输入 slot 在输入面, 输出 slot 在输出面中格; inspect 的 inventories 会显示误塞进去的杂物(齿轮占着红瓶机的输…","keys":{"action":"inspect","item":"assembling-machine-1"}}
+{"rule":"本沙盘红瓶(automation-science-pack)配方读出来是 copper-plate + iron-gear-wheel。","keys":{"item":"automation-science-pack"}}
+{"rule":"找堵点最快: belt_flow; 看科学链: science; 看某物分布: supply --args '{\"item\":\"X\"}'; 实验室供料: labs。","keys":{"item":"lab"}}
+{"rule":"没有 insert 动作; 往机器/箱子放东西用 feed / transfer / collect。","keys":{"action":"feed","item":"wooden-chest"}}
+{"rule":"feed: recipe 和 item/items 互斥; item 单喂用 `{\"area\":…,\"item\":\"x\",\"count\":N,\"up_to\":true}`; refuel 的参数是 count 不是 fuel_count。","keys":{"action":"feed"}}
+{"rule":"collect 会从机器进料口误拿 (曾误拿 20 齿轮); 机组装输出被机械臂瞬间搬走, collect 机器输出拿不到。","keys":{"action":"collect","item":"inserter"}}
+{"rule":"transfer 目标远时要 \"walk\":true, 否则 out_of_reach 报错退出码1。","keys":{"action":"transfer"}}
+{"rule":"build 批量用 builds:[{item,position,direction}]; trace 要 {\"item\",\"upstream\":true,\"position\"}; collect 的 position 会被纠正成 positions。","keys":{"action":"build"}}
+{"rule":"换班断供: 常驻命令随下线消失, 依赖单人手喂的线必断 (塑料单点教训)。","keys":{"item":"plastic-bar"}}
+{"rule":"锅炉蒸汽出口在正下方: 若下方 1 格被横放的蒸汽机(5 宽 3 高, 方向 east)占地挡住, 蒸汽出不去、锅炉白建。加锅炉前先…","keys":{"item":"boiler"}}
+{"rule":"deconstruct 没有建设机器人时只是标红叉, 不会真拆; 要亲手 mine 才会回收。","keys":{"action":"mine","item":"construction-robot"}}
+{"rule":"配方: 管道=1 铁板; 锅炉=4 管道+1 石炉; 蒸汽机=10 铁板+8 铁齿轮+5 管道。","keys":{"item":"pipe"}}
+{"rule":"transfer 对箱子用中心坐标 (x.5,y.5)。feed: recipe 和 items 不能同时给; feed 远处要加 \"walk\":true。","keys":{"action":"transfer","item":"wooden-chest"}}
+{"rule":"move_to 参数是 {\"position\":{x,y}}; order_set 用 --args-file; orders 列表看不到步骤, 命令 JSON 自己存文件。","keys":{"action":"move_to"}}
+{"rule":"常驻命令最多 6 个; 触发用 \"item_count deconstruction-planner ≥1\" 当常开 (钢板会被手搓用光, 用钢板当触发会全停)。","keys":{"recipe":"deconstruction-planner"}}
+{"rule":"sleep --until 写 \"item_count solar-panel>=20\"; build 远处要 \"walk\":true; --args 和 --args-file 不能同时用。","keys":{"action":"build","item":"solar-panel"}}
+{"rule":"build --wait 常被私信/监工打断 (东西照建); 重跑同一文件, 已建的报 \"already contains\"。","keys":{"action":"build"}}
+{"rule":"technologies 翻页用 from:N (数字)。placements 加 \"powered\":true,\"separate\":true 找互不重叠有电的位置。ports 要 name; 查箱子出口用 tr…","keys":{"action":"trace","item":"wooden-chest"}}
+{"rule":"collect 会被别人的认领拦 (skipped_claims); 先让对方改认领。","keys":{"action":"collect"}}
+{"rule":"craft underground-belt count=2 实际出 4。","keys":{"action":"craft","recipe":"underground-belt"}}
+{"rule":"机械臂 direction 不一定可靠: 建完用 observe 看 pickup/drop, 反了用 rotate direction 改。","keys":{"item":"inserter"}}
+{"rule":"带上放分流器要先拆占位的带子; build 的 type input/output 指定地下带入口出口。","keys":{"action":"build","item":"transport-belt"}}
+{"rule":"mine 一次只拆一个实体; 拆管会断液体要 cut_fluid:true; 远于 32 格要 walk:true; transfer 超过 64 格要 walk:true。","keys":{"action":"mine"}}
+{"rule":"order_set: on_fail 只能 abort/skip/goto; 每人只能一条不带 when 的默认常驻命令; 同名再 set 整条替换。","keys":{"action":"order_set"}}
+{"rule":"observe 过滤用 entity_names; belt_route 没有 clear_obstacles; bottleneck 用 item / area / positions。","keys":{"action":"belt_route"}}
+{"rule":"collect 用 count, 不用 max/up_to 数字。","keys":{"action":"collect"}}
+{"rule":"化工厂缺气而炼油厂满: pipe_gaps line 看管里是不是混了水。","keys":{"item":"chemical-plant"}}
+{"rule":"升级组装机: build 新机器在同位置 (recipe 同写) = 快速替换, 旧机器和里面的料回背包; 批量用 builds 数组。","keys":{"action":"build","item":"assembling-machine-1"}}
+{"rule":"feed 只喂机器, 箱子用 transfer {\"direction\":\"to_entity\",\"position\":…} (教训库 #42: 箱子用中心坐标 x.5,y.5)。","keys":{"action":"feed","item":"wooden-chest"}}
+{"rule":"冶炼配方 (钢板等) 不能手搓, craft 会拒: 得组装机/炉子做。","keys":{"action":"craft","recipe":"stone-furnace"}}
+{"rule":"角色会被机器+箱子围死 (油区 9 格圈): move_to 报 closed in + mine_to_get_out 给最短开锁清单; 拆别人的先 tell 说明再动, 拆完…","keys":{"action":"move_to","item":"wooden-chest"}}
+{"rule":"configure 不要 entity 参数 (position+recipe 就够); build all:true 用 builds/item (不是 entities/name); fh tell 不能 --reply-to, 用 chat_ack {seq}…","keys":{"action":"configure"}}
+{"rule":"collect 会被别人的认领拦; mine 一次只拆一个实体, 拆管 cut_fluid:true; 远 walk:true。","keys":{"action":"collect"}}
+{"rule":"机械臂 direction = 取料那一侧 (south = 从南取往北放)。","keys":{"item":"inserter"}}
+{"rule":"order_set: 每人只能一个无 when 的例行命令; on_fail 只能 abort/skip/goto; 同名再 set 整条替换。","keys":{"action":"order_set"}}
+{"rule":"transfer 多目标用 positions 数组 + count (每个目标); bash 里不许 ${p%,*} 这类展开。","keys":{"action":"transfer"}}
+{"rule":"拆别人带子前先重新 scan: 队友几分钟前可能刚改过 (18h01 差点拆断铜带)。","keys":{"item":"transport-belt"}}
+{"rule":"机械臂 build 的 direction 是取料侧；已有机械臂或传送带改方向要 rotate，重建不会改方向。","keys":{"action":"build","item":"inserter"}}
+{"rule":"feed 的 recipe 与 item 不可同时传；带 walk 的定时动作加 --wait。常驻命令会与自动线争产物，应完成后删除相关步骤。","keys":{"action":"feed"}}
+{"rule":"建造遇树会异步清场后重跑，等待后 inspect 供电和实际取放目标；单段带路完成后用 belt_flow 看末端是否真的取走。","keys":{"action":"inspect"}}
+{"rule":"命令里不能用 for/变量/$(); 走远先 move_to, build 可加 walk:true。","keys":{"action":"move_to"}}
+{"rule":"机械臂 direction = 拾取侧。transfer to_player 会把东西落地, 改用箱子交接。","keys":{"action":"transfer","item":"inserter"}}
+{"rule":"取带上煤: pickup {belt:true,item,position,count,radius,ticks}; 取机器燃料: transfer to_player。","keys":{"action":"transfer"}}
+{"rule":"砍树: python tools/chop.py x y 半径 棵数 (tree-06 每棵 4 木)。","keys":{"item":"tree-06"}}
+{"rule":"机械臂direction是抓取侧！向东送设west；进红瓶机向南送设north。建后inspect看pickup/drop。","keys":{"action":"inspect","item":"inserter"}}
+{"rule":"直接动作会暂停队列，结束须resume。pickup空地会失败暂停，巡回加on_fail skip。不要用construct消耗关键臂去建未来虚影…","keys":{"action":"construct"}}
+{"rule":"机械臂 direction 是抓取侧，向东送料设 west。建完看 pickup/drop。","keys":{"item":"inserter"}}
+{"rule":"电线杆横平竖直，别压在 3x3 机器上。","keys":{"item":"small-electric-pole"}}
+{"rule":"2x2 石炉放(x,y)占 (x,y)(x-1,y)(x,y-1)(x-1,y-1), 别和机械臂格重叠。","keys":{"item":"stone-furnace"}}
+{"rule":"燃料别手补, 接煤带+机械臂; refuel/手挖只兜底。开局手挖已超时(>20min), 该靠煤带。","keys":{"action":"refuel","item":"inserter"}}
+{"rule":"transfer 方向: to_player=取, to_entity=给 (错了两次!)。","keys":{"action":"transfer"}}
+{"rule":"refuel 会扫半径内所有燃烧机器, 一次喂一片区域。","keys":{"action":"refuel"}}
+{"rule":"热能臂 direction=拾取方向的反面: \"north\"=从北侧取放南侧; 要带→锅炉 用 \"south\"。","keys":{"item":"boiler"}}
+{"rule":"mine 取树要 walk:true, 超过 32 格; 取石头 count 配 walk:true。","keys":{"action":"mine"}}
+{"rule":"transfer 燃料 slot 只能放一种燃料; 有煤时木头给不进去。","keys":{"action":"transfer"}}
+{"rule":"build 的 direction 是投放方向, 建完用 scan 核对。","keys":{"action":"build"}}
+{"rule":"取炉子成品: transfer item 铁板 direction to_player。","keys":{"action":"transfer","item":"iron-plate"}}
+{"rule":"手采矿只开局用。transfer 取炉子产物用 position + direction to_player + inventory crafter_output。","keys":{"action":"transfer","recipe":"stone-furnace"}}
+{"rule":"burner-mining-drill 是 3x3, 中心整数坐标; 向南吐 (centre.y+1.5)","keys":{"item":"burner-mining-drill"}}
+{"rule":"feed count 是目标存量, 已有 >= count 不给","keys":{"action":"feed"}}
+{"rule":"炉子输出 collect 会跳过别人 claim 但照样取到 (仍显示 claimed)","keys":{"action":"collect","item":"stone-furnace"}}
+{"rule":"craft 手搓 0.5s/个","keys":{"action":"craft"}}
+{"rule":"mine 远于 32 格要 walk:true; 取石头/矿要 count + walk:true。","keys":{"action":"mine"}}
+{"rule":"transfer 给燃料只能放一种; 槽里有煤时木头给不进。","keys":{"action":"transfer"}}
+{"rule":"move_to / mine / 直接 transfer 会暂停队列, 之后要 `./fh queue resume`。","keys":{"action":"move_to"}}
+{"rule":"./calc 算配比: 红瓶 30/分需铁板 60/分、铜板 30/分 (先算再建)。","keys":{"item":"iron-plate"}}
+{"rule":"给队友物品: transfer 写 to_player 名字, 要先走到他 1 格内。 给实体: direction to_entity 必填。","keys":{"action":"transfer"}}
+{"rule":"小电杆供电半径2.5；机械臂横差3格就没覆盖。蓝图自动连出斜线，建后要清：python tools/straight_wires.py(固定科研区)，清…","keys":{"item":"inserter"}}
+{"rule":"build_path站在待铺格上会build_failed且不给原因；移开或用build批量会自动stepping_aside。","keys":{"action":"build_path"}}
+{"rule":"输入侧汇入必须保留主带上游直段；已实测左铜右齿轮，单道单料。","keys":{"item":"transport-belt"}}
+{"rule":"锅炉朝西时蒸汽从西口出、水从南北进，不能把水泵直线顶到蒸汽口。","keys":{"item":"boiler"}}
+{"rule":"小电线杆供电半径约 2.5、连线约 7.5，蒸汽机占位大，杆子放在机旁一格外。","keys":{"item":"steam-engine"}}
+{"rule":"burner-mining-drill 是 2x2, 中心整数坐标, 向南吐 center.y+1.5 (即 tile y-1 的下一格)","keys":{"item":"burner-mining-drill"}}
+{"rule":"build 的 direction 是取料方向: 建 burner-inserter direction \"west\" = 从西取、往东丢","keys":{"action":"build","item":"burner-inserter"}}
+{"rule":"feed 支持 area / radius 批量补料; feed 的 fuel=\"coal\" fuel_count=N 才有目标存量","keys":{"action":"feed"}}
+{"rule":"transfer from nearest 默认只走 32 格, 远了要 walk:true","keys":{"action":"transfer"}}
+{"rule":"订单失败 3 次自动关掉, 改 order_set 同名可重开","keys":{"action":"order_set"}}
+{"rule":"order_set 的 when: fuel_below 支持 area/position+radius+count","keys":{"action":"order_set"}}
+{"rule":"craft 是排进手搓队列, 要 wait_until crafting_done 才进背包","keys":{"action":"craft"}}
+{"rule":"transfer/pickup: transfer 不接 belt:true, 取带子用 pickup {position,belt:true,item,count}; 1x1 建筑 build 用 x.5 坐标。","keys":{"action":"transfer","item":"transport-belt"}}
+{"rule":"build 参数是 builds:[{item,position,direction}] (entities/name 会被纠正); direction=投放方向。","keys":{"action":"build"}}
+{"rule":"手采石头: mine {position,count} 会跑很久 (80石约4分钟), 用 status 看 active。","keys":{"action":"mine"}}
+{"rule":"2x3 钻机 transfer 喂料用钻机左上角整数坐标 (如 -33,-34), 写 x.5 会命中矿。","keys":{"action":"transfer"}}
+{"rule":"transfer 给燃料只能放一种; 槽里有煤时木头给不进; 炉子燃料槽满 50 煤会拒收。","keys":{"action":"transfer","item":"stone-furnace"}}
+{"rule":"钻机输出堵住多半是后面炉子跟不上, 先看炉子燃料和进料 (lesson #153)。","keys":{"item":"stone-furnace"}}
+{"rule":"tells 的参数是 since=N, 不是 seq。 fh wait 没有 --until-idle。 远处实体先 move_to 再 transfer。","keys":{"action":"move_to"}}
+{"rule":"锅炉燃料一次最多 50 煤 (单格), 塞满会拒绝。","keys":{"item":"boiler"}}
+{"rule":"move_to 超过 mention 会中断 wait: 用 fh wait --wait-through-tells 继续等。","keys":{"action":"move_to"}}
+{"rule":"refuel 动作坏了 (fuel_category 报错), 用 transfer {direction:to_entity,item:coal}","keys":{"action":"refuel"},"who":"a","run":"2026-11-02T15-10-07"}
+{"rule":"(8h) 队列里的 transfer/collect 目标不在视野 (没雷达的区块) 会直接失败 → 循环里先 move_to 过去; 蓝瓶区放了雷达 -38.5,-60.5…","keys":{"action":"transfer","item":"radar"},"who":"b","run":"2026-11-02T18-17-03"}
+{"rule":"烧煤采矿机朝南落点 (x+0.5,y+1.5)。机械臂 direction=south 表示从南边拿、往北放。","keys":{"item":"inserter"},"who":"b","run":"2026-11-03T05-30-29"}
+{"rule":"热能采矿机出口朝箱子: 北向出口在 (x-0.5,y-1.5), 东向在 (x+1.5,y-0.5)。机械臂 direction=south 表示从南边拿往北放。","keys":{"item":"burner-mining-drill"},"who":"a","run":"2026-11-03T06-34-21"}
+{"rule":"机械臂 direction: build dry_run + check_inserters 会显示 pickup/drop, 先看再放 (east = 从东边取? 以 dry_run 为准)。","keys":{"action":"build","item":"inserter"},"who":"b","run":"2026-11-03T10-13-47"}
+{"rule":"蓝瓶断产是塑料单点: 塑料在 300 格外油田手搬, 一断全链满输出 (铜缆/电路板/硫/炼油厂连锁堵)。","keys":{"item":"plastic-bar"},"who":"c","run":"2026-11-04T09-36-33"}
+{"rule":"旧: 化工厂口跟朝向转 (north: 水北进酸南出); ptg 表面口只 1 个; feed 拒收=流体不齐; mine 断水网管 cut_fluid:true; collect 用 po…","keys":{"action":"feed","item":"chemical-plant"},"who":"d","run":"2026-11-04T18-40-18"}
+{"rule":"ores 用 resource; rates 查流体用 positions; ./fh view 坏了; belt_flow 只收 position。","keys":{"action":"rates"},"who":"b","run":"2026-11-05T02-13-24"}
+{"rule":"PowerShell数字参数加引号；plan即使自动化解锁仍infeasible，calc示例targets报recipes undefined，已向管理员多次报障。","keys":{"item":"automation"},"who":"b","run":"2026-11-05T04-39-42"}
+{"rule":"热能采矿机 drop 是实体\"drop\"字段(如 -52.5,42.5=格 -53,42); 机械臂拾/投看 pickup/drop 字段, 放置后用 observe 核实。","keys":{"item":"burner-mining-drill"},"who":"d","run":"2026-11-05T04-39-42"}
+{"rule":"calc 工具报 TypeError(solve.ts:143), 坏了; 用监工给的比例(铜 5采矿机+4炉=75/分)。","keys":{"item":"electric-mining-drill"},"who":"d","run":"2026-11-05T04-39-42"}
+{"rule":"iron-plate 永远缺: 每次搓之前先看 held, 场上的铁全在西边 90+ 格。","keys":{"item":"iron-plate"},"who":"e","run":"2026-11-05T04-39-42"}
+{"rule":"别带着东西走进虫巢 30 格内; 小虫一群就能把轻甲+手枪的人咬死。","keys":{"item":"pistol"},"who":"claude-opus-5-5","run":"2026-11-07T07-09-39"}
+{"rule":"跳步推进: 在已装弹炮塔射程内放下一座, 放下立刻 transfer 装弹, 再往前。","keys":{"action":"transfer"},"who":"claude-opus-5-5","run":"2026-11-07T07-09-39"}

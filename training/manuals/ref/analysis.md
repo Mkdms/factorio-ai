@@ -1,0 +1,558 @@
+- `./fh progress [--full] [--last N] [--format json]`: the run so far by shift from the recorded data (no game call):
+  a line per shift (technologies, SPM, packs and plates a minute, rockets, deaths, loss alerts, machines running, made
+  by machines and moved by hand), a run line and the last 3 shifts' trend; `--full` gives each shift's technologies
+  and packs; `--last N` only the last N shifts. Example: `./fh progress --last 3`
+- `research {technology | research_queue, front?, append?, remove?, move?, to?, target_level?, targets?}` and
+  `./fh research`: the research queue: each technology's progress, who queued it, its packs, and when it should finish
+  (`done_in`, at the last minute's lab throughput) (or which pack it waits for). A leveled technology
+  (mining-productivity-3) may stand in the queue several times, each the next level (`research_queue` and `append`
+  keep the repeats; `over_levels` names more than it has levels left). `target_level: {"mining-productivity-3": 8}`
+  keeps adding its next level until 8 is researched (at most 16 targets, 100 levels ahead; 0 removes one); `targets:
+  true` and the plain read say per target what is researching or queued and the levels left. Example: `./fh call research --args '{"target_level":{"mining-productivity-3":8}}'`
+- `research_done` (`./fh research done`): what finished lately, newest first, and what each unlocked (a technology
+  with levels: the level done).
+- `science {pack?, surface?, compact?, all_surfaces?}`: counts each pack the research needs (or `pack`) over your whole
+  surface, the same for everyone wherever they stand: made and used in 10 minutes, the assemblers set to it and their
+  states, packs in chests, in landing pads and hubs, on belts, in labs and carried, and the largest holders (landing
+  pads included). Spoilable packs add effective research units from freshness and remaining durability, before lab
+  bonuses. Its `reach` line says where else each pack sits (inserter hands, robots) and why it does not reach the labs;
+  its `chain` line walks the pack's recipe tree down, each step with its makers and made and used per minute,
+  following the ingredient most makers lack (`chemical-science-pack: 9 of 14 makers lack advanced-circuit, ...;
+  plastic-bar: 4 of 4 working, made 30/min, used 52/min`), and `chain_tree` lists every step down to ores and fluids;
+  a mined or pumped step names its drills or pumps, their states (working, output full, no resource left) and what
+  they put into. `compact: true`: one line a pack, your surface only, about a fifth of the full reply; its first line
+  says so and counts the labs on other planets; `all_surfaces: true` gives the compact read for each planet with labs.
+- Ammunition `supply`: `counts_scope` excludes turret magazines; whole ship: `platform_endurance resources.aboard`.
+- `supply {item, near?, radius?, surface?, compact?, all_stopped?, split?, requesters?, makers?, consumers?, stock?}`: `makers: "all"`: every machine
+  making it on the surface, nearest first, 24 a call (`from`), each with status and why, rate (as inspect's: a product
+  exempt from productivity, an egg breeder's returned egg, gets none; `net_per_min` when it goes back in), inputs
+  against one craft and what it feeds. `consumers: "all"`: every machine whose recipe takes it (status, its take a minute now and at full
+  speed) and every requester or buffer chest asking for it (as `requesters` reads them), the largest use first, 24 a
+  call (`from`), with the totals. `requesters: true`: who gets
+  an item: every requester or buffer chest in a logistic network on the surface asking for it, served now (robots bringing N) first, then
+  unmet (and why: no network, none free, no idle robot, none on the way yet), then met, each with its request, what it
+  holds and the machines it feeds that use it (working, take a minute); each network's free stock and idle robots;
+  then the chests that feed machines using it but ask for none of it (with what they ask). `split: true`: where an item or fluid goes
+  now: each group of our machines whose recipe takes it (by recipe and place) with how many work, its take at full
+  speed and share, and what feeds it: an item, what its feeding inserters pick from (belts, requester chests by
+  network, chests, drills dropping in), then requester chests asking for it that feed none of them; a fluid, the pipe
+  segments its input boxes are on, each with the machines making it there (none: tanks, pumps or a pipe between). Otherwise one item or fluid: where it sits (chests by kind,
+  belts (`belt_lines`: the 5 belt lines holding the most, with their ends and the tile with the most; `belt_positions:
+  true` adds each of those lines' tile positions with counts and the scan's tick, up to 1000; `belt_tiles: "<those
+  positions>"` reads the same tiles again at one tick, zeros included), machine outputs,
+  inserter hands, robots, characters), each logistic network's stock of it (free and reserved, and which requesters the
+  reserved stock is for), its robots, every unmet requester with the reason (`inventory full: all 48 slots taken
+  (spoilage 494 in 10 slots, ...)` first when its slots are all taken), machines that make and use it by status (the
+  worst 3 with positions) and the inserters feeding them. A short machine whose input inserter is off by its circuit
+  or logistic condition, or whose requester asks for less than one craft, is named as that first (the condition and
+  what the source holds), ahead of plain shortages. `surplus_chest` names the largest unreserved plain, storage
+  or provider stock (requester and buffer chests left out); `throughput` names a machine whose inserters carry less than
+  its recipe at full speed, each inserter's rate a minute, and how many inserters like its fastest it takes (`trace
+  {position}` on a machine gives the same); `full_chests` names chests with every slot used that the makers' output
+  waits on (slots used/total, what fills them, the machines waiting); `chests` rows give free slots. A fluid
+  (`lubricant`) gives its stock and flow, makers and users. `made_by_spoiling` (an item others spoil into:
+  copper-bacteria into copper-ore): how many are held and spoil within 5 min; the production statistics do not count
+  spoiling. For an item that spoils, `flow` says spoiling counts in neither made nor used (used counts ingredients and
+  fuel burned), and a whole-surface read gives `uncounted`: against the last one 1-60 min before, made, used, held
+  then and now, cargo pods landed and sent up in rockets over the same interval (the pod log), and the `residual`
+  (signed: above 0 more left the stock than these count, which spoiling or what left uncounted can be; below 0 more came
+  in uncounted; the game's statistics count no spoiling).
+  `where` counts fuel slots and stacks on the ground too. A read is kept 10 s: the same read within them is reused;
+  `read` says `fresh` or `reused`, `read_tick` the tick it was read, `as_of` its age. `stock: true` (whole surface): the
+  item's count there by place, read now and never reused: `total`, `where` and `places` (`{label: count}`, as `where`
+  gives), `read_tick`, `next_tick`; one read a 5 s for your same surface and item (sooner: refused, with the next tick);
+  a platform of at most 10000 buildings, a planet of at most 2500 (by the census); no belt lines, networks or
+  machines. `near` with `radius` (up to 512, default 64)
+  limits it to that area; `compact: true`: lines only (flow, where, makers, the stopped makers and users by position,
+  the chests holding most), about a fifth of the full reply; `all_stopped: true`: every maker and user not working,
+  grouped by cluster with every position. Example: `./fh call supply --args '{"item":"advanced-circuit","near":{"x":0,"y":0},"radius":64}'`
+- What the production statistics count: made is what crafts put out past each product's ignored_by_stats (a
+  productivity completion's extra whole); used is each craft's ingredients past their ignored_by_stats, fuel burned and
+  ammo fired, never spoiling, hatching or what leaves the surface. A recipe that gives back what it takes (pentapod-egg:
+  1 egg in, 2 out, 1 more a productivity completion; barrels, kovarex, fish breeding) has the returned amount on
+  neither side, so made is the net (Gleba, six breeders at +50% over 66 s: 109 crafts and 54 productivity completions,
+  272 out, 109 back in, statistics made 163). Completions count crafts finished, not items. uptime's `returned` (rows,
+  groups) and supply's `returned` give out, back in, net and what the statistics count; supply's `used_by` lists the
+  recipes, the burners holding or burning it (rate at full power), turrets holding it, and what used leaves out.
+- `rates {item | recipe | area | positions, surface?, per?}`: per item, `produced`, `consumed` and `net` are full-speed
+  figures (`basis: "full speed"`: what the machines would make and use running without stop, not what they made);
+  `working` says how many of them work now. With `item`, `actual` and `statistics` give what was made and used (the
+  game's statistics over 10 min), and `line` puts the two side by side. With `item`, `producers` gives one row a
+  machine making it (the first 48): `full_per_min` (full speed, as `inspect`) beside `measured_per_min`, what it made
+  by its own crafts counter over `measured_over` (10-20 min; "not counted yet" for a machine the harness's background
+  count has not reached).
+- `technologies {name? | prefix?, level?, available?, limit?}`: each technology's `effects` as the research screen lists them
+  (recipes unlocked, places, qualities, modifiers such as `ammo-damage (bullet) +40%` or `low-density-structure
+  productivity +10%`) and, for one with levels, `next_level` ("level 8 adds ...; N units"). Each one not researched:
+  `progress`, `takes` (the time it alone would take at the labs' rate measured over the last minute, as the research
+  queue's `done_in`; `lab_rate` gives the rate), `packs_needed` (each pack for its units left, with the count where the
+  labs are: the labs the census pass listed and the logistic networks of their surfaces) and `packs_short`. Example:
+  `./fh call technologies --args '{"name":"physical-projectile-damage-7"}'`.
+  With one exact `name` and `level` (no list/filter/page arguments), reads that level without changing research:
+  `./fh call technologies --args '{"name":"low-density-structure-productivity","level":16}'`.
+  `level` is the requested level; `force_level` is the engine's current/next level. `full_units`, `remaining_units`,
+  `progress_source` and `takes` distinguish the full cost from current or saved progress. `cost.eta_seconds` uses
+  measured lab progress, includes productivity and excludes queue wait. Completed levels have zero remaining units.
+  `cost.nominal_packs_per_unit/full/remaining` are the research recipe, before lab drain and productivity;
+  `cost.physical_packs_remaining` estimates fresh normal-quality full-durability pack equivalents at the working
+  compatible cohort's speed shares. `cost.cohort` states census age, lab counts/groups, drain and productivity.
+  Missing/incomplete census or no working compatible labs makes physical demand unavailable. Changed supply,
+  freshness, quality and partial pack durability change physical item demand. Plain `packs_needed`/`packs_short`
+  also remain nominal. Repeated infinite `research` entries carry successive `level`, `full_units`, `remaining_units`
+  and `progress_source`; only the first occurrence can use saved/current progress.
+- `bottleneck {item, per_min?, all_stopped?, surface?}` (or `area`, `positions`): follows a shortage down its ingredient
+  chain to where it starts, naming each step's makers, their states and what they lack; `fixes` gives, for a starved
+  maker, the nearest chest within 64 tiles holding what it lacks and one `transfer` call that carries it there.
+  A maker lacking an item its input inserter's source holds while that inserter is off by its condition reads "held by
+  its feeder's condition" (the condition, values on its wires, the source's stock; `held_by_feeders`), gets no fix, and
+  the line stops there; a source with none stays a shortage. `per_min: 30`: each step's rate for that target, what it makes now, its makers' rate each and the machines the target
+  takes; an ingredient is counted net of what its recipe gives back (asteroid crushing). A fluid adds `shares`: each
+  recipe's machines and share of the fluid at full speed. `all_stopped: true`: every maker not working, grouped by
+  cluster with every position. A maker stopped by its own circuit or logistic condition carries the gate inline (the
+  condition and what it reads now), in bottleneck's groups (`gate`, with area or positions) and in supply's and
+  bottleneck item's maker lines. Example: `./fh call bottleneck --args '{"item":"processing-unit","per_min":30}'`
+  `chain: true` (with item): each link of the recipe chain back from the item, with its makers and their states, made
+  and used a minute now, full speed, what the link it feeds asks at its full speed, and logistic stock; `limit` is the
+  link the shortage comes down to (followed while a link's makers mostly lack an input), with its numbers and its
+  makers' states. Up to 16 links and 24 makers a link read; machines from the census pass (`as_of`).
+- `trace {position | item, platform? | surface?, forward?, audit?, upstream?, throughput?, circuit?, all?, near?,
+  radius?}`: on a machine or lab, per ingredient it lacks each feeding inserter, what that inserter reads and how much
+  is there, and a container within 10 tiles holding it that nothing reads. A belt lane it picks from that is full of
+  another item and holds none of the ingredient is followed upstream (256 tiles): the jam, the blocking item, the
+  inserter putting it on (what it takes from, its circuit or logistic condition and whether it holds now; else the
+  belts feeding the line's start), and the first consumer of the ingredient past it (`blocked`). `competitors`: the
+  other takers of it at the feeder's source (inserters on that lane, followed 64 tiles upstream, into another machine
+  whose recipe takes it or into a chest; at a chest or machine output the other inserters taking from there), each with
+  its machine, recipe, state and what the recipe uses of it a minute at its speed. `forward: true` follows its output inserters
+  and belts lane by lane to where they end and what blocks them (on a belt tile, a drill or a chest: from there,
+  forward), naming where other items join a lane (`joins transport-belt (12,5) carrying iron-plate on the left lane:
+  your iron-ore mixes in`); with `audit: true` it adds `audit`: where the walked lanes lose capacity (a belt
+  side-loading both carried lanes onto one, a curve made a side-load by an empty stub behind the turn, a route ending at
+  missing tiles with the run going on within 4 tiles, what it carries). `lane_facts` adds native contents and the front
+  item per lane, two source lanes connected to one destination lane, and inserters along the line: status, held item,
+  pickup switches, near/far lanes. Belts and inserters include their circuit/logistic conditions and current values.
+  These facts cover 32 walked lane tiles by default; `lane_facts_limit: 1..256` sets the page size and
+  `lane_facts_offset` skips walked lane tiles. The reply counts total/included/omitted lane tiles and names `more`
+  and `next` arguments; `lane_facts_coverage` repeats coverage/options at the top level. Pages are current reads. `lane_facts:false` omits these extra reads; the original trace
+  and audit remain. Its lane-tile count is walked (belt, lane) pairs; included belts report all native lines.
+  `max_tiles: N` caps a forward walk at N lane tiles (1..3000); `continue_at` names where the capped route stops. `upstream: true` goes the other way: from a
+  machine, lab, thruster, hub or belt tile back along what feeds it, naming per ingredient the first place it stops or
+  goes elsewhere (a filter, a circuit condition, an inserter taking it onto another belt, a jammed mixed lane, a
+  splitter filter, where another item joins); `item` picks one. `item` alone follows every route from its makers to the
+  labs (for an ore, from the drills mining it). `throughput: true` on a belt tile reads the line through it (every belt
+  feeding it back, on to its end): per lane the mining drills dropping onto it (how many, working, on what) and what
+  they put on at full speed against the slowest belt's lane capacity, and what the last 10 tiles hold (a tile near the
+  end counts every drill). `circuit: true`: a machine's inserters with their conditions, and the circuit networks on
+  their wires followed back through combinators. `surface` reads another surface, `platform` a platform. Out of sight
+  it returns dated last-seen memory. It flags a held-item refusal. A refused argument shape names every shape it
+  takes; `./fh help trace` gives a call for each mode. Example: `./fh call trace --args '{"position":{"x":-290.5,"y":-312.5},"forward":true,"audit":true}'`
+- `labs {surface?, position?, radius?}`: which labs lack which packs, which inserters feeding them are idle and why,
+  and the research ETA; `surface` reads that surface. `full_speed` and `lab_rates` (and `inspect`'s `research_rate` on a
+  lab): the engine's figures at full supply for the current research. Speed = researching speed at its quality × (1 +
+  modules and beacons) × (1 + the force's lab speed): the two multiply, so the entity's `speed_bonus` (their sum) is not
+  it. Each pack a minute = its amount × units a minute × drain (biolab 50%). Productivity adds progress, not pack use.
+  What the labs used is `science` (the 10-minute statistics).
+- Out of sight (no radar or character of ours sees the chunk), `inspect {area}`, `scan` and `observe` (and `./fh view`)
+  add `fog`: our buildings and belts we saw there that no longer stand there (`remembered`, with `seen_s_ago` and status
+  then), our ghosts there now, and ours destroyed there (`lost`, from the destroyed alerts). `./fh view` draws the
+  remembered ones dim, ghosts blue, losses as red outlines. `./fh view --args '{"position":{"x":5,"y":563},"radius":26}' --out
+  v.png` draws round that position (radius up to 32); `area` (up to 64x64) is drawn round its centre.
+- `requester_rate {position | area, surface?}`: per requester or buffer chest (24 at most) and item: what it asks and holds, what
+  the machines its inserters feed use a minute (their recipe at their crafting speed now), the stock the network's
+  robots would take it from (the game's pick) and how far, the robot round trip there and back at our robot speed
+  (charging not counted), the most deliveries bring a round trip (they come for what is under the request: at most
+  the request) and so a minute, and the minutes of use the request covers. `surface`: a chest on that planet, by
+  remote view, as inspect.
+- `alerts_digest {surface?, since?, limit?}`: enemy and structure alerts in one read: one line per surface and 64-tile
+  place, newest first, each incident once: the attacks there (ids, hits, attackers, what was hit), what was lost,
+  enemy groups seen gathering heading there. Without `since` it gives what came after your last digest read (the
+  first: the last 10 minutes) and moves your mark; `next_since` is the tick to pass as `since`. status's `alerts_new`
+  counts the places with news since your mark. What wakes a wait stays its own filters (`--no-urgent`,
+  `--urgent-radius N`, `--until "alert near=X,Y radius=R min_size=N"`).
+- `losses {surface?, area? | position+radius?, since?, name?}`: each building of ours that died, newest first: where,
+  when, the cause (`lightning` for a strike on Fulgora), whether its ghost stands now and whether robots can build it (the covering network, its idle
+  robots and the item), and the items a rebuild needs (to carry, held, in the covering networks). A call checks the
+  newest 100; older ones are counted by name and marked not checked (`unchecked`).
+  Example: `./fh call losses --args '{"surface":"vulcanus","since":120}'`
+  `losses {incident, recovery: {checked, result?, check?}}` dates your recovery check on a loss incident (the id in
+  status alerts.incidents): its alert lines then say `handled by NAME, checked N ago: ...` (with a `checks` check's
+  state when named); a loss after it, joining the incident or within 2 tiles of its box, reopens it, and the lines say
+  what was lost and when. `recovery: false` clears it; `{incident}` alone reads its row.
+- `fields: [...]` on `inspect`, `status`, `platform` and `platforms`: only those fields of the reply (a row's, or
+  `"hub.cargo"` one level down); a name this reply lacks but the read can have is listed in `absent`; a name the read
+  never has is refused with the names there are.
+- `inspect {position | positions | area | position+radius, surface? | platform?, types?, all?, compact?, page?}`:
+  reads entities without reach: any entity in sight, or on your surface in a chunk our radars see, by remote view
+  (`by: remote view`); out of sight and coverage, the refusal names the nearest radar coverage, and a recorded entity
+  returns dated last-seen memory. `inspect {position}` with nothing there lists what stands within 3 tiles (`not_at`
+  says so); with a `name` that left out what stands there, the refusal names that entity. `positions`: up to 8 entities in one call (`positions_limit` says 8; more is refused; `compact: true`: one line each). What it shows:
+  - a machine (or its ghost): `recipe` and `recipe_quality`, the quality its recipe runs at (normal too; `quality` is
+    the machine's own, and a normal machine can run a legendary recipe: it takes and makes legendary items); an idle
+    furnace `previous_recipe` and `previous_recipe_quality` (a furnace's comes from its input). Compact lines put it
+    before the recipe when not normal or when they name the machine's quality (`recipe legendary NAME`, `recipe normal
+    NAME`), the rate line opens with it when not normal, and `scan` rows add `recipe_quality` with `recipe`, `status`
+    or `output`;
+  - a machine: its `rate` (crafts and output per minute, net of what goes back in), `output_fill` (and `full`) and
+    `output_stop`: per product its `capacity`, `delivers_up_to` (a finished craft goes out while that much or less is
+    held, else waits in the machine), `full` and `idle_full_output_from`, and `blocking`: `output` (a finished craft
+    waits for room, crafting_progress 1) or `input` (not crafting, an ingredient short, holding a few crafts' worth:
+    the game reads that full_output too); inserters put no ingredient into a machine holding that much of an item
+    product (`refuses_ingredients`, with the inserters waiting for space in it);
+  - a chest: `holds` (and `requests` with their fill); a full chest names the nearest chests with free slots, and a
+    requester whose slots are all taken shows `slots_full` and `requests_blocked`; a take from a chest names what
+    robots have reserved there;
+  - inserters: pickup and drop tiles; a built inserter with no pickup or drop target is flagged (build replies too);
+  - fluid connection tiles (`fluid_connections[].joins` is where a pipe must go); a ghost shows its fluid ports as
+    `ports` does; a heat entity its heat connections and temperature; `inspect.heating` reports freezing, demand,
+    adjacent heat buffers and the heat connections there (what is frozen now across a planet: the `frozen` alert,
+    `game_alerts {kind: "frozen"}`);
+  - a machine, solar panel or accumulator: its maximum under `electricity`; poles and machines their
+    `electric_network_id`, wired entities `circuit.wires`;
+  `area` (or `position` with `radius`: the square round it) lists every entity of ours there (where inspect reads):
+  belts, inserters, poles, chests, machines, ghosts, each with its position and direction, an inserter's pickup and
+  drop, and `holds`, `requests`, `recipe`, `status_name` where it has them. It always returns `entities` (64 a page:
+  `page`, `pages`, `next`) and `by_name` beside them; robots flying through are only counted (`also`). `types` or
+  `name` narrows it. A belt's `holds` is its lanes (`right lane: rocket*4`; an underground's buried part as `... lane
+  underground`), or `empty`. An inserter has no inventory and no `holds`: its hand is `held` (`4 rocket` or `nothing`)
+  and `held_count`. A machine's `holds` is its slots; a craft under way is `in_progress` (its products are in no slot
+  until it finishes). An entity with module slots adds `modules` (`{"efficiency-module@normal": 3}`; absent when none),
+  `module_slots` ("3/4"), and `modules_requested` / `modules_removing` while robots move some; its compact line says
+  `modules efficiency-module*3 (3/4 slots)` or `modules none (0/4 slots)`. `compact: true` gives a line each (with `positions`, up to 32 in one reply): status,
+  health, recipe, what it holds, and `spoil:` (each spoilable item's count and spoiled share, the first to spoil or hatch
+  and when), `hatch:`, and `circuit:` (its circuit condition with each signal's value on its wires now, its logistic
+  condition with what the network holds, whether it is off by them). Example: `./fh call inspect --args '{"area":{"left_top":{"x":0,"y":0},"right_bottom":{"x":20,"y":10}},"compact":true}'`
+- `inspect`, robots: a logistic or construction robot: `robot` {unit_number, cargo (item, quality, count), heading
+  (where it flies), network}; area and `scan` rows of a robot give its `unit_number` and `cargo`, area rows `holds`
+  and `heading` too; other rows at one position carry `unit_number`. Nothing records where a robot picked up its
+  cargo;
+- `inspect`, fusion: a fusion reactor: `fusion`: its neighbour reactors (those whose side points meet its own, plasma
+  or coolant side, fluid connection or not) and the bonus at full, its most at its quality (coolant and plasma a
+  second, fuel, electric, plasma MW alone and with neighbours: formula), and once sampled, fuel burnt over a rolling
+  30 s (measured) with coolant and plasma a second derived from it and the plasma MW its neighbours give now
+  (estimate), and `totals` since sampling began (fuel MJ, average MW, seconds covered and burning, gaps where cells
+  went in); sampling goes on 600 s after the last read (a read after that begins a new stretch; the ended one's totals
+  stay in `last_stretch`, expired); `power` lists it in `fusion_reactors`;
+- `inspect`, turret kills: a built turret, artillery turret or wagon: `kills` and `damage_dealt`, its tooltip's Kills
+  and Damage dealt, its own since it was placed (area rows and compact lines too; `turret_tally` watches them over a
+  window);
+- `inspect`, ammo: a turret, artillery, car or spidertron: `ammo_rounds` per ammunition inventory: items (a part-used
+  magazine is one item in `inventories`) and the rounds left in them (`partial`: stacks whose top magazine is
+  part-used); area rows and compact lines say `ammo: firearm-magazine*10 (93 rounds)`, the vehicle read's guns `5
+  firearm-magazine (43 rounds)`;
+- `inspect`, inserter waits: an inserter waiting for source items: `pickup_wait` (compact: `waits:`): what its pickup
+  holds of what it may take, a requester's network stock of it, robots taking from it, and whether the drop target
+  takes it now and what it holds (fuel slots and burn rate at full power; the game's arms top fuel up only while it
+  runs low);
+- `inspect`, captive spawner: a captive biter spawner not producing: `starving`: its health, the minutes it has left
+  (it loses 1 HP a second while it makes nothing; at 0 a hostile biter-spawner takes its place) and why (fuel slot
+  empty, output full);
+- `inspect`, networks: a roboport or logistic chest: its network (the number `stock {network}` and `reservations`
+  take) and, for a roboport, its own area and robots, or that no roboport's logistic area covers the chest, and
+  `port.power` at its quality: charging slots, kW a slot and with all charging, drain, buffer and input flow limit (a
+  legendary roboport: 4 slots at 1250 kW, 12.5 MW input);
+- `inspect`, agriculture: an agricultural tower: its `empty_cells` and why; any entity its `damage_history`;
+- `inspect`, burnt result: a burner whose burnt-result slot is full and that burns nothing reads `burnt_result_full`
+  (in scan, supply, bottleneck and the status warning too), with what fills it, whatever the game's status reads.
+- `ports {name, position, direction?, recipe?, mirror?, platform? | surface?}`: where each fluid port of an unbuilt machine is and
+  the fluid the recipe puts there. More boxes on a side than fluids: the first fluid takes the extra ones (a cryogenic
+  plant on lithium: lithium-brine left and middle, ammonia right); `box` is the fluidbox inspect gives once built.
+  Example: `./fh call ports --args '{"name":"electromagnetic-plant","position":{"x":0,"y":0},"direction":"north","recipe":"electrolyte"}'`
+- `power {position?, radius?, area?, fragile?, by_cause?, platform?, surface?}`: per network `supply_line`: generators'
+  nameplate (fusion generators at 50 MW each), what the working ones can give, the stopped ones by status (dry steam
+  engines), `generators.by_name` (each one's most output apart from the network's output of that name now), solar,
+  accumulator and lightning attractor lines, `reactors`, and `boilers` by state; each of `lines` says its age, and
+  `built_since` a generator built after it (the view is made again from then);
+  on a platform `platform_power`: the platform's own network (every machine, panel and accumulator on it, with or
+  without poles) with draw, production, capacity, solar, accumulators, machines on low power and their power bars,
+  and the tick; pole networks with nothing on them are named there (their figures are the platform's);
+  generators with no steam, fuel or plasma in now are named, and headroom is against what can supply now, with
+  low-power machines counted beside it (the science line's headroom too). `fragile: true` with `position` (and
+  `radius`, default 96) lists the poles of that network whose loss alone would cut machines off from all generation,
+  with how many machines and where (wires leaving the radius count as power). `by_cause: true` ranks each network's
+  draw by entity name (last 5 s); when roboports draw, it adds the robots flying, charging and waiting, what the flying
+  ones draw, their trip lengths and the requesters with the most on the way; on a platform it reads the platform's own
+  network (no pole needed), names the platform, and gives `made_by` and `capacity_kw`. `platform` reads a platform's networks;
+  `surface` (a planet or platform name) reads that surface's networks by remote view, round a `position` or `area`
+  there (needed there; `by_cause` reads all of them); the reply's `surface` names the one read. `power` is also an
+  observe scope. Draw and production (also `platform_power` and `by_cause`) sum every quality, a row per name and
+  quality (`quality` when not normal), `qualities` naming those found. A `low_power` turret firing from a buffer
+  (laser, railgun, tesla) in `unpowered` has `cause`: the network short when another machine of it in the area is on
+  low or no power, or its accumulators there are empty while it draws all it produces (`turrets_short_by` machines or
+  accumulators); else recharging after shots. `platform_power.satisfaction.turrets` counts these turrets apart from
+  machines (`recharging`, `network_short`, `short_by`); inspect gives a railgun's buffer as a laser's.
+  `inspect`'s `electricity` gives the draw of its own quality (`now_kw_its_quality`), of the name at every quality
+  (`now_kw_all_of_name`, `now_by_quality`) and an electric turret's buffer (`buffer_kj`, `buffer_pct`, `input_limit_kw`).
+- `fuel_budget {surface?, boilers?}`: each fuel made and used per minute, and each group of fuel users (boilers,
+  furnaces, burner drills, heating towers, `recipe plastic-bar`, ...) with what it burns per minute and the minutes its
+  own fuel lasts, fewest first; a fuel that spoils says what the statistics leave out. Reactors one by one: temperature, the fuel burning and what is left of it, fuel slots,
+  the feeding inserters' circuit condition and stock, minutes left from heat, burning fuel and feed. `boilers: true`: each boiler group's burn against the fuel in reach and the drills
+  supplying it, with the hours left, and each boiler under 5 fuel with its feeding inserters (burner fuel, no power,
+  not connected; one taking from a belt: that belt line's length, its head and why it stops there, and its gaps, so a
+  broken link reads apart from a shortage), the nearest chest or belt holding the fuel, and one `refuel {positions, fuel, count, from}` call
+  (`from: "nearest"` for a chest, the belt's position for a belt).
+- `game_alerts {kind?, surface?, compact?}`: the game's alerts and warnings in groups, worst first, after `counts`
+  (groups per kind, the most first). `kind` takes several (`["no_storage","no_power"]` or `"no_storage,no_power"`);
+  a `no_storage` group lists up to 4 `robots` as the scan read them (unit_number, cargo, heading), its line too;
+  `compact: true` gives `lines`, one a group (`KIND SURFACE: line`), in place of the groups. `claim: 7` (a board
+  claim id) or `mine: true` (your open claims): only the groups whose centre lies in it, compact; each such reply
+  gives a `cursor`, and `since: CURSOR` (with `mine`, `claim` or `cursor: true`) lists only the groups not in that
+  reply, with `new` and `gone_since`. `kind: "no_power"` groups
+  connected machines without power by electric network, isolated drill networks included; `kind: "belt_cut"` names
+  observed gaps in belts that carried items, and a rebuilt gap clears; a depleted-drill alert includes one remembered
+  placement on the same resource (`drill_sites` lists more). `kind: "output_full"`: mining drills waiting for space in a
+  chest they drop into (each drill, what it mines, the chest's slots used and what fills it); a backed-up belt is not
+  said. `kind: "speaker"`: programmable speakers alerting now (message, icon, since when, who hears it: who built it
+  and agents on its surface; the team block tells each once while it is up). `kind: "off_by_condition"`: machines off by their own
+  circuit or logistic condition, each with the condition and what its signal reads now (`bioflux > 200 (bioflux 150
+  now)`); one whose unmet conditions are all on what its recipe makes (a stock cap) is not listed. A new group is one
+  team alert line to its builders and claim owners. `captive_starving`: captive spawners not producing, with the same
+  facts as inspect's `starving`, to their builder and their feeders' builders; under 2 minutes left it is
+  `captive_urgent`, and `captive_died` names the hostile spawner standing in its place; both show in the team block's
+  urgent part and wake a sleep.
+- `belt_flow {position, seconds?, platform? | surface?}` (`surface`: a belt on another planet by remote view: the line is walked
+  where the map is charted, a point out of sight now is not sampled, said per point as `out_of_sight`): the belt line through position (64 tiles back and on, undergrounds
+  followed), cut into sections at each merge (a side-load, a splitter), sampled for `seconds` (2..30, default 10) by
+  item at each section's last tile and each belt merging in: per lane items a minute that left the tile, by name, and
+  `stopped` (`full` with 4 stacks on the tile) for a lane whose items did not move. Every count is items: a stack on
+  the belt counts its items (`stacks_rate`: stacks a minute; `stack_max`: the largest stack seen). `stacking`: the belt
+  stack size (1 + the force's belt stack bonus; the stack-inserter research gives +1): a stack inserter or a big mining
+  drill puts stacks of that size on a belt, other inserters and drills one item. A section's `lane_cap`: a lane moves
+  speed x 4 x 3600 stacks a minute (`stacks`), `items` at the belt stack size; `merges` gives the line before
+  each merge and each belt merging in against the line after it; `lane_mix`: each side-load, from which side of the
+  line and onto which lane (both its lanes go onto that one), or a splitter or end-on join lane to lane, with what
+  each lane carries after it; `limit`: a side-load stopped full while the line after it runs at its cap (the line's
+  own items go first), the end backed up (one or both lanes stopped full), or a lane at its cap (in stacks). Where inserters pick
+  from a sampled tile the point adds `inserters` (each one's `picked`, counted from its hand each sample), `picked`,
+  `passed_on` (seen next on what the tile feeds) and `lanes_rate`, and its `rate` is passed_on + picked: an inserter can
+  take an item in the tick it comes onto the tile, and no sample sees it on the lane. `note` names what each count can
+  miss. The call returns when the sampling ends;
+  Each start, progress and result names its own `id`; `belt_flow {id}` reads that watch, `{}` the latest. Four watches
+  are retained per agent. A new start is refused while all four sample; otherwise it evicts the oldest completed
+  result and names it in `evicted_id` and `warning`. The sample ends at `until_tick`; `stop` and actions do not end it; `./fh wait` waits for it when nothing else runs. Example: `./fh call belt_flow --args '{"position":{"x":8.5,"y":20.5},"platform":"Kestrel II"}'`
+  With `exact_tile: true` it samples the belt at position only, no line walked (a splitter: the half position is in, its
+  input lanes). Per lane: `left` (items seen on the lane, then gone; `rate` a minute), `passed_on` (seen next on what the
+  tile feeds), `taken` (gone from mid-lane: taken off this tile; an inserter can take part of a stack, which stays on
+  the lane with fewer items), `not_seen_after` (gone at the lane's end and not seen
+  on what it feeds: taken there or here before a sample saw it), `entered`, `held`, `state`. `inserters`: each inserter
+  picking from the tile, with `picked` counted from its hand, items it takes in the tick they arrive included;
+  `through` (`through_rate`): passed_on + picked where inserters pick from the tile, else left. `tile`
+  names the entity (name, direction, unit number). On Asterion's explosives line, blocked at (13.5,38.5), the tile at
+  (13.5,37.5) read 8/min taken by its inserter while the end and the line read stopped.
+- `belt_gaps {from, to, via?, surface?}` or `{line}`: remembered belt gaps and ghosts along the line, with observation
+  ticks; unrecorded tiles are unknown. A leg that is not straight follows the remembered belt round its corners
+  (`followed`). A missing tile in sight names what stands on it (`blocked_by`, `line`). `line: {x,y}` (one belt of a
+  line) follows the whole line both ways, in chunks our force sees now, up to 4096 tiles each way: at each end a belt of
+  ours facing the same way within 16 tiles on is the line going on, the tiles between a gap, each named empty or with
+  what stands on it (`gaps`); `head` and `end` say where and why it stops. A stretch standing only as ghosts carries
+  nothing: `ghost_breaks` (and `ghost_line`) give each with its tiles, the items that build it and whether a roboport's
+  construction area covers it (the network's count of each item, its idle construction robots).
+  Example: `./fh call belt_gaps --args '{"from":{"x":10,"y":5},"to":{"x":40,"y":5}}'`
+- `uptime {positions, seconds?}`: up to 64 crafting machines or labs (or `area` {left_top, right_bottom} with an optional
+  `recipe`) watched for seconds (10..3600, default 600), a status sample a second, in the background; `uptime {}` reads it
+  so far or done: each machine's crafts finished and crafts a minute against its full speed, status shares, when each
+  status other than working was read (`status_runs`: first and last tick, longest run of samples in a row; `changes`:
+  its last 8 status changes), the ingredients short at the samples that read short (at the recipe's quality, with
+  their first and last tick), outputs by quality from its output slot,
+  totals by recipe (`groups`), `left_out`; a rocket silo's completions are rocket parts, with `silo_statistics` (the
+  surface's production statistics of them over the watch); rows above 16 machines are left out (`lines` has each). `items` (up to 8, a
+  name for every quality or {name, quality}): the surface's production statistics by quality over the watch.
+  `uptime {read: true, page?, page_size?, positions?, id?, agent?, details?}` reads a watch in pages of rows (16 a page by
+  default, at most 16) and never starts or replaces one: each row as `uptime {}` gives it, with `index` (its place in
+  the watch) and `short_counts` {ingredient: {samples, least, need, first_tick, last_tick}}; `positions` picks the
+  watch's machines (the nearest centre within 2 tiles; `not_found` names the rest); `id` (`uptime@START_TICK/AGENT`, as
+  the start and status work name it) or `agent` (a name) reads any agent's watch; `uptime@START_TICK` reads the one
+  watch begun on that tick, and is refused with each id named when two or more were; `details: true` adds each row's
+  line. The reply gives `started_tick`,
+  `to_tick` (the end, or now), `sampled_tick`, `samples`, `page`, `pages`, `machines_total`, `matched`; a watch with
+  `items` gives `flows` on every page (surface, start_tick, end_tick, every row, line: a done or kept one's as it
+  ended, for any agent; only machine rows page). On a copy of
+  world n Sol's 20-machine Asterion watch read 13.5 KB for page 1 and 3.0 KB for page 2.
+  A new watch keeps your last one done, readable by its id (`kept`: at most 4, 96 machines; `kept_dropped` says why).
+  While an `uptime`, `turret_tally` or `belt_flow` watch of yours runs, your idle count reads it as measuring (the clock
+  line: `measuring uptime@TICK/AGENT`; the sleep line and `sleep_check` name it with its scope, end tick and latest sample; it
+  runs in the background, and your actions meanwhile do not end it); one late, stalled, invalid or done with its final
+  unread is listed in a sleep's `watches`. `reason` (up to 200 characters) on the watch or on `fh sleep --reason TEXT`
+  records your own reason to wait; it is shown back as given, and the operator's idle check shows it.
+  An edit inside what a running watch measures (a measured entity configured, rotated, wired, fed by hand, built or
+  removed; a feeding inserter, drill, loader or beacon built, removed or configured; a turret, collector or feed aboard
+  a watched platform) splits it at the edit, whoever makes it (another agent's configure step included). The read up to
+  the edit stays in `mixed.parts` (its line and lines, the last 3 parts), `mixed.edits` names each edit, and the watch
+  starts again from the edit to its end tick under a new id (it ends at the edit when that start is refused or a
+  measured entity went). Its read, its watch row and one alert to you say so. Robot and platform builds are not seen.
+  A platform's departure, turn or arrival is no edit: it splits no uptime watch.
+  An uptime or asteroid watch keeps the closed window whole as a segment (`segments`: id, segment_start, ended_tick,
+  closed_by): the old id or `segment_start` reads it as a done watch, its counts to the edit (`uptime {read: true, id:
+  "uptime@START/AGENT"}`, in pages; `platform_defense {platform, asteroids: true, segment_start}`). An uptime watch keeps
+  at most 4 segments and 128 machines in them, the first window always (the second oldest goes first); a second edit
+  on the tick of a split keeps no part.
+- `pipe_gaps {from, to, via?}` or `{line}` (`surface`: those pipes on another planet by remote view): a pipe line read live: its fluid segments (fluid, amount, extent) and the cuts
+  where neighbours do not join or the line stops, each side's fluid named. `scan` rows of our pipes, pipe-to-grounds,
+  tanks and pumps give `fluid` (the segment's). `line: {x,y}` (a pipe, pipe-to-ground, tank or pump of ours): the
+  network through it, followed through fluid neighbours (pumps too) in chunks our force sees now, up to 1024 entities:
+  each fluid segment by the engine's id with its fluid, amount over capacity and box, `empty` (with the fluid it is
+  locked to), and the machines it joins with each box's fluid. inspect's rows and compact lines give an entity's
+  fluid boxes (`fluid`). Example: `./fh call pipe_gaps --args '{"from":{"x":10,"y":5},"to":{"x":10,"y":40}}'`
+- `danger {position?, radius?, surface?}`: a destination before a trip (no position: where you stand): worms and
+  spawners on the map round it with their reach, enemy units in sight or radar coverage by name, and those more than
+  24 tiles from every spawner in packs (`packs`: count, names, where, how far), apart from those by their nests;
+  attacks, losses, groups and deaths there; the nests the straight line from you passes; your health, armor and
+  shield; `eggs`: each egg site within the radius that hatches (count, holder, the first hatch time), with the turrets
+  of ours in range of it (ready: ammunition, power or fluid; in range without). The egg alerts name the same turrets.
+  `quiet_s: 60`: whether the straight way from you to it (24 tiles either side) has had an attack on our structures in
+  the last 60 s, and the enemy units seen there now (`quiet: true` when neither). `build`, `rearm` and `transfer` take
+  `retry_when_clear: true`: refused for passing enemies (an area under attack), they wait until no unit is within 48
+  tiles there, then run again.
+  Example: `./fh call danger --args '{"position":{"x":-190,"y":-31}}'`
+- `drill_sites {position | area, resource?, drill?, direction?, radius?, limit?, surface?}`: for one depleted drill of
+  ours, the nearest visible placements on the same resource, with mining-area amounts and placement checks; `resource`
+  gives the name when no earlier mining target was recorded. Any other position, an `area` (up to 48x48: round its
+  centre) or `drill` given: the spots for that drill (default electric-mining-drill, `direction` default north) on
+  `resource`, else the resource most found there (`any_spot`; `limit` up to 16). Spots where a drill or drill ghost
+  already stands are left out and named (`occupied_by`); spots the placement check refuses name what stands there
+  (`blocked_by`). Sites are alternatives, not one layout. Example: `./fh call drill_sites --args '{"position":{"x":120.5,"y":-44.5}}'`
+- `robot_losses {surface?, minutes?, cancel?, near?}`: our construction and logistic robots killed by enemies in the last
+  `minutes` (default 30), by killer: how many, the jobs that sent them (order and target, where), and how many of those
+  jobs stand; a killer with a death in the last 5 min is a team alert (`robots_lost`). `cancel: true, near: {x,y}` (a
+  killer's position) cancels those jobs as by hand: ghosts, tile ghosts and item request proxies removed,
+  deconstruction and upgrade marks cancelled; repairs and deliveries named, not cancelled; a job gone by then (built,
+  removed or done) is skipped and named in `ended`.
+  Example: `./fh call robot_losses --args '{"cancel":true,"near":{"x":200,"y":40}}'`
+- `ingredient_gap {position | positions | area, all?, skip?, surface?}` (`surface`: those machines on another planet by
+  remote view, in sight): per crafting machine (16 a call), each ingredient of its
+  next craft: needed, held in its input, how many of those spoil within 5 min, usable, short; for a short item the
+  places within 64 tiles of the machine that can spare it without going under their own request (a requester or buffer
+  only over its request), with how many. A craft takes ingredients of its recipe's quality only (`recipe_quality`): held,
+  short and donors count that quality; `other_quality` is the rest of that item in the input; donors for the first 8 short items a call (`donors_skipped`); the ground as
+  the ground watch last binned it. `area` (up to 128x128) lists the machines short of something (`all: true`: every
+  one, those short of nothing as a line); `more` says how many are there, `skip` reads on. `positions` past 16 come
+  back in `left`. Example: `./fh call ingredient_gap --args '{"area":{"left_top":{"x":-40,"y":10},"right_bottom":{"x":0,"y":40}}}'`
+- `ores {resource?, surface?, min_amount?, limit?, position?, patch?, forecast?}`: `forecast: true` with `patch`: our
+  drills' depletion there: each working drill's share of the ore under it (a tile under several shared) at what it
+  takes a minute (speed with bonus, mining time, drain), the minutes until half and all of the working ones stop
+  (stopped drills counted apart), and the 3
+  nearest other patches of the ore (size, a demolisher territory one lies in); half stopping within 30 minutes is
+  also a team alert (`mine_depleting`) to their builders. Otherwise the patches on the charted map (one resource, or
+  every one), nearest first: amount left (oil: yield), distance from you and from our nearest building, enemy spawners
+  and worms within 50 tiles, and how many of our drills are on it. `patch: {x,y}`: only the patch with ore at or within
+  8 tiles of it; its row then carries `drill_list` (a reply field, no argument; with `forecast` or without): every
+  drill of ours on it, one line each (position, name, status, the ore under its mining area), stopped ones first, then
+  the least ore; no scan radius; up to 200 lines.
+  Example: `./fh call ores --args '{"resource":"copper-ore","patch":{"x":40,"y":210}}'`
+- `stock {item?, items?, network?, surface?, position?, radius?, places?, holders?, limit?, page?, unrequested?}`:
+  `quality`: places and reads round a position count that quality; a planet's whole count is of normal quality only
+  (with another quality, `surface` alone is refused and the default total is the 128 tiles round you).
+  `unrequested: true`: requester and buffer chests in our logistic networks on the surface holding items they do not
+  request (`item` for one), the most first, each with what it asks and whether trash unrequested sends them to storage
+  (off: they stay there); `items` sums them per item; 512 requester points a call (`page: 2` reads the next, `next`
+  says so). `items: [...]`
+  (1..32) gives one row each (item, total, line) from the same read with the other arguments. Where an item is, landed
+  cargo pods (of any force: kind `pod`) and stacks on the ground in sight (kind `ground`, `on_ground`, not in the total)
+  among the places with their positions. Ground places are of the quality asked (normal when none, the place's
+  `quality`) and within the circle read, each the stacks of one 32-tile cell at the nearest; a stack on the ground is
+  one quality (3 legendary iron spilled lay as 3 stacks of 1). With
+  `item` and no radius: the whole surface's total (named or yours; a platform is read whole) and the places within 128
+  tiles; `radius` (up to 1024) reads that circle only; `covered` says what was read, `as_of` whether a total is live or
+  reused (and its age). `places: "all"`: every place on the surface holding it, nearest first, `limit` a page (`page`,
+  `next`). `holders: ["provider", "storage"]`: only those kinds of place; each place says its `kind` and what robots
+  have `reserved` there, and `reserved_for` where those robots deliver it (`5 to requester-chest (97.5,41.5)`, the 3
+  largest). `by_holder` splits the places read: provider and storage chests (robots can take it), requester and buffer
+  chests (held for their requests), plain chests, machine outputs, elsewhere; the summary says so when logistic chests
+  hold it. With `surface`, `by_network`: each logistic network's hold in providers, storage and other
+  holders, and `on_ground`: stacks of normal quality lying on the ground in chunks our force sees now. A spoilable item adds
+  `spoils_within_2_min` beside the total and per place. `network: 96` (the number `networks` and an `inspect` of a
+  roboport give): what a logistic network holds, its robots, and `roboports`: the robots each roboport holds, most
+  first. Example: `./fh call stock --args '{"item":"iron-plate","places":"all","limit":16}'`
+- `reservations {network, item?, surface?}` (read only): what robots have reserved to pick up at each provider and
+  storage chest, each requester short or with deliveries on the way (its request, what it holds, what is coming, no
+  room when every slot is taken), the robots' orders by item and target, and `flags` (reservations while robots are
+  idle, orders to a chest with no room for the item); its robots are the network's first 1024 in the air. Example: `./fh call reservations --args '{"network":96,"item":"iron-plate"}'`
+- `reservations {position, from?, radius?, item?, surface?}` (read only): one requester, buffer, provider or storage
+  chest or landing pad. `on_the_way` and `reserved_for_pickup` are its own counts (every robot); a landing pad's
+  request from platforms in orbit is `from_orbit` (no robot brings it). The logistic robots in the air within `radius`
+  (8..128, default 64) of it, and with `from` within radius of that point and 32 tiles either side of the line
+  between, with an order to deliver there or pick up there: `routes` (robots, items, source, destination, state:
+  flying to pick it up at its source, carrying it (a robot that has picked up keeps no source), flying to pick it up
+  here) and `robots` (each one's position); `not_found_*`: what its counts hold and the robots read do not (on robots
+  outside what was read); up to 1024 robots read. `sweep: true` reads every logistic robot of its network in the air
+  instead, across ticks (Nauvis's network: 42 columns, about 77 ticks); the reply gives its number, and
+  `reservations {sweep: N}` reads it, with the chest's counts at the sweep's start and end. Example:
+  `./fh call reservations --args '{"position":{"x":-269.5,"y":486.5},"from":{"x":52,"y":54},"item":"bioflux","surface":"nauvis"}'`
+- `logistics_audit {network? | position?, surface?, limit?, from?, storage?, backlog?, charging?}` (read only; default: the network where you stand):
+  `charging: true`: the network's roboports with the most robots waiting to charge, then charging, each as its own
+  GUI shows it (`limit` 1..20, default 5): position, waiting, charging, its charging slots, energy; with the network's
+  totals and how many roboports have a queue. The status `robots` line gives a network's total over all its roboports
+  with the position of one of them, then the 5 roboports of the planet with the most.
+  `backlog: true`: why requests wait: the oldest unfilled first (chest, item, short, how long it has been short, the
+  provider the game picks with what robots reserve there) and `held_by`, the first that holds each now (on the way, no
+  room, none in the network, no provider, all reserved, no idle robot with what the busy ones do, robots queued with
+  every charging slot taken, or not sent yet); `robots`: idle, on orders, holding cargo with no order, charging,
+  queued to charge, charging slots. `storage: true` reads its storage room instead (the `no_storage` alert): storage chests, free slots, full and
+  filtered ones, robots holding cargo with no order to put it anywhere and their items, each with whether a storage
+  chest can take it now. Free slots are those under each chest's bar (`physical_free_slots` counts every empty slot,
+  the bar's red ones too); every read of a chest's, pad's, wagon's or hub's free slots counts under its bar. Otherwise:
+  every requester of that logistic network, worst first: `full_unrequested` (every slot taken while a short item has
+  no room, by items it does not request, spoilage named), `full` (the same by its own items), `spoiled` (spoilage it
+  does not request, 4 or fewer slots left), `waiting` (deliveries on the way 5+ min while under its count), `not_sent`
+  (short with the item free in providers or storage, nothing on the way), `shortage` (none free in the network). Each
+  item with what it holds, what is on the way and for how long, the network's free count and the provider robots would
+  take it from (position, distance, count). The summary counts each kind and names the chests holding spoilage with
+  room left. `limit`: rows (default 12, up to 48); 256 requesters a call, `next_from` gives `from` for the rest.
+  `far` (default 200): each ask short or with a delivery on the way whose pickup the network would pick now lies
+  farther off, with that chest and its distance. Characters' requests are left out.
+- `construction_robots {network? | position?, sources?, sources_from?, surface?}`: the construction robots of the network you stand in
+  (or `network`): each in the air with its charge, cargo, orders and what holds it up (no storage for what it holds,
+  target out of the area, waiting to charge, no charge, its target ghost standing over a live entity of ours not marked
+  for upgrade or deconstruction); `ghosts_waiting`: each ghost in a held-up robot's queue; `ghosts_blocked`: the ghosts
+  in the orders of robots in the air that stand over such an entity, counted per ghost and entity name with the `upgrade` (or
+  `deconstruct`) call that marks them.
+  `sources: true`: per group of waiting ghosts and item requests, first how many are in transit (construction robots
+  with an order on one holding its item, the nearest how far off), then for the rest the chest the network's robots
+  would take the item from (the game's pickup choice; what it holds, the network's total) and whether the straight line
+  from it passes within a worm's or spawner's reach the map shows. A call reads up to 4 squares of 128 tiles of the
+  construction area (fewer once 60 ghosts are read); the first line names `sources_from` for the next squares.
+- `shortages {surface?}`: machines stopped short of an ingredient (by recipe and ingredient), no fuel, low or no power,
+  labs waiting for packs, and what requester chests lack, in lines. Short machines are missing stock, or held back by
+  their feeder's condition (its source holds the ingredient: the inserter, condition, value now, source stock).
+- `damage_log {position?, radius?, surface?}`: what hit our entities there, for hits our force saw:
+  what dealt each hit (a fire, projectile or stream) and the game's cause with its position, facing and distance against
+  its range, both from the game's event. A fire's cause is the turret whose stream lit the first fire; a hit past its
+  range is a fire that spread. Rows identify the original unit ID; `hit_rows` retains target name, tick/last_tick and
+  position. State is alive by original ID in current sight, destroyed/removed by a recorded event, otherwise unknown
+  (`alive` omitted). `current_position` can differ from the hit position. `current_occupants` separately lists IDs now
+  standing at the returned historical position when visible, with complete/capped/unknown status. Legacy hits have
+  unknown per-hit positions and a labelled first-observation search anchor. Example: `./fh call damage_log --args '{"position":{"x":67,"y":-170},"radius":16}'`
+- `dependency {item, surface?}`: the item and each ingredient of its recipe there: made and used a minute, stock and
+  minutes left, pods coming down and platforms carrying it to a stop there, a rocket's load by weight; missing, short
+  or ok each; feasible, sustained and the first unsatisfied. An item that spoils gives the residual supply measured in
+  the last 30 min, signed (else says it is not counted); the crafts run count the makers' productivity bonus and
+  a returned catalyst (pentapod-egg). Example: `./fh call dependency --args '{"item":"rocket-fuel","surface":"nauvis"}'`
+- The operator's factory digest arrives by `tell` at the deadline minus 2 hours: what changed since the last digest
+  (blockers per planet, lessons whose check is not met, items blocked, requests nobody owns), each to the owner of
+  the claim or item it concerns, the rest to the team. On operator request the full census: remembered machine and
+  fuel counts per planet and sampled belt ends, with observation ages; missing data is unknown.
+- Shift and factory-digest `research_use` lines compare researched gear with the gear worn, fitted and carried now,
+  show building tiers per planet from the dated census, and researched vehicles against force-wide built counts.
+- A full `status` gives `robots`: per planet or platform, all its logistic networks' robots by kind (idle, working,
+  charging, waiting to charge) and the networks with the most waiting. Its fuel and power warnings name the surface and
+  the first places (`fuel on nauvis: boiler 4/42 no_fuel at (-75,21.5) ...`). `alerts.out_of_sight`: per planet, our
+  drills, machines and turrets in chunks our force does not see now (no radar or character of ours sees them),
+  by 64-tile area with the nearest radar and its state, and the radars not working. `alerts.outside_coverage`: per
+  planet, what lies outside every roboport's construction area (buildings and ghosts, by 64-tile area and name) and the
+  requester and buffer chests outside every logistic area. On Fulgora also our buildings outside every lightning
+  attractor's protection, by 64-tile area: a point within 10 tiles of each lies outside every attractor's reach (10 +
+  range_elongation x (1 + 0.3 x quality level): rod 25, collector 35, ruin attractor 30 at normal), and a strike there
+  hits what stands within 10 tiles of it (walls and rails never). And our buildings lightning killed: in the last hour,
+  and the last one. The team block carries both once an hour.
+- `scan {fields: "inventory"}` on belts gives their items per lane (`L: ... | R: ...`), on a platform too.
+- A scan lists 256 rows a call, in reading order. With more kept (`limit` up to 1024), the reply has `page`, `pages`
+  and `rows` ("1..256 of 697"), and `more {rows, next: {page}}` before the last. The same arguments with `page: 2`
+  list the next rows.
+- `scan {type: "transport-belt"}` (any belt type) adds `belt_items`: what all the belts found carry by item, before
+  `limit` cuts the rows (up to 1024 belts). `item: "rocket"` adds `belt_item`: how many on how many belts, and each
+  belt holding it (`positions`, 64; `line` names the first 12). Example:
+  `./fh call scan --args '{"platform":"Kestrel III","area":{"left_top":{"x":-64,"y":-64},"right_bottom":{"x":64,"y":64}},"type":"transport-belt","item":"rocket"}'`
+- Out of sight, reads add `fog`: what our force saw there that is gone, with
+  its age, our ghosts now, ours lost. `./fh call losses` lists our lost buildings and what rebuilding them needs;
+  `rebuild {area}` builds the ghosts robots will not.
+- Remote reads: `inspect`, `belt_flow`, `trace` where we see now; `scan`,
+  `observe`, `nearest` at a charted centre; `surface=`, `platform=` elsewhere.

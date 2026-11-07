@@ -1,0 +1,105 @@
+[
+ {
+  "label": "组装机排 铁齿轮 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 66,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 163,
+  "perTile": 1.164,
+  "efficiency": 0.302,
+  "trend": 1,
+  "working": 0.264,
+  "powerMW": 0.372,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 327.5
+  }
+ },
+ {
+  "label": "组装机排 铁齿轮 × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 108,
+  "w": 20,
+  "h": 13,
+  "outPerMin": 326,
+  "perTile": 1.254,
+  "efficiency": 0.302,
+  "trend": 1,
+  "working": 0.285,
+  "powerMW": 0.744,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 655
+  }
+ },
+ {
+  "label": "组装机排 电力机械臂 × 6 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 单排",
+  "entities": 91,
+  "w": 20,
+  "h": 8,
+  "outPerMin": 160.5,
+  "perTile": 1.003,
+  "efficiency": 0.297,
+  "trend": 0.994,
+  "working": 0.285,
+  "powerMW": 0.388,
+  "powerFixed": 0,
+  "fed": {
+   "iron-plate": 161,
+   "electronic-circuit": 160.5,
+   "iron-gear-wheel": 159.5
+  }
+ },
+ {
+  "label": "组装机排 电力机械臂 × 12 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 144,
+  "w": 20,
+  "h": 14,
+  "outPerMin": 374.5,
+  "perTile": 1.337,
+  "efficiency": 0.347,
+  "trend": 1.019,
+  "working": 0.299,
+  "powerMW": 0.893,
+  "powerFixed": 0,
+  "fed": {
+   "electronic-circuit": 373,
+   "iron-gear-wheel": 374,
+   "iron-plate": 374.5
+  }
+ },
+ {
+  "label": "组装机排 电路板 × 6 / 组装机2型 / 电力机械臂×2 出×1 / 基础传送带 / 单排",
+  "entities": 72,
+  "w": 20,
+  "h": 7,
+  "outPerMin": 151,
+  "perTile": 1.079,
+  "efficiency": 0.28,
+  "trend": 1,
+  "working": 0.208,
+  "powerMW": 0.382,
+  "powerFixed": 0,
+  "fed": {
+   "copper-cable": 451,
+   "iron-plate": 151
+  }
+ },
+ {
+  "label": "组装机排 内燃机 × 8 / 组装机2型 / 电力机械臂×1 出×1 / 基础传送带 / 双排",
+  "entities": 96,
+  "w": 14,
+  "h": 14,
+  "outPerMin": 36,
+  "perTile": 0.184,
+  "efficiency": 1,
+  "trend": 1.118,
+  "working": 1,
+  "powerMW": 1.274,
+  "powerFixed": 0,
+  "fed": {
+   "steel-plate": 36,
+   "pipe": 72,
+   "iron-gear-wheel": 36
+  }
+ }
+]
