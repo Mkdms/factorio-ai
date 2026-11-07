@@ -20,3 +20,19 @@ export function argvFilePs1(nodeBin: string, envFile: string, script: string, fi
     "",
   ].join("\r\n");
 }
+
+/** ./calc '<方案 JSON>' 的 PowerShell 版: 方案直接写进 .calc-plan.json 再跑计算器 (和 sh 版一样), 并往 .calc.log 记一行 */
+export function calcPs1(nodeBin: string, envFile: string, cliScript: string): string {
+  const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
+  return [
+    "# 由 core/run/ps1-wrap.ts 生成: ./calc '<方案 JSON>' → 写进 .calc-plan.json 再跑计算器",
+    "$ErrorActionPreference = 'Stop'",
+    "Add-Content -Path (Join-Path $PSScriptRoot '.calc.log') -Value ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())",
+    "$plan = Join-Path $PSScriptRoot '.calc-plan.json'",
+    "[IO.File]::WriteAllText($plan, [string]$args[0], (New-Object Text.UTF8Encoding $false))",
+    "$env:CALC_IDS = '1'",
+    `& ${q(nodeBin)} ${q(`--env-file-if-exists=${envFile}`)} ${q(cliScript)} $plan`,
+    "exit $LASTEXITCODE",
+    "",
+  ].join("\r\n");
+}

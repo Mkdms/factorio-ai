@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.319",
-    "@modelcontextprotocol/sdk": "^1.32.2"
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "yalps": "^0.6.4"
   },
   "scripts": {
     "test": "node --env-file-if-exists=.env --test --test-timeout=30000 \"test/*.test.ts\"",
@@ -20,6 +21,8 @@
     "offgame:setup": "node --env-file-if-exists=.env game/offgame/setup.ts",
     "client:setup": "node --env-file-if-exists=.env game/client/setup.ts",
     "run:online": "node --env-file-if-exists=.env core/run/online.ts",
-    "brains:probe": "node --env-file-if-exists=.env core/brains/probe.ts"
+    "brains:probe": "node --env-file-if-exists=.env core/brains/probe.ts",
+    "calc": "node --env-file-if-exists=.env src/calc/cli.ts",
+    "bp": "node --env-file-if-exists=.env src/play/bp.ts"
   }
 }

@@ -34,8 +34,10 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 | `shell.ts` | 找 Git for Windows 的 bash (PATH 上的 bash 可能是 WSL 的) |
 | `../brains/driver.ts` + `claude-code.ts` / `agent-sdk.ts` (+ `agent-sdk-runner.ts`) / `codex.ts` / `grok.ts` / `gemini.ts` / `relay.ts` / `keys.ts` / `lineup.ts` / `probe.ts` | 大脑驱动: 八家按家起进程、事件翻成 Claude 形状、中转站分流和本机代理、密钥文件、角色名 = 模型名、一句试通 (docs/brains.md) |
 
+| `../../src/` (calc / blueprint / play / dataset / lab / io) | 第二版整目录搬来的 `./calc` `./bp` `./plan` (docs/brains.md 第 ④ 步; 文件名路径照旧, 几个转接文件指向新项目的家) |
+
 ## 还没搬 (旧项目有; 顺序见 docs/brains.md)
-`./calc` `./bp` `./plan`、真人的话没回就催 (旧 replies.ts)、换班不关游戏、看门狗、死亡计数、多角色 (team.md、按负责人发)、群和界面 (含账号页的中转站"核实全部模型"队列, 旧 relay-verify.ts VerifyJob)。
+真人的话没回就催 (旧 replies.ts)、换班不关游戏、看门狗、死亡计数、多角色 (team.md、按负责人发)、群和界面 (含账号页的中转站"核实全部模型"队列, 旧 relay-verify.ts VerifyJob)。
 
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。

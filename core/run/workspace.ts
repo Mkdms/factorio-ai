@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "../../game/sandbox/paths.ts";
-import { argvFilePs1 } from "./ps1-wrap.ts";
+import { argvFilePs1, calcPs1 } from "./ps1-wrap.ts";
 import { loadZhNames } from "../../commands/chattags.ts";
 import { manualFile, manualsDir, trainingFiles, trainingRoot, trainingRoots } from "./training.ts";
 
@@ -78,5 +78,17 @@ export function setupWorkspace(o: { dir: string; name: string; pipe: string; bri
   ].join("\n"));
   const fhPs1 = path.join(o.dir, "fh.ps1");
   fs.writeFileSync(fhPs1, argvFilePs1(node, envFile, script, fixed, env));
+  // ./calc ./bp ./plan: 第二版整目录搬来的 src/ (calc / play / blueprint), 照原来的用法; bp build 和 plan 经同一条管道走玩家操作 (FH_ONLINE), 没有 RCON
+  const toolEnv = { FH_SOCKET: o.pipe, FH_ONLINE: "1", FH_PROTO: o.protoDir ?? "", PYTHONUTF8: "1" };
+  const exportLine = `export ${Object.entries(toolEnv).map(([k, v]) => `${k}='${fwd(v)}'`).join(" ")}`;
+  const calcCli = path.join(ROOT, "src", "calc", "cli.ts");
+  // ./calc '<方案 JSON>': 方案写进 .calc-plan.json 再跑计算器 (JSON 参数经 shell 转手会拆坏), 往 .calc.log 记一行 (监工看有没有算过)
+  fs.writeFileSync(path.join(o.dir, "calc"), ["#!/bin/sh", "date +%s >> .calc.log", `printf '%s' "$1" > .calc-plan.json && CALC_IDS=1 exec '${fwd(node)}' '--env-file-if-exists=${fwd(envFile)}' '${fwd(calcCli)}' .calc-plan.json`, ""].join("\n"));
+  fs.writeFileSync(path.join(o.dir, "calc.ps1"), calcPs1(node, envFile, calcCli));
+  for (const [name, rel] of [["bp", ["src", "play", "bp.ts"]], ["plan", ["src", "play", "plan.ts"]]] as const) {
+    const s = path.join(ROOT, ...rel);
+    fs.writeFileSync(path.join(o.dir, name), ["#!/bin/sh", exportLine, `exec '${fwd(node)}' '--env-file-if-exists=${fwd(envFile)}' '${fwd(s)}' "$@"`, ""].join("\n"));
+    fs.writeFileSync(path.join(o.dir, `${name}.ps1`), argvFilePs1(node, envFile, s, [], toolEnv));
+  }
   return { fh, fhPs1, know, knowPs1, refFiles };
 }

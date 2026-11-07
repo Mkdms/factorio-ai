@@ -4,6 +4,8 @@
 import fs from "node:fs";
 import net from "node:net";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { EXISTING_LUA } from "../src/play/expand.ts";
+import { siteLua } from "../src/play/plan-lib.ts";
 
 export type BrokerMode = "sandbox" | "server";
 export type Dispatch = { raw: string; request: { id?: string; action?: string; args?: Record<string, unknown>; bot?: string; player?: number } };
@@ -229,6 +231,8 @@ export class CommandBroker {
       const text = (d.request.args as { text?: unknown } | undefined)?.text;
       if (typeof text === "string") this.opts.onOperator?.(text);
     }
+    // ./plan 的两段固定只读 Lua (场上已有的机器和科技、找空地) 在游戏外的假接口上跑: 模型手里仍没有自己写 Lua 的口, 只能点这两个名字
+    if (this.opts.mode === "server" && d && action === "plan_read") return this.planRead(d);
     // 真服上能翻译成玩家操作的先走行动层, 不问模组: craft、say、research 这些模组的只读闸门不拦 (它们不打断队列), 在外面的假接口上跑会报怪错 (2026-11-06 核出来)
     if (this.opts.mode === "server" && d && this.opts.actions?.has(action) && !isResearchRead(d)) return this.act(d, action);
     // 读也会被重发: 世界大了一次读超过 5 秒, 命令行用同一个 id 再发, 请求越堆越慢 (注入客户端的程序 的存档 41MB, 沙盘 1.7MB)。一模一样的请求接到第一次的结果上
@@ -241,6 +245,22 @@ export class CommandBroker {
       return p;
     }
     return this.answer(command, d, action);
+  }
+
+  /** plan_read {what: existing} / {what: site, near, w, h, taken} → src/play 里那两段 Lua 的结果 (Harness 形状的回复: {ok, result}) */
+  private async planRead(d: Dispatch): Promise<Reply> {
+    const a = (d.request.args ?? {}) as { what?: string; near?: [number, number] | null; w?: number; h?: number; taken?: { x: number; y: number; w: number; h: number }[] };
+    const lua = a.what === "existing" ? EXISTING_LUA : a.what === "site" ? siteLua(Array.isArray(a.near) ? [Number(a.near[0]), Number(a.near[1])] : null, Number(a.w), Number(a.h), Array.isArray(a.taken) ? a.taken : []) : null;
+    if (!lua) { this.count("plan_read", "refuse", 0); return { ok: false, refused: true, error: "plan_read 只认 what = existing / site" }; }
+    const t0 = Date.now();
+    try {
+      const result = await this.evalLua(lua);
+      this.count("plan_read", "mem", Date.now() - t0);
+      return { ok: true, text: JSON.stringify({ ok: true, result }) };
+    } catch (e) {
+      this.count("plan_read", "refuse", 0);
+      return { ok: true, text: JSON.stringify({ ok: false, error: { code: "plan_read", message: `游戏外的假接口跑不了: ${(e as Error).message.slice(0, 300)}` } }) };
+    }
   }
 
   private async answer(command: string, d: Dispatch | null, action: string): Promise<Reply> {
