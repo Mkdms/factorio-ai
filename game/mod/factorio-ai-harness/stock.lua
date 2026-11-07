@@ -1,0 +1,1234 @@
+-- Where our factory already holds an item: machine outputs and storage
+-- chests. Hand-crafting what a nearby assembler has already made wastes the
+-- character's time, so craft and construct point here, and `collect` with a
+-- radius walks the stock back.
+return function(api)
+  local M={}
+  -- temporary-container: a cargo pod landed with no pad (a player opens it; freight_audit counted 45 solar panels in one
+  -- that stock left out, Sol 15:22).
+  local TYPES={'assembling-machine','furnace','agricultural-tower','container','logistic-container','cargo-landing-pad','temporary-container'}
+  -- Gathering leaves plain chests alone unless asked: they are usually feed
+  -- chests the player stocked for machines, not stock to collect.
+  local NO_CHESTS={'assembling-machine','furnace','agricultural-tower','cargo-landing-pad'}
+  -- An agricultural tower's harvest is its output, as an assembler's product is (Gleba).
+  local CRAFTER={['assembling-machine']=true,furnace=true,['agricultural-tower']=true}
+  local CHEST={container=true,['logistic-container']=true,['temporary-container']=true}
+  local MAX_PLACES=32
+  function M.try(fn) local ok,v=pcall(fn); if ok then return v end end
+  -- (d26 batch248 R3) previous_recipe.name is a prototype (userdata)
+  local function recipe_name(prev)
+    local n=prev and prev.name
+    if n~=nil and type(n)~='string' then n=M.try(function() return n.name end) end
+    return n
+  end
+  local function output_of(e)
+    if CRAFTER[e.type] then
+      local ok,inv=pcall(e.get_output_inventory); return ok and inv or nil
+    end
+    local id=e.type=='cargo-landing-pad' and defines.inventory.cargo_landing_pad_main or defines.inventory.chest
+    local ok,inv=pcall(e.get_inventory,id); return ok and inv or nil
+  end
+  local function makes(e,item)
+    if not CRAFTER[e.type] then return false end
+    local ok,recipe=pcall(e.get_recipe)
+    if not (ok and recipe) then return false end
+    for _,product in ipairs(recipe.products or {}) do if product.name==item then return true end end
+    return false
+  end
+  -- (d19 batch45) for a caller scanning many items round centres in one box (ingredient_gap): our holders there found
+  -- once and each one's output read once (by item and quality: held, keyed name or name@quality), landed pods, and
+  -- ground(item) for the stacks on the ground (the ground watch's cells, every quality, or nil). A box over MAX_NEAR a
+  -- side: holders nil (each scan finds).
+  local MAX_NEAR=320
+  -- (each holder's type read cost as much as its inventory: crafters, chests and pads found apart)
+  local NEAR_FINDS={{{'assembling-machine','furnace','agricultural-tower'},'output'},{{'container','logistic-container','temporary-container'},defines and defines.inventory.chest,true},
+    {{'cargo-landing-pad'},defines and defines.inventory.cargo_landing_pad_main}}
+  function M.near(p,box,ground)
+    local near={ground=ground,held={}}
+    if box.right_bottom.x-box.left_top.x<=MAX_NEAR and box.right_bottom.y-box.left_top.y<=MAX_NEAR then
+      local holders,held={},near.held
+      for _,find in ipairs(NEAR_FINDS) do
+        for _,e in ipairs(p.surface.find_entities_filtered{force=p.force,type=find[1],area=box}) do
+          holders[#holders+1]=e
+          local ok,inv
+          if find[2]=='output' then ok,inv=pcall(e.get_output_inventory) else ok,inv=pcall(e.get_inventory,find[2]) end
+          local okc,list=false,nil
+          if ok and inv then okc,list=pcall(inv.get_contents) end
+          if okc and #list>0 then
+            -- what a scan needs of a holder, read once: {e, inv, name, position, chest, count (of that quality)}
+            -- (d27 batch262 IQ, Astra #2536: a legendary recipe's donors were normal stock) every quality, by key
+            local hn,hq=e.name,e.position
+            for _,c in ipairs(list) do
+              local q=c.quality
+              local k=(q==nil or q=='normal') and c.name or c.name..'@'..(type(q)=='string' and q or q.name)
+              local l=held[k]; if not l then l={}; held[k]=l end
+              l[#l+1]={e=e,inv=inv,name=hn,position=hq,chest=find[3],count=c.count}
+            end
+          end
+        end
+      end
+      near.holders=holders
+      near.pods=M.try(function() return p.surface.find_entities_filtered{name='cargo-pod-container',area=box} end) or {}
+    end
+    return near
+  end
+  -- Every own entity within radius of centre holding the item, nearest first,
+  -- plus the crafters set to make it (whether or not they hold any now).
+  -- opts.surface: another surface than the character's (stock {surface, position}; Sonnet 12:20: the surface was
+  -- ignored); opts.whole: every place on it (a platform's), no radius.
+  function M.scan(p,item,opts)
+    opts=opts or {}
+    local centre=opts.position or p.position
+    local quality=opts.quality or 'normal'
+    local places,total,groups,makers={},0,{},{}
+    local spoils=api.spoil and api.spoil.spoils(item)
+    local f={force=p.force,type=opts.types or TYPES}
+    if not opts.whole then f.position=centre; f.radius=opts.radius or 128 end
+    -- (d19 batch45, ingredient_gap {area}: 21 scans were 240 ms, 10 ms each the ground's whole-surface read) opts.near
+    -- (M.near): what a caller scanning many items round nearby centres found once; each place kept within the radius
+    -- here. Its makers are only the holders holding some.
+    local near=opts.near
+    local held=near and near.holders and not opts.whole and not opts.types
+    local far=opts.radius or 128
+    local qkey=quality=='normal' and item or item..'@'..quality
+    for _,x in pairs(held and (near.held[qkey] or {}) or (opts.surface or p.surface).find_entities_filtered(f)) do
+      local h=held and x or nil
+      local e=h and h.e or x
+      if e.valid and not (h and api.distance(centre,h.position)>far) then
+        if not h and makes(e,item) then makers[e.name]=(makers[e.name] or 0)+1 end
+        local inv=h and h.inv or output_of(e)
+        local n=h and h.count or inv and inv.get_item_count{name=item,quality=quality} or 0
+        if n>0 then
+          total=total+n
+          local name,pos=h and h.name or e.name,h and h.position or e.position
+          local g=groups[name] or {name=name,entities=0,count=0,chest=h and h.chest or not h and CHEST[e.type] or nil}
+          groups[name]=g; g.entities=g.entities+1; g.count=g.count+n
+          local place={entity=e,name=name,position=pos,count=n,distance=api.distance(centre,pos)}
+          -- A spoilable item: this place's first stack to spoil (spoil.lua).
+          if spoils then
+            -- (C7) what of it spoils within 2 minutes here
+            for k=1,#inv do
+              local st=inv[k]
+              if st.valid_for_read and st.name==item then
+                local okt,t=pcall(function() return st.spoil_tick end)
+                if okt and type(t)=='number' and t>0 and t-game.tick<=7200 then place.soon2=(place.soon2 or 0)+st.count end
+              end
+            end
+            for _,r in ipairs(api.spoil.inventory(inv,{})) do
+              if r.name==item and (not place.spoil_tick or r.tick<place.spoil_tick) then place.spoil_tick,place.spoil_percent,place.soon=r.tick,r.percent,r.soon end
+            end
+          end
+          places[#places+1]=place
+        end
+      end
+    end
+    -- (batch28 B3, Muse: 15 minutes for 5 collectors and 350 ice) landed cargo pods of any force in the read (a pod
+    -- landed with no pad), and the stacks on the ground in chunks our force sees now: places with positions (kind pod,
+    -- ground); the ground is not in total (on_ground counts it).
+    local on_ground
+    if not opts.types or opts.pods then
+      local function key(e) return e.unit_number or (e.name..'@'..e.position.x..','..e.position.y) end
+      local seen={}
+      for _,x in ipairs(places) do if x.entity then seen[key(x.entity)]=true end end
+      local pf={name='cargo-pod-container'}
+      if not opts.whole then pf.position=centre; pf.radius=opts.radius or 128 end
+      for _,e in pairs(near and near.pods or M.try(function() return (opts.surface or p.surface).find_entities_filtered(pf) end) or {}) do
+        if e.valid and e.name=='cargo-pod-container' and not seen[key(e)] and not (near and not opts.whole and api.distance(centre,e.position)>far) then
+          local inv=output_of(e)
+          local n=inv and inv.get_item_count{name=item,quality=quality} or 0
+          if n>0 then
+            total=total+n
+            local g=groups[e.name] or {name=e.name,entities=0,count=0,chest=true}
+            groups[e.name]=g; g.entities=g.entities+1; g.count=g.count+n
+            places[#places+1]={entity=e,name=e.name,position=e.position,count=n,distance=api.distance(centre,e.position)}
+          end
+        end
+      end
+      -- (d25 batch198 QK2, Astra #2325) the stacks of the quality asked (normal when none), each within the radius
+      -- (a row: the stacks of a 32-tile cell there, at the nearest one); near's cells are by name, every quality
+      -- (d27 batch262 IQ) with near, its cells (every quality) only say whether stacks lie within the radius: then the
+      -- stacks there of the quality asked are read (most short items have none near)
+      local g
+      if near then
+        g=near.ground(item)
+        local any=false
+        for _,c in ipairs(g and g.cells or {}) do if opts.whole or api.distance(centre,c.position)<=far then any=true; break end end
+        if any and api.on_ground then
+          g=M.try(function() return api.on_ground(p.force,opts.surface or p.surface,item,{quality=quality,position=not opts.whole and centre or nil,radius=not opts.whole and far or nil}) end)
+        elseif not any then g=nil end
+      end
+      if not near then g=api.on_ground and M.try(function() return api.on_ground(p.force,opts.surface or p.surface,item,
+        {quality=quality,position=not opts.whole and centre or nil,radius=not opts.whole and (opts.radius or 128) or nil}) end) end
+      for _,c in ipairs(g and g.cells or {}) do
+        local d=api.distance(centre,c.position)
+        if opts.whole or d<=(opts.radius or 128) then
+          on_ground=(on_ground or 0)+c.count
+          places[#places+1]={name=string.format('%d stack%s on the ground',c.stacks,c.stacks==1 and '' or 's'),position=c.position,count=c.count,distance=d,ground=true,
+            quality=quality}
+        end
+      end
+    end
+    table.sort(places,function(x,y) return x.distance<y.distance end)
+    local list={}
+    for _,g in pairs(groups) do list[#list+1]=g end
+    table.sort(list,function(x,y) return x.count>y.count end)
+    return {item=item,total=total,groups=list,places=places,makers=next(makers) and makers or nil,on_ground=on_ground}
+  end
+  -- One line an agent cannot skim past: how much, in what, and where.
+  -- (d17 batch23 B2, Sonnet: 4k copper cable read as ready twice; it sat in requester chests) a stock's places by what
+  -- can be taken: provider and storage chests (robots can take it), requester and buffer chests (held for a request),
+  -- plain chests, machine outputs, the rest.
+  function M.split(places)
+    local t={free=0,requested=0,chest=0,machine=0,pod=0,other=0}
+    for _,x in ipairs(places) do
+      if not x.ground then
+        local ok,k=pcall(M.holder_kind,x.entity)
+        k=ok and k or 'other'
+        local slot=(k=='provider' or k=='storage') and 'free' or (k=='requester' or k=='buffer') and 'requested' or (k=='chest' or k=='machine' or k=='pod') and k or 'other'
+        t[slot]=t[slot]+x.count
+      end
+    end
+    local bits={string.format('provider and storage chests %d (robots can take it)',t.free),string.format('requester and buffer chests %d (held for their requests)',t.requested)}
+    if t.chest>0 then bits[#bits+1]=string.format('plain chests %d',t.chest) end
+    if t.machine>0 then bits[#bits+1]=string.format('machine outputs %d',t.machine) end
+    if t.pod>0 then bits[#bits+1]=string.format('landed cargo pods %d (take them by hand)',t.pod) end
+    if t.other>0 then bits[#bits+1]=string.format('elsewhere %d (landing pads, wagons, vehicles)',t.other) end
+    t.text=table.concat(bits,', ')
+    return t
+  end
+  function M.line(s,centre)
+    if s.total==0 then return nil end
+    local parts={}
+    for i,g in ipairs(s.groups) do
+      if i>3 then parts[#parts+1]='...'; break end
+      parts[#parts+1]=string.format('%d in %d %s',g.count,g.entities,g.name)
+    end
+    -- (d20 batch65 AA7, Grok 22:15: stock {item: nutrients, places: "all", holders: [provider, storage, machine]} failed
+    -- "attempt to index local 'near'") a holders filter can leave no place: the line says what it left out
+    if #s.places==0 then
+      return string.format('%d %s held by our factory (%s); no %s holds it%s',s.total,s.item,table.concat(parts,', '),
+        s.holders and 'place of the holders asked ('..table.concat(s.holders,', ')..')' or 'place read',
+        s.left_out and '; by holder kind: '..s.left_out or '')
+    end
+    local near,big=s.places[1],s.places[1]
+    for _,x in ipairs(s.places) do if x.count>big.count then big=x end end
+    local largest=big~=near and string.format('; largest %d in %s at (%g,%g) %d tiles away',big.count,big.name,big.position.x,big.position.y,math.floor(big.distance+0.5)) or ''
+    local chests=false
+    for _,g in ipairs(s.groups) do if g.chest then chests=true end end
+    local first
+    for _,x in ipairs(s.places) do if x.spoil_tick and (not first or x.spoil_tick<first.spoil_tick) then first=x end end
+    local spoil=first and string.format('; the first %s in %s at (%g,%g) in %s (%d%% spoiled)',api.spoil.hatch(s.item) and 'hatches into '..api.spoil.hatch(s.item).entity or 'spoils',
+      first.name,first.position.x,first.position.y,api.spoil.secs(first.spoil_tick-game.tick),math.floor(first.spoil_percent*100+0.5)) or ''
+    local split=M.split(s.places)
+    return string.format('%d %s held by our factory (%s%s); nearest %d at (%g,%g) %d tiles away%s%s; collect item=%s radius=%d%s gathers it',
+      s.total,s.item,table.concat(parts,', '),(split.free>0 or split.requested>0) and '; '..split.text or '',near.count,near.position.x,near.position.y,math.floor(near.distance+0.5),largest,spoil,
+      s.item,math.max(8,math.ceil(math.max(s.places[math.min(#s.places,4)].distance,big.distance))+2),chests and ' chests=true' or '')
+  end
+  -- Without an item: what our machines and chests hold, per item, largest
+  -- first (shake2: agents asked `scope=stock` bare and got an error).
+  function M.summary(p,a,radius,limit,surface)
+    local centre=a.position and api.position(a.position) or p.position
+    surface=surface or p.surface
+    local totals,order={},{}
+    local spoil,read={},{}
+    for _,e in pairs(surface.find_entities_filtered{position=centre,radius=radius,force=p.force,type=TYPES}) do
+      local inv=e.valid and output_of(e)
+      for _,s in ipairs(inv and inv.get_contents() or {}) do
+        local key=s.quality and s.quality~='normal' and s.name..'@'..s.quality or s.name
+        local t=totals[key]
+        if not t then t={item=key,count=0,entities=0,chests=0}; totals[key]=t; order[#order+1]=t end
+        t.count=t.count+s.count; t.entities=t.entities+1
+        if CHEST[e.type] then t.chests=t.chests+1 end
+        -- Spoilable items: the first stack to spoil among the places (spoil.lua).
+        if api.spoil and api.spoil.spoils(s.name) and not read[e] then read[e]=true; api.spoil.inventory(inv,spoil) end
+      end
+    end
+    table.sort(order,function(x,y) return x.count>y.count or (x.count==y.count and x.item<y.item) end)
+    local items={}
+    for i=1,math.min(limit,#order) do
+      local t=order[i]
+      local r=spoil[t.item]
+      local h=r and api.spoil.hatch(r.name)
+      items[i]=string.format('%s %d in %d %s%s%s',t.item,t.count,t.entities,t.entities==1 and 'entity' or 'entities',
+        t.chests>0 and string.format(' (%d chest%s)',t.chests,t.chests==1 and '' or 's') or '',
+        r and string.format('; the first %s in %s (%d%% spoiled)',h and 'hatches into '..h.entity or 'spoils',api.spoil.secs(r.tick-game.tick),math.floor(r.percent*100+0.5)) or '')
+    end
+    return {radius=radius,items=items,more=#order>limit and #order-limit or nil,
+      covered=string.format('our machine outputs and chests within %d tiles of (%g,%g) on %s',radius,math.floor(centre.x),math.floor(centre.y),surface.name),
+      as_of=string.format('live (tick %d)',game.tick),
+      note=#order>0 and 'machine outputs and chests within radius; scope=stock item=NAME lists the places and a collect line' or 'no machine output or chest within radius holds anything'}
+  end
+  -- What kind of holder a place is (Muse 09:24: 3-4 stock calls to find a provider robots had not committed): provider
+  -- (active or passive), storage, requester, buffer, chest (no logistics), machine, or the entity type.
+  local KINDS={provider=true,storage=true,requester=true,buffer=true,chest=true,machine=true,wagon=true,pad=true,vehicle=true,pod=true,ground=true}
+  function M.holder_kind(e)
+    if not e then return 'ground' end
+    if e.type=='temporary-container' then return 'pod' end
+    local mode=e.type=='logistic-container' and (pcall(function() return e.prototype.logistic_mode end) and e.prototype.logistic_mode)
+    if mode=='active-provider' or mode=='passive-provider' then return 'provider' end
+    if mode then return mode end
+    if CHEST[e.type] then return 'chest' end
+    if e.type=='assembling-machine' or e.type=='furnace' or e.type=='lab' or e.type=='mining-drill' or e.type=='agricultural-tower' then return 'machine' end
+    if e.type=='cargo-wagon' then return 'wagon' end
+    if e.type=='cargo-landing-pad' then return 'pad' end
+    if e.type=='car' or e.type=='spider-vehicle' then return 'vehicle' end
+    return e.type
+  end
+  -- opts: surface (the one named), whole (a platform: every place aboard).
+  function M.view(p,a,opts)
+    local radius=api.integer(a.radius,128,1,1024,'radius')
+    if a.item==nil then return M.summary(p,a,radius,api.integer(a.limit,16,1,64,'limit'),opts and opts.surface) end
+    assert(type(a.item)=='string' and prototypes.item[a.item],'item must be a known item name')
+    local limit=api.integer(a.limit,8,1,MAX_PLACES,'limit')
+    local centre=a.position and api.position(a.position) or p.position
+    local surface=opts and opts.surface or p.surface
+    local whole=opts and opts.whole
+    local s=M.scan(p,a.item,{position=centre,radius=radius,quality=a.quality,surface=surface,whole=whole})
+    local split=M.split(s.places)
+    -- holders: only those kinds of place (the total and groups stay the whole stock).
+    local want
+    if a.holders~=nil then
+      local list=type(a.holders)=='string' and {a.holders} or a.holders
+      assert(type(list)=='table' and #list>=1,'holders is a list of kinds: provider, storage, requester, buffer, chest, machine, wagon, pad, vehicle')
+      want={}
+      for _,k in ipairs(list) do assert(KINDS[k],'holders: unknown kind '..tostring(k)..' (provider, storage, requester, buffer, chest, machine, wagon, pad, vehicle)'); want[k]=true end
+      local kept,out,order={},{},{}
+      for _,x in ipairs(s.places) do
+        local k=M.holder_kind(x.entity)
+        if want[k] then kept[#kept+1]=x
+        else
+          local r=out[k]
+          if not r then r={kind=k,count=0,places=0}; out[k]=r; order[#order+1]=r end
+          r.count=r.count+x.count; r.places=r.places+1
+        end
+      end
+      table.sort(order,function(x,y) return x.count>y.count or (x.count==y.count and x.kind<y.kind) end)
+      local bits={}
+      for i,r in ipairs(order) do bits[i]=string.format('%s %d in %d place%s%s',r.kind,r.count,r.places,r.places==1 and '' or 's',r.kind=='ground' and ' (not in total)' or '') end
+      s={item=s.item,total=s.total,groups=s.groups,places=kept,makers=s.makers,on_ground=s.on_ground,holders=list,left_out=#bits>0 and table.concat(bits,', ') or nil}
+    end
+    -- page (A9, Muse: places past 128 tiles unfindable): places limit at a time, nearest first, from page 1.
+    local pages=math.max(1,math.ceil(#s.places/limit))
+    local page=api.integer(a.page,1,1,pages,'page')
+    local skip=(page-1)*limit
+    local places={}
+    for i=1,math.min(limit,#s.places-skip) do
+      local x=s.places[skip+i]
+      local reserved=x.entity and api.reserved and api.reserved(x.entity,a.item) or 0
+      places[i]={name=x.name,position=x.position,count=x.count,distance=math.floor(x.distance+0.5),kind=M.holder_kind(x.entity),quality=x.ground and x.quality or nil,
+        reserved=reserved>0 and reserved or nil,
+        first_spoils_in=x.spoil_tick and api.spoil.secs(x.spoil_tick-game.tick) or nil,spoiled_percent=x.spoil_tick and math.floor(x.spoil_percent*100+0.5) or nil,
+        within_5_min=x.soon and x.soon>0 and x.soon or nil,within_2_min=x.soon2}
+    end
+    -- reserved_for (d17 batch18 B5, Haiku): where the robots taking a place's reserved stock deliver it: in each such
+    -- place's logistic network, every logistic robot's queue read once for a pickup there of this item followed by a
+    -- deliver (the requester, buffer chest or character it goes to, and how many), the 3 largest a place.
+    local nets,by={},nil
+    for i,x in ipairs(places) do
+      local e=s.places[skip+i].entity
+      local net=x.reserved and e and e.valid and M.try(function() return e.logistic_network end)
+      if net and net.valid then
+        if not nets[net.network_id] then
+          nets[net.network_id]=true
+          by=by or {}
+          local PICK,DELIVER=defines.robot_order_type.pickup,defines.robot_order_type.deliver
+          for _,r in ipairs(M.try(function() return net.logistic_robots end) or {}) do
+            local q=r.valid and M.try(function() return r.robot_order_queue end) or {}
+            for k=1,#q-1 do
+              local o,d=q[k],q[k+1]
+              local it=o.target_item and (type(o.target_item.name)=='string' and o.target_item.name or M.try(function() return o.target_item.name.name end))
+              if o.type==PICK and d.type==DELIVER and it==a.item and o.target and o.target.valid and d.target and d.target.valid then
+                local from,to=o.target.unit_number,d.target
+                local key=to.unit_number or to
+                by[from]=by[from] or {}
+                local row=by[from][key]
+                if not row then row={e=to,n=0}; by[from][key]=row end
+                row.n=row.n+(o.target_count or 0)
+              end
+            end
+          end
+        end
+        local list={}
+        for _,row in pairs(by and by[e.unit_number] or {}) do list[#list+1]=row end
+        table.sort(list,function(u,v) return u.n>v.n end)
+        local parts={}
+        for k=1,math.min(3,#list) do
+          local t=list[k].e
+          local who=t.type=='character' and M.try(function() return 'the character of '..t.player.name end) or t.name
+          parts[k]=string.format('%d to %s (%g,%g)',list[k].n,who,t.position.x,t.position.y)
+        end
+        if #parts>0 then x.reserved_for=table.concat(parts,', ')..(#list>3 and string.format(', +%d more',#list-3) or '') end
+      end
+    end
+    -- (C7) the places read: how much spoils within 2 minutes
+    local soon2
+    if api.spoil and api.spoil.spoils(a.item) then
+      soon2=0
+      for _,x in ipairs(s.places) do soon2=soon2+(x.soon2 or 0) end
+    end
+    local h=api.spoil and api.spoil.hatch(a.item)
+    return {item=a.item,total=s.total,on_ground=s.on_ground,on_ground_note=s.on_ground and string.format('stacks of %s on the ground %s, in chunks our force sees now: places of kind ground (a row: those in one 32-tile cell, at the nearest), not in total',a.quality and a.quality~='normal' and a.item..'@'..a.quality or a.item..' (normal quality)',whole and 'aboard' or 'within the radius') or nil,by_holder={provider_storage=split.free,requester_buffer=split.requested,chests=split.chest,machines=split.machine,other=split.other,line=split.text},by_entity=s.groups,places=places,more=#s.places>skip+limit and #s.places-skip-limit or nil,holders_left_out=s.left_out,
+      spoils_within_2_min=soon2,
+      page=pages>1 and page or nil,pages=pages>1 and pages or nil,
+      covered=whole and string.format('every machine output and chest of ours on %s',surface.name)
+        or string.format('our machine outputs and chests within %d tiles of (%g,%g) on %s',radius,math.floor(centre.x),math.floor(centre.y),surface.name),
+      as_of=string.format('live (tick %d)',game.tick),
+      made_by=s.makers,held=p.get_main_inventory().get_item_count{name=a.item,quality=a.quality or 'normal'},summary=M.line(s,centre),
+      -- (d18 batch37 B1, Grok: 16,000 copper ore in plain chests on Gleba) what no network's providers and storage give
+      elsewhere=api.elsewhere and M.try(function() return (api.elsewhere(p.force,surface,a.item,nil,centre)) end) or nil,
+      hatches_into=h and string.format('%s (an enemy, %s) when it spoils: first_spoils_in is when the first hatches',h.entity,api.spoil.per_text(h)) or nil}
+  end
+  -- Gathering: visit stock places nearest-neighbour from the character and
+  -- take the item from each until `want` is met.
+  local function route(start,places,limit)
+    local left,out,at={},{},start
+    for i,x in ipairs(places) do left[i]=x end
+    while #left>0 and #out<(limit or MAX_PLACES) do
+      local best,bd=1,math.huge
+      for i,x in ipairs(left) do local d=api.distance(at,x.position); if d<bd then best,bd=i,d end end
+      local x=table.remove(left,best)
+      out[#out+1]={entity=x.entity,position=x.position}
+      at=x.position
+    end
+    return out
+  end
+  -- Another agent's claimed places stay put; returns the places kept and the skipped_claims lines.
+  local function unclaimed(p,places,what)
+    local skipped,kept={},{}
+    for _,place in ipairs(places) do
+      local c=api.claims and api.claims.other(p,place.position)
+      if c then
+        local key=api.claims.label(c,p)
+        if not skipped[key] then skipped[key]={places=0,count=0}; skipped[#skipped+1]=key end
+        skipped[key].places=skipped[key].places+1; skipped[key].count=skipped[key].count+place.count
+      else kept[#kept+1]=place end
+    end
+    if #skipped==0 then return places,nil end
+    local lines={}
+    for i,key in ipairs(skipped) do
+      if i<=4 then lines[i]=string.format('%d %s in %d places of %s; ask the owner',skipped[key].count,what,skipped[key].places,key) end
+    end
+    return kept,lines
+  end
+  -- Without an item (Gemini, after the courier tools): every assembler and furnace output in the radius, all items,
+  -- output slots only (never inputs or fuel); count caps the total.
+  local OUTPUT={['assembling-machine']='assembling_machine_output',furnace='furnace_result',['agricultural-tower']='agricultural_tower_output'}
+  function M.start_all(p,a,ticks)
+    assert(a.chests==nil or a.chests==false,'collect with radius and no item takes machine outputs only; name an item to take from chests')
+    assert(a.quality==nil,'quality goes with item')
+    for _,t in ipairs(a.types or {}) do assert(OUTPUT[t],'collect with radius and no item takes machine outputs: types may be assembling-machine and furnace') end
+    local radius=api.integer(a.radius,32,1,256,'radius')
+    local want=api.integer(a.count,1000000,1,1000000,'count')
+    local places,total={},0
+    for _,e in pairs(p.surface.find_entities_filtered{position=p.position,radius=radius,force=p.force,type=a.types or {'assembling-machine','furnace'}}) do
+      local inv=e.valid and output_of(e)
+      local n=0
+      for _,s in ipairs(inv and inv.get_contents() or {}) do n=n+s.count end
+      if n>0 then
+        total=total+n
+        places[#places+1]={entity=e,name=e.name,position=e.position,count=n}
+      end
+    end
+    local skipped
+    places,skipped=unclaimed(p,places,'items')
+    local action={kind='gather',all=true,want=want,got=0,visited=0,items={},targets=route(p.position,places),index=1,until_tick=game.tick+ticks,min_fresh=a.min_fresh}
+    local out={items='all',want=want<1000000 and want or nil,stock=total,places=#action.targets,skipped_claims=skipped}
+    if total==0 then out.note='no assembler or furnace output in radius holds anything' end
+    return action,out
+  end
+  function M.start(p,a,ticks)
+    if a.item==nil then return M.start_all(p,a,ticks) end
+    assert(type(a.item)=='string' and prototypes.item[a.item],'collect with radius requires a known item')
+    local radius=api.integer(a.radius,32,1,256,'radius')
+    local want=api.integer(a.count,10000,1,100000,'count')
+    local chests=a.chests==true
+    local s=M.scan(p,a.item,{radius=radius,quality=a.quality,types=a.types or (chests and TYPES or NO_CHESTS)})
+    -- Another agent's claimed stock stays put; the result says whose it is.
+    local skipped
+    s.places,skipped=unclaimed(p,s.places,a.item)
+    local action={kind='gather',item=a.item,quality=a.quality,outputs_only=a.outputs_only,want=want,got=0,visited=0,min_fresh=a.min_fresh,
+      targets=route(p.position,s.places),index=1,until_tick=game.tick+ticks,avoid_enemies=a.avoid_enemies,unsafe_goal=a.unsafe_goal}
+    M.guard(action)
+    local left=M.screen_action(p,action,'every place holding '..a.item..' there')
+    local out={item=a.item,want=want,stock=s.total,places=#action.targets,skipped_claims=skipped}
+    M.left_out_into(out,left)
+    if not chests and not a.types then
+      -- Say how much sits in chests that this trip leaves alone.
+      local all=M.scan(p,a.item,{radius=radius,quality=a.quality})
+      if all.total>s.total then out.left_in_chests=all.total-s.total; out.note='chests are skipped; pass chests=true to take from them too' end
+    end
+    return action,out
+  end
+  -- Waiting at one machine (Muse, operator 09:31: a collect from a machine's
+  -- output lost to its output inserters about four times): walk into reach,
+  -- then take each product from its output the tick it is there, for up to
+  -- wait ticks or until count, as a player standing there does. The machine's
+  -- products_finished gives what it made meanwhile; what it made and what
+  -- the output held less what was taken and what is left went to inserters.
+  local WAIT_TYPES={['assembling-machine']=true,furnace=true}
+  function M.start_wait(p,a,e,wait)
+    if not WAIT_TYPES[e.type] then error(e.name..' is no assembler or furnace: wait_ticks waits at a machine\'s output',0) end
+    if e.force~=p.force then error(e.name..' is not ours',0) end
+    if a.item~=nil then assert(type(a.item)=='string' and prototypes.item[a.item],'item must be a known item') end
+    local want=a.count and api.integer(a.count,nil,1,100000,'count') or 1000000
+    local walk=api.integer(a.ticks,3600,1,36000,'ticks')
+    local action={kind='gather',wait=wait,item=a.item,quality=a.quality,all=a.item==nil or nil,want=want,got=0,visited=0,items={},min_fresh=a.min_fresh,
+      targets={{entity=e,position=e.position}},index=1,until_tick=game.tick+walk+wait}
+    local recipe=pcall(e.get_recipe) and e.get_recipe()
+    local okt,tk=pcall(M.output_takers,e,a.item); tk=okt and tk or nil
+    return action,{machine=string.format('%s (%g,%g)',e.name,e.position.x,e.position.y),recipe=recipe and recipe.name or nil,wait_ticks=wait,
+      count=a.count and want or nil,item=a.item,in_reach=p.can_reach_entity(e),
+      taken_by_inserters=tk and tk.line or nil,follow_chests=tk and #tk.chests>0 and 'follow: true takes from '..tk.chests[1].name..string.format(' (%g,%g)',tk.chests[1].position.x,tk.chests[1].position.y)..' instead' or nil}
+  end
+  local function counts(inv)
+    local out={}
+    for _,st in ipairs(inv and inv.get_contents() or {}) do out[st.name]=(out[st.name] or 0)+st.count end
+    return out
+  end
+  -- What one craft of the machine's recipe yields per item (the expected amount for a ranged or chance product).
+  local function per_craft(e)
+    local ok,recipe=pcall(e.get_recipe)
+    if not (ok and recipe) and e.type=='furnace' then ok,recipe=pcall(function() return prototypes.recipe[recipe_name(e.previous_recipe)] end) end
+    local out={}
+    for _,pr in ipairs(ok and recipe and recipe.products or {}) do
+      if pr.type=='item' then
+        local amount=pr.amount or ((pr.amount_min or 0)+(pr.amount_max or 0))/2
+        out[pr.name]=(out[pr.name] or 0)+amount*(pr.probability or 1)
+      end
+    end
+    return out
+  end
+  local function finished(e) local ok,n=pcall(function() return e.products_finished end); return ok and n or nil end
+  -- What the wait saw, counted each tick (Sol, shift12 12:41: a wait at an assembler on iron-bacteria reported "made
+  -- iron-bacteria*2, inserters_took iron-bacteria*2" from 16 crafts times the product's 10% chance, while its only
+  -- output inserter takes spoilage and iron ore; nothing was taken because none was made). Per tick, before the take:
+  -- what arrived in the output since the tick before, what the inserters picking from it took into their hands, and
+  -- what left it otherwise (spoiled, or another player took it). On 2.0.77 the take reaches a product the tick it is
+  -- there before an inserter waiting at the output does (a burner inserter at a stone furnace took none of 6 plates).
+  local function takers(e)
+    local ok,list=pcall(function()
+      local b=e.bounding_box
+      return e.surface.find_entities_filtered{area={{b.left_top.x-3,b.left_top.y-3},{b.right_bottom.x+3,b.right_bottom.y+3}},type='inserter',force=e.force}
+    end)
+    local out={}
+    for _,ins in ipairs(ok and list or {}) do
+      local okt,t=pcall(function() return ins.pickup_target end)
+      if ins.valid and okt and t==e then out[#out+1]=ins end
+    end
+    return out
+  end
+  local function hand(ins)
+    local ok,name,count=pcall(function()
+      local st=ins.held_stack
+      if st and st.valid_for_read then return st.name,st.count end
+    end)
+    if ok then return name,count end
+  end
+  -- The inserters that take a machine's output and where they put it (Sol, shift18: twice collect wait_ticks waited
+  -- while inserters moved every lithium plate into an output chest): {rows, chests, line}. item: only inserters
+  -- whose filter lets it through (a whitelist naming it, a blacklist not naming it, or no filter in use).
+  local function passes(ins,item)
+    if not item then return true end
+    local ok,use=pcall(function() return ins.use_filters end)
+    if not (ok and use) then return true end
+    local okm,mode=pcall(function() return ins.inserter_filter_mode end)
+    local named=false
+    for i=1,5 do
+      local okf,f=pcall(function() return ins.get_filter(i) end)
+      -- (a filter's name, or the filter itself, may be a prototype: a table in tests, userdata in 2.0)
+      local n=okf and f and (type(f)=='string' and f or (pcall(function() return f.name end)) and f.name)
+      if n and type(n)~='string' then local okn,nm=pcall(function() return n.name end); n=okn and nm or nil end
+      if n==item then named=true end
+    end
+    if okm and mode=='blacklist' then return not named end
+    return named
+  end
+  function M.output_takers(e,item)
+    local rows,chests,seen={},{},{}
+    for _,ins in ipairs(takers(e)) do
+      if passes(ins,item) then
+        local okd,drop=pcall(function() return ins.drop_target end)
+        local held=0
+        local into='the ground'
+        if okd and drop then
+          into=string.format('%s (%g,%g)',drop.name,drop.position.x,drop.position.y)
+          if item then held=(pcall(function() return drop.get_item_count(item) end)) and drop.get_item_count(item) or 0 end
+          if (drop.type=='container' or drop.type=='logistic-container') and not seen[drop.unit_number] then
+            seen[drop.unit_number]=true
+            chests[#chests+1]={entity=drop,position={x=drop.position.x,y=drop.position.y},name=drop.name,holds=held}
+          end
+        end
+        rows[#rows+1]=string.format('%s (%g,%g) into %s%s',ins.name,ins.position.x,ins.position.y,into,
+          okd and drop and item and string.format(' (holds %d %s)',held,item) or '')
+      end
+    end
+    if #rows==0 then return nil end
+    return {rows=rows,chests=chests,
+      line=string.format('%d inserter%s take%s %s from its output as it is made: %s',#rows,#rows==1 and '' or 's',#rows==1 and 's' or '',
+        item or 'its products',table.concat(rows,'; '))}
+  end
+  local function watch(w,e)
+    if not w.takers or game.tick>=w.takers_tick then w.takers=takers(e); w.takers_tick=game.tick+300 end
+    local grabbed={}
+    for _,ins in ipairs(w.takers) do
+      if ins.valid then
+        local name,count=hand(ins)
+        local prev=w.hands[ins.unit_number]
+        if name and (not prev or prev.name~=name) then grabbed[name]=(grabbed[name] or 0)+count
+        elseif name and count>prev.count then grabbed[name]=(grabbed[name] or 0)+count-prev.count end
+        w.hands[ins.unit_number]=name and {name=name,count=count} or nil
+      end
+    end
+    local now=counts(output_of(e))
+    local names={}
+    for k in pairs(now) do names[k]=true end
+    for k in pairs(w.last) do names[k]=true end
+    for k in pairs(grabbed) do names[k]=true end
+    for name in pairs(names) do
+      local d=(now[name] or 0)-(w.last[name] or 0)+(grabbed[name] or 0)
+      if d>0 then w.arrived[name]=(w.arrived[name] or 0)+d elseif d<0 then w.gone[name]=(w.gone[name] or 0)-d end
+      if grabbed[name] then w.grabbed[name]=(w.grabbed[name] or 0)+grabbed[name] end
+    end
+    w.last=now
+  end
+  function M.wait_tick(p,action)
+    local t=action.targets[1]
+    local e=t.entity
+    if not (e and e.valid) then action.why='the machine is gone'; return action.got>0 and 'collected' or 'nothing_collected' end
+    if not p.can_reach_entity(e) then
+      if not action.nav then
+        action.nav={position=t.position,tolerance=t.pickup_reach and math.max(0.1,t.pickup_reach-0.2) or math.max(1,(p.reach_distance or 10)-3),max_stalls=6,replans=0,stalled=0,last_position=p.position}
+        -- an entity stop: arrived once within its transfer reach (A5, Gemini 21:29: a silo's centre lies inside it)
+        if t.entity and t.entity.valid and not t.pickup_reach and api.reach_target then
+          local okr,rt=pcall(api.reach_target,p,t.entity)
+          if okr and rt then action.nav.reach_target=rt end
+        end
+        api.request_path(p,action.nav)
+      end
+      local outcome=api.navigate(p,action.nav)
+      if outcome then
+        api.stop_walking(p); action.unreached=1
+        action.why=(action.followed_to and action.followed_to..'; ' or '')..'the walk to it ended '..outcome..' out of reach'
+        return action.got>0 and 'collected' or 'unreached'
+      end
+      return nil
+    end
+    if not action.waiting then
+      api.stop_walking(p); action.nav=nil; action.visited=1
+      local now=counts(output_of(e))
+      action.waiting={since=game.tick,finished=finished(e),output=now,per_craft=per_craft(e),last=now,arrived={},grabbed={},gone={},hands={}}
+      -- (a followed chest keeps the wait's end: D1)
+      action.wait_end=action.wait_end or game.tick+action.wait
+      -- to (batch26 C4): the machine given to is in reach from here, or the wait ends before it takes
+      local g=action.give_to and action.give_to.entity
+      if g and not (g.valid and p.can_reach_entity(g)) then
+        action.unreached=1
+        action.why=g.valid and string.format('to: %s (%g,%g) is out of reach from where the wait stands at %s (%g,%g); stand in reach of both',
+          g.name,g.position.x,g.position.y,e.name,e.position.x,e.position.y) or 'to: the machine given to is gone'
+        return 'unreached'
+      end
+    end
+    -- follow during the wait (D1, Sol 00:20: one finished barrel sat in an output chest out of reach while the wait stood
+    -- at the machine until a rescue by hand): every half second, the chests its output inserters fill; one in reach that
+    -- holds the item is taken from, one out of reach becomes where the wait stands (walked to, as into reach of the
+    -- machine), and a walk that ends out of reach ends the wait unreached, saying where the items are.
+    if action.follow and action.machine==nil and game.tick>=(action.follow_next or 0) then
+      action.follow_next=game.tick+30
+      local okt,tk=pcall(M.output_takers,e,action.item)
+      for _,c in ipairs(okt and tk and tk.chests or {}) do
+        local ch=c.entity
+        local inv=ch.valid and output_of(ch)
+        local n=inv and (action.item and inv.get_item_count{name=action.item,quality=action.quality or 'normal'} or (not inv.is_empty() and 1 or 0)) or 0
+        if n>0 then
+          if p.can_reach_entity(ch) then
+            action.trash_tally=action.trash_tally or {}
+            local ok,out=pcall(api.take,p,ch,action.item,action.quality,math.min(10000,action.want-action.got),nil,action.trash_tally)
+            if ok and out.transferred>0 then
+              action.got=action.got+out.transferred
+              for _,st in ipairs(out.items or {{name=action.item,count=out.transferred}}) do
+                if st.name and st.count and st.count>0 then action.items[st.name]=(action.items[st.name] or 0)+st.count end
+              end
+              local k=string.format('%s (%g,%g)',ch.name,ch.position.x,ch.position.y)
+              action.followed_took=action.followed_took or {}
+              action.followed_took[k]=(action.followed_took[k] or 0)+out.transferred
+              if out.inventory_full then return 'inventory_full' end
+            end
+          else
+            action.machine=string.format('%s (%g,%g)',e.name,e.position.x,e.position.y)
+            action.followed_to=string.format('its output inserters put %s into %s (%g,%g), out of reach: the wait walked there and takes from it',
+              action.item or 'its products',ch.name,ch.position.x,ch.position.y)
+            action.targets[1]={entity=ch,position=ch.position}
+            action.waiting=nil; action.nav=nil
+            return nil
+          end
+        end
+      end
+    end
+    local w=action.waiting
+    pcall(watch,w,e)
+    local inv=output_of(e)
+    local here=inv and (action.item and inv.get_item_count{name=action.item,quality=action.quality or 'normal'} or (not inv.is_empty() and 1 or 0)) or 0
+    if here>0 then
+      action.trash_tally=action.trash_tally or {}
+      local ok,out=pcall(api.take,p,e,action.item,action.quality,math.min(10000,action.want-action.got),OUTPUT[e.type],action.trash_tally)
+      if ok then
+        action.got=action.got+out.transferred
+        for _,st in ipairs(out.items or {{name=action.item,count=out.transferred}}) do
+          if st.name and st.count and st.count>0 then
+            action.items[st.name]=(action.items[st.name] or 0)+st.count
+            -- (taken out of the output now: not gone otherwise at the next tick)
+            if w.last then w.last[st.name]=math.max(0,(w.last[st.name] or 0)-st.count) end
+          end
+        end
+        -- to (batch26 C4): what was taken goes on into the other machine now, by hand
+        local g=action.give_to
+        if g and out.transferred>0 then
+          local okg,gave=pcall(api.give,p,g.entity,action.item,action.quality,out.transferred,g.inventory)
+          local n=okg and gave and gave.transferred or 0
+          action.gave=(action.gave or 0)+n
+          if n<out.transferred then
+            action.gave_short=string.format('%d stayed in your inventory: %s',out.transferred-n,
+              okg and (gave and gave.entity_full and 'the machine given to had no room' or 'the give moved fewer') or tostring(gave):gsub('^[^:]*:%d+: ',''))
+          end
+        end
+        if out.inventory_full then return 'inventory_full' end
+      else action.take_error=tostring(out) end
+    end
+    -- The other machines (collect positions with wait_ticks): each reached from here, taken from the same way.
+    for _,x in ipairs(action.also or {}) do
+      if action.got>=action.want then break end
+      if x.valid and p.can_reach_entity(x) then
+        local xi=output_of(x)
+        local n=xi and (action.item and xi.get_item_count{name=action.item,quality=action.quality or 'normal'} or (not xi.is_empty() and 1 or 0)) or 0
+        if n>0 then
+          action.trash_tally=action.trash_tally or {}
+          local ok,out=pcall(api.take,p,x,action.item,action.quality,math.min(10000,action.want-action.got),OUTPUT[x.type],action.trash_tally)
+          if ok then
+            action.got=action.got+out.transferred
+            local k=string.format('%s (%g,%g)',x.name,x.position.x,x.position.y)
+            action.also_took=action.also_took or {}
+            action.also_took[k]=(action.also_took[k] or 0)+out.transferred
+            for _,st in ipairs(out.items or {{name=action.item,count=out.transferred}}) do
+              if st.name and st.count and st.count>0 then action.items[st.name]=(action.items[st.name] or 0)+st.count end
+            end
+            if out.inventory_full then return 'inventory_full' end
+          end
+        end
+      elseif x.valid then
+        action.also_unreached=action.also_unreached or {}
+        action.also_unreached[string.format('%s (%g,%g)',x.name,x.position.x,x.position.y)]=true
+      end
+    end
+    if action.got>=action.want then return 'collected' end
+    if game.tick>=action.wait_end then return action.got>0 and 'collected' or 'nothing_collected' end
+  end
+  -- The wait's count: what it took, what the machine made, what its inserters took (per item, as name*count lines).
+  -- A wait carried over a harness update (carry.lua) from a runtime that did not count its output each tick (before
+  -- shift12 13:45): counting starts now, from what the output holds.
+  function M.carried(action)
+    local w=action.wait and action.waiting
+    if type(w)~='table' or w.arrived then return end
+    local t=action.targets and action.targets[1]
+    local e=t and t.entity
+    local now=e and e.valid and counts(output_of(e)) or {}
+    w.last=now; w.arrived={}; w.grabbed={}; w.gone={}; w.hands={}; w.counted_from=game.tick
+  end
+  function M.wait_report(action)
+    local w=action.waiting
+    if not w then return nil end
+    local e=action.targets[1].entity
+    local function line(t)
+      local parts={}
+      for name,n in pairs(t) do if n>0 then parts[#parts+1]={name=name,n=n} end end
+      table.sort(parts,function(x,y) return x.n>y.n or (x.n==y.n and x.name<y.name) end)
+      for i,v in ipairs(parts) do parts[i]=v.name..'*'..math.floor(v.n+0.5) end
+      return #parts>0 and table.concat(parts,' ') or 'none'
+    end
+    local out={took=line(action.items),waited_s=math.floor((game.tick-w.since)/6+0.5)/10}
+    -- follow during the wait (D1)
+    if action.followed_took then
+      local parts={}
+      for k,n in pairs(action.followed_took) do parts[#parts+1]=k..' '..n end
+      table.sort(parts)
+      out.followed_took=table.concat(parts,', ')
+    end
+    out.followed_to=action.followed_to and action.followed_to..' (from '..tostring(action.machine)..')' or nil
+    if action.give_to then
+      local g=action.give_to.entity
+      out.gave=string.format('%d %s into %s %s',action.gave or 0,tostring(action.item),g.valid and string.format('%s (%g,%g)',g.name,g.position.x,g.position.y) or 'the machine (gone)',
+        tostring(action.give_to.inventory))
+      out.gave_short=action.gave_short
+    end
+    if action.also then
+      local parts={}
+      for k,n in pairs(action.also_took or {}) do parts[#parts+1]=k..' '..n end
+      table.sort(parts)
+      local far={}
+      for k in pairs(action.also_unreached or {}) do if not (action.also_took or {})[k] then far[#far+1]=k end end
+      table.sort(far)
+      out.also=(#parts>0 and 'from the others: '..table.concat(parts,', ') or 'from the others: none')..(#far>0 and '; out of reach from where it stood: '..table.concat(far,', ') or '')
+    end
+    local now=e and e.valid and finished(e)
+    local crafts=now and w.finished and now-w.finished or nil
+    out.crafts=crafts
+    -- Counted in the output each tick (watch), not estimated from crafts.
+    if w.arrived then
+      out.made=line(w.arrived); out.inserters_took=line(w.grabbed)
+      out.left_otherwise=next(w.gone) and line(w.gone)..' (spoiled, or another player took it)' or nil
+      -- Carried over a harness update from a runtime that did not count (M.carried).
+      if w.counted_from then
+        out.counted_from=string.format('made, inserters_took and left_otherwise are counted from tick %d (a harness update); the wait began at tick %d',
+          w.counted_from,w.since)
+      end
+    end
+    -- Products a craft makes only by chance: how often.
+    local chance,odds={},{}
+    local ok,recipe=pcall(function() return e.get_recipe() or (e.type=='furnace' and prototypes.recipe[recipe_name(e.previous_recipe)]) end)
+    for _,pr in ipairs(ok and recipe and recipe.products or {}) do
+      if pr.type=='item' and pr.probability and pr.probability<1 then
+        odds[pr.name]=pr.probability
+        chance[#chance+1]=string.format('%s comes from %g%% of crafts',pr.name,pr.probability*100)
+      end
+    end
+    out.chance=#chance>0 and table.concat(chance,'; ') or nil
+    -- Nothing taken: why.
+    if action.got==0 and w.arrived then
+      local function sum(t) local n=0; for _,v in pairs(t) do n=n+v end; return n end
+      local item=action.item
+      local made=item and (w.arrived[item] or 0) or sum(w.arrived)
+      local by=item and (w.grabbed[item] or 0) or sum(w.grabbed)
+      local gone=item and (w.gone[item] or 0) or sum(w.gone)
+      local what=item or 'products'
+      if action.take_error then out.why='taking from its output failed: '..action.take_error
+      elseif made==0 then
+        local why=string.format('the machine made no %s in %g s (%d craft%s)',what,out.waited_s,crafts or 0,crafts==1 and '' or 's')
+        local p=item and odds[item]
+        if p and crafts and crafts>0 then why=why..string.format('; %s comes from %g%% of crafts: about %.1f expected',item,p*100,crafts*p) end
+        if crafts==0 then
+          local okst,status=pcall(function() return e.status end)
+          for k,v in pairs(okst and defines.entity_status or {}) do if v==status then why=why..'; its status: '..k end end
+        end
+        out.why=why
+      else
+        local parts={}
+        if by>0 then parts[#parts+1]=string.format('its output inserters took %d',by) end
+        if gone>0 then parts[#parts+1]=string.format('%d left the output otherwise (spoiled, or another player took it)',gone) end
+        out.why=string.format('the machine made %d %s%s',made,what,#parts>0 and '; '..table.concat(parts,'; ') or '')
+      end
+    end
+    return out
+  end
+  -- Tours: the same walk through given entities (turrets, burners), topping
+  -- each up; op names the runtime's visit ('rearm' or 'refuel').
+  local MAX_TOUR=128
+  function M.start_tour(p,op,entities,ticks,fields)
+    local places={}
+    for i,e in ipairs(entities) do places[i]={entity=e,position=e.position} end
+    -- ordered: the caller's walking order (rearm's clusters, nearest first), never re-routed.
+    local targets
+    if fields and fields.ordered then
+      targets={}
+      for i=1,math.min(#places,MAX_TOUR) do targets[i]=places[i] end
+    else targets=route(p.position,places,MAX_TOUR) end
+    local action={kind='gather',op=op,got=0,visited=0,want=math.huge,targets=targets,index=1,until_tick=game.tick+ticks}
+    for k,v in pairs(fields or {}) do if k~='ordered' and k~='screened' then action[k]=v end end
+    M.guard(action)
+    -- (screened: the caller checked its places itself: rearm's clusters, recover's corpses)
+    local left=not (fields and fields.screened) and M.screen_action(p,action,'every place of this tour') or nil
+    local out={op=op,item=action.item,places=#action.targets,skipped=#entities>MAX_TOUR and #entities-MAX_TOUR or nil,
+      avoid_enemies=action.avoid_mode and api.describe_avoid and api.describe_avoid(action.avoid_mode) or nil}
+    M.left_out_into(out,left)
+    return action,out
+  end
+  -- round2120a (Haiku, shift14 03:58: rearm surface=true walked into a big worm's range, the character and 50
+  -- explosives lost): every stop is checked at the call too, as each leg is (M.tick). One inside a worm's range,
+  -- within 40 tiles of a spawner or in an area under attack now is left out and named, unless unsafe_goal; the first
+  -- SCREEN stops of the walk, the rest when the walk comes to them. places: {position, entity?, name?}; returns the
+  -- kept places in their order and {lines (the first 8), count}, or nil when none is left out.
+  local SCREEN=64
+  function M.screen(p,places,mode,unsafe)
+    if not mode or unsafe or not api.goal_inside then return places,nil end
+    local drop,lines,n={},{},0
+    local passing,staying,first_at,passing_at=0,0,nil,{}
+    for i=1,math.min(SCREEN,#places) do
+      local pl=places[i]
+      local ok,c=pcall(api.goal_inside,p,pl.position,mode)
+      if ok and c then
+        drop[i]=true; n=n+1
+        -- (d17 batch13 A2) what holds it: a worm or spawner stays; an attack, units or a group seen now pass
+        if c.m and c.m.attack then
+          passing=passing+1; first_at=first_at or pl.position
+          if #passing_at<64 then passing_at[#passing_at+1]={x=pl.position.x,y=pl.position.y} end
+        else staying=staying+1 end
+        if #lines<8 then
+          local e=pl.entity
+          local name=(e and e.valid and e.name) or pl.name or 'place'
+          lines[#lines+1]=api.goal_text(name,pl.position,c)
+        end
+      end
+    end
+    if n==0 then return places,nil end
+    local kept={}
+    for i,pl in ipairs(places) do if not drop[i] then kept[#kept+1]=pl end end
+    local left={lines=lines,count=n,passing=passing,staying=staying,at=first_at,passing_at=passing_at}
+    M.last_refusal={tick=game.tick,passing=passing,staying=staying,at=first_at,passing_at=passing_at,kept=#kept}
+    return kept,left
+  end
+  -- What holds the places left out (A2, Haiku: three rearms refused "within 40 tiles of biter-spawner", retried by
+  -- hand): those a worm or spawner holds (it stays) and those passing enemies hold (they go), with the way on.
+  function M.blocker_text(left)
+    if not left then return '' end
+    local parts={}
+    if (left.staying or 0)>0 then parts[#parts+1]=string.format('%d held by a worm or spawner (it stays: unsafe_goal: true goes anyway)',left.staying) end
+    if (left.passing or 0)>0 then parts[#parts+1]=string.format('%d by passing enemies, an attack or units seen now (retry_when_clear: true waits until they are gone near (%g,%g), then runs again)',
+      left.passing,left.at and left.at.x or 0,left.at and left.at.y or 0) end
+    return #parts>0 and ' ['..table.concat(parts,'; ')..']' or ''
+  end
+  -- An action's targets screened in place; none left: refused, naming them (what: 'every turret under 5 rounds there').
+  function M.screen_action(p,action,what)
+    local had=#action.targets
+    local kept,left=M.screen(p,action.targets,action.avoid_mode,action.unsafe_goal)
+    if not left then return nil end
+    if #kept==0 and had>0 then
+      error(string.format('%s lies in enemy reach the map shows: %s%s%s: unsafe_goal: true to go anyway, avoid_enemies: false for no check',
+        what,table.concat(left.lines,'; '),left.count>#left.lines and string.format('; +%d more',left.count-#left.lines) or '',M.blocker_text(left)),0)
+    end
+    action.targets=kept
+    action.left_out=left.lines; action.left_out_count=left.count
+    return left
+  end
+  function M.left_out_into(out,left)
+    if not left then return end
+    out.left_out=left.lines
+    out.left_out_more=left.count>#left.lines and left.count-#left.lines or nil
+    out.left_out_note='left out of the walk: inside the enemy reach the map shows (unsafe_goal: true walks there too)'
+  end
+  -- Every tour walks with the enemy check (round1950a, Haiku 45h02m: a rearm tour walked past a nest into an attack
+  -- and died): avoid_enemies as move_to's (default worms, spawners within 40 tiles and the areas under attack now;
+  -- false: none), its legs round them, and a place inside one left out unless unsafe_goal (M.tick).
+  function M.guard(action)
+    if action.avoid_mode == nil and action.avoid_enemies ~= false and api.avoid_mode then action.avoid_mode = api.avoid_mode(action.avoid_enemies) end
+    action.avoid_enemies = nil
+  end
+  -- A courier's legs (runtime.lua M.pick_source): its places in the given order, never re-routed; a place without
+  -- an entity (find) is resolved on arrival, when the character comes within reach of its position.
+  M.AHEAD_EVERY=180
+  function M.start_legs(p,places,ticks,fields)
+    local action={kind='gather',op='transfer',got=0,visited=0,want=math.huge,targets=places,index=1,until_tick=game.tick+ticks}
+    for k,v in pairs(fields or {}) do action[k]=v end
+    M.guard(action)
+    -- A courier goes to both places or to none (round2120a): either inside the enemy reach refuses it.
+    local _,left=M.screen(p,places,action.avoid_mode,action.unsafe_goal)
+    if left then
+      error(string.format('%s of this courier lie%s in enemy reach the map shows: %s: unsafe_goal: true to go anyway, avoid_enemies: false for no check',
+        left.count==1 and 'a place' or 'both places',left.count==1 and 's' or '',table.concat(left.lines,'; ')),0)
+    end
+    return action
+  end
+  local function done(action)
+    -- Nothing moved and every place failed or was not reached (Astra 08:47: every target failed read as a success):
+    -- failed (the first reason in first_error), or unreached when none was reached.
+    local errors,unreached=action.errors or 0,action.unreached or 0
+    if action.got==0 and errors+unreached>0 and errors>=action.visited then
+      return errors>0 and 'failed' or 'unreached'
+    end
+    -- load_silo {walk} (rocketload.lua): its silo stop ends it (loaded, launched, short, no_rocket); the stops ran out
+    -- before that when the silo was not reached or its load failed.
+    if action.op=='load_silo' then return action.final or (unreached>0 and 'unreached') or (errors>0 and 'failed') or 'short' end
+    -- transfer {walk=true}: what moved, or nothing to take, or nothing the targets wanted
+    if action.chain then return action.got>0 and 'transferred' or 'nothing_to_do' end  -- (d18 batch37 C1) every leg walked
+    if action.op=='transfer' then
+      -- collect {walk=true} names its outcome as a collect does.
+      if action.got>0 then return action.collect and 'collected' or 'transferred' end
+      if (action.unreached or 0)>0 and action.visited==0 then return 'unreached' end
+      return action.transfer.direction=='to_player' and 'nothing_collected' or 'nothing_to_do'
+    end
+    if action.op then return action.visited>0 and 'topped_up' or 'nothing_to_do' end
+    return action.got>0 and 'collected' or 'nothing_collected'
+  end
+  -- The walk of a tour (C5, Luna 18:20: a 39-tile transfer was split into a walk and two calls; "report the actual
+  -- route"): where the character stood at each via point and stop, and the tiles it moved, for last.route.
+  local function r1(x) return math.floor(x*10+0.5)/10 end
+  local function walked(p,action,label)
+    action.walked=action.walked or {}
+    if #action.walked<24 then action.walked[#action.walked+1]=string.format('%s (%g,%g)',label,r1(p.position.x),r1(p.position.y)) end
+  end
+  function M.route_text(action)
+    if not action.walk_from or (action.tiles or 0)<1 and not action.via then return nil end
+    return string.format('from (%g,%g)%s: %d tiles walked',r1(action.walk_from.x),r1(action.walk_from.y),
+      action.walked and ' -> '..table.concat(action.walked,' -> ') or '',math.floor((action.tiles or 0)+0.5))
+  end
+  -- via: points walked in order before the first stop, each reached within 1.5 tiles; one not reached ends the tour
+  -- unreached. Returns an outcome, or nil while walking them.
+  local function via_tick(p,action)
+    local i=action.via_i or 1
+    local v=action.via[i]
+    if not action.nav then
+      if api.distance(p.position,v)<=1.5 then walked(p,action,'via '..i); action.via_i=i+1; return nil end
+      action.nav={position=v,tolerance=1,max_stalls=6,replans=0,stalled=0,last_position=p.position}
+      if action.avoid_mode and api.avoid_start then api.avoid_start(p,action.nav,action.avoid_mode) end
+      api.request_path(p,action.nav)
+    end
+    local outcome=api.navigate(p,action.nav)
+    if outcome and action.nav.foes and api.leg_done and api.leg_done(p,action.nav,outcome) then outcome=nil end
+    if not outcome then return nil end
+    local why=action.nav.why
+    if outcome=='blocked' and not why and api.stall_why then
+      local okw,w=pcall(api.stall_why,p,action.nav,v)
+      if okw then why=w end
+    end
+    action.nav=nil; api.stop_walking(p)
+    if outcome=='arrived' or outcome=='arrived_near' or api.distance(p.position,v)<=1.5 then walked(p,action,'via '..i); action.via_i=i+1; return nil end
+    action.unreached=(action.unreached or 0)+1
+    action.first_unreached=action.first_unreached or string.format('via point %d (%g,%g): %s%s',i,v.x,v.y,outcome,why and ': '..why or '')
+    return 'unreached'
+  end
+  -- Returns an outcome when the gathering is over.
+  -- (backlog #820, Opus 105h09: a recover ended "collected" standing on the rails at its stop and a locomotive killed him
+  -- 2.3 tiles on) a tour that ends on a ground rail walks off it first, to the nearest free tile off the rails (the
+  -- train guard keeps watch on that walk), then ends with its outcome; last.off_rails says where.
+  local function ending(p,action,outcome)
+    if outcome==nil or action.rail_exit or not (api.rail_under and api.off_rail_spot) then return outcome end
+    if not api.rail_under(p,p.position) then return outcome end
+    local spot=api.off_rail_spot(p)
+    if not spot then return outcome end
+    action.rail_exit={position=spot,outcome=outcome,tick=game.tick,from={x=p.position.x,y=p.position.y}}
+    action.nav={position=spot,tolerance=0.3,max_stalls=6,replans=0,stalled=0,last_position=p.position,off_belts=true}
+    api.request_path(p,action.nav)
+    return nil
+  end
+  local function rail_exit_tick(p,action)
+    local r=action.rail_exit
+    local outcome=api.navigate(p,action.nav)
+    if outcome or game.tick-r.tick>300 then
+      api.stop_walking(p)
+      action.off_rails=string.format('the tour ended on a rail at (%.1f,%.1f): walked off the rails to (%.1f,%.1f)%s',r.from.x,r.from.y,p.position.x,p.position.y,
+        api.rail_under(p,p.position) and ' (still on a rail: the walk off was cut short)' or '')
+      return r.outcome
+    end
+    return nil
+  end
+  function M.tick(p,action)
+    if action.rail_exit then return rail_exit_tick(p,action) end
+    return ending(p,action,M.tour_tick(p,action))
+  end
+  function M.tour_tick(p,action)
+    if action.wait then return M.wait_tick(p,action) end
+    local pos=p.position
+    if action.walk_last then action.tiles=(action.tiles or 0)+api.distance(action.walk_last,pos) else action.walk_from={x=pos.x,y=pos.y} end
+    action.walk_last={x=pos.x,y=pos.y}
+    if action.via and (action.via_i or 1)<=#action.via then return via_tick(p,action) end
+    while true do
+      if action.got>=action.want then return 'collected' end
+      -- transfer {walk} filling a count over several chests (from: "nearest"): done once it is taken.
+      if action.fill and action.got>=action.fill then return 'transferred' end
+      local t=action.targets[action.index]
+      -- collect {pods, to} (d17 pods): what the tour took and still carries goes to the chest before it ends
+      if not t and action.pods and action.pods.to and not action.pods.final and api.pods_owed and api.pods_owed(p,action)>0 then
+        action.pods.final=true
+        local c=action.pods.to
+        action.targets[#action.targets+1]={entity=c,position=c.position,deposit=true}
+        t=action.targets[action.index]
+      end
+      if not t then return done(action) end
+      if t.find and not t.entity and api.near(p,t.position) then
+        local ok,e=pcall(api.find,p,t.position)
+        t.find=nil
+        if ok then t.entity=e
+        else
+          local why=tostring(e):gsub('^[^:]*:%d+: ','')
+          action.rows=action.rows or {}
+          action.rows[#action.rows+1]={position=t.position,error=why}
+          action.errors=(action.errors or 0)+1
+          action.first_error=action.first_error or string.format('(%g,%g): %s',t.position.x,t.position.y,why)
+          if action.chain then action.chain_at=action.index; return 'failed' end
+        end
+      end
+      if t.find and not t.entity then
+        break
+      elseif not (t.entity and t.entity.valid) then
+        if action.chain then
+          action.chain_at=action.index; action.errors=(action.errors or 0)+1
+          action.first_error=action.first_error or string.format('(%g,%g): the entity there is gone',t.position.x,t.position.y)
+          return 'failed'
+        end
+        action.index=action.index+1; action.nav=nil
+      elseif (t.pickup_reach and api.distance(p.position,t.position)<=t.pickup_reach) or (not t.pickup_reach and p.can_reach_entity(t.entity)) then
+        local ok,out
+        if t.deposit then ok,out=pcall(api.pods_deposit,p,action,t.entity)
+        elseif action.op then ok,out=pcall(api.visit,p,action,t.entity)
+        else
+          -- tally: what each take puts over the personal request max (trash.lua)
+          action.trash_tally=action.trash_tally or {}
+          ok,out=pcall(api.take,p,t.entity,action.item,action.quality,math.min(10000,action.want-action.got),(action.all or action.outputs_only) and OUTPUT[t.entity.type] or nil,action.trash_tally)
+        end
+        if not (ok and out.wait) then action.index=action.index+1; action.visited=action.visited+1; if action.walk_from and (action.tiles or 0)>=1 then walked(p,action,t.entity.valid and t.entity.name or 'stop') end end
+        action.nav=nil
+        if ok then
+          action.got=action.got+out.transferred
+          if out.transferred>0 then action.touched=(action.touched or 0)+1 end
+          for _,st in ipairs(action.all and out.items or {}) do
+            local key=st.name..(st.quality and '@'..st.quality or '')
+            action.items[key]=(action.items[key] or 0)+st.count
+          end
+          if out.inventory_full and action.pods and action.pods.to and not t.deposit then
+            -- full: to the chest, then back to this container for the rest
+            local c=action.pods.to
+            table.insert(action.targets,action.index,{entity=t.entity,position=t.position})
+            table.insert(action.targets,action.index,{entity=c,position=c.position,deposit=true})
+            action.pods.trips=(action.pods.trips or 1)+1
+          elseif out.inventory_full then return 'inventory_full' end
+          if out.stop then return out.stop end
+          -- (d20 batch54 N6) a hold begun on a belt or rail steps off it first (runtime.lua hold_off_belt)
+          if out.wait then if not (api.hold_off_belt and api.hold_off_belt(p,action,t.entity)) then api.stop_walking(p) end; return nil end
+        else
+          action.errors=(action.errors or 0)+1
+          action.first_error=action.first_error or string.format('(%g,%g): %s',t.position.x,t.position.y,(tostring(out):gsub('^[^:]*:%d+: ','')))
+          -- A courier whose take failed goes no further (round1650d: Luna's walked on to the give).
+          if action.legs and action.index==2 then return 'failed' end
+          if action.chain then action.chain_at=action.index-1; return 'failed' end  -- (d18 batch37 C1) a chain stops at its first failed leg
+        end
+      else
+        break
+      end
+    end
+    local t=action.targets[action.index]
+    -- (d18 batch36 B2) the next leg against enemy groups and units seen now, before it starts: one in reach of it stops
+    -- the tour short, naming it and where it stopped (unsafe_goal true or "moving" walks on)
+    -- (d18 batch37 U1, Haiku: a 480-tile rearm leg cut 5 times in 2 minutes by units passing it) ahead_wait ticks (rearm
+    -- by default, retry_when_clear): it waits where it stands, rechecking every AHEAD_EVERY ticks, and goes on once the
+    -- leg is clear, saying how long it waited; enemies_ahead only when the wait runs out.
+    if not action.nav and action.avoid_mode and action.unsafe_goal==nil and api.leg_threat then
+      local h=action.ahead_hold
+      if h and game.tick<h.next then return nil end
+      local okl,lt=pcall(api.leg_threat,p,p.position,t.position,action.avoid_mode)
+      if okl and lt then
+        api.stop_walking(p)
+        if (action.ahead_wait or 0)>0 and (not h or game.tick-h.since<action.ahead_wait) then
+          if not h then
+            h={since=game.tick}; action.ahead_hold=h
+            action.until_tick=action.until_tick+action.ahead_wait  -- the wait does not eat the tour's own time
+          end
+          h.next=math.min(game.tick+M.AHEAD_EVERY,h.since+action.ahead_wait); h.line=lt.line
+          return nil
+        end
+        action.enemies_ahead=string.format('%s; stopped at (%.1f,%.1f) before it, %d of %d stops done%s',lt.line,p.position.x,p.position.y,action.index-1,#action.targets,
+          h and string.format('; waited %d s for it to clear (the most: %d s)',math.floor((game.tick-h.since)/60),math.floor(action.ahead_wait/60)) or '')
+        action.why=action.enemies_ahead
+        action.ahead_hold=nil
+        return 'enemies_ahead'
+      elseif h then
+        action.ahead_hold=nil
+        action.ahead_waited=action.ahead_waited or {}
+        if #action.ahead_waited<8 then
+          action.ahead_waited[#action.ahead_waited+1]=string.format('waited %d s at (%.1f,%.1f) before stop %d of %d, then went on: %s',
+            math.floor((game.tick-h.since)/60),p.position.x,p.position.y,action.index,#action.targets,h.line)
+        end
+      end
+    end
+    if not action.nav then
+      -- A place inside a worm's range, within 40 tiles of a spawner or in an area under attack now is not walked to
+      -- (round1950a: Haiku's rearm cluster lay in attack #1548): left out, named, unless unsafe_goal.
+      -- (d17 batch35 A3) unsafe_goal "moving": a place whose only threats move is walked to
+      if action.avoid_mode and action.unsafe_goal~=true and api.goal_check then
+        local okc,c=pcall(api.goal_check,p,p.position,t.position,action.avoid_mode)
+        if okc and c and not (action.unsafe_goal=='moving' and c.moving_only) then
+          local why=api.goal_text('place',t.position,c)
+          action.danger=(action.danger or 0)+1
+          action.dangers=action.dangers or {}
+          if #action.dangers<8 then action.dangers[#action.dangers+1]=why end
+          action.first_unreached=action.first_unreached or string.format('(%g,%g): %s (unsafe_goal: true walks there)',t.position.x,t.position.y,why)
+          action.index=action.index+1; action.unreached=(action.unreached or 0)+1
+          if action.legs and action.index==2 then return 'unreached' end
+          if action.chain then action.chain_at=action.index-1; return 'unreached' end
+          return nil
+        end
+      end
+      action.nav={position=t.position,tolerance=t.pickup_reach and math.max(0.1,t.pickup_reach-0.2) or math.max(1,(p.reach_distance or 10)-3),max_stalls=6,replans=0,stalled=0,last_position=p.position}
+      -- an entity stop: arrived once within its transfer reach (A5, Gemini 21:29: a silo's centre lies inside it)
+      if t.entity and t.entity.valid and not t.pickup_reach and api.reach_target then
+        local okr,rt=pcall(api.reach_target,p,t.entity)
+        if okr and rt then action.nav.reach_target=rt end
+      end
+      -- avoid_mode (recover; transfer from: "nearest" walking, friction3: worms killed Opus on such a tour along a turret
+      -- line): the walk keeps out of the enemy reach the map shows, as move_to's.
+      if action.avoid_mode and api.avoid_start then api.avoid_start(p,action.nav,action.avoid_mode) end
+      api.request_path(p,action.nav)
+    end
+    -- An attack that starts while the walk is under way (d17 batch17 B1, Haiku: a rearm walked into attack #5203 at the
+    -- guns it went to, and was killed beside a live attack at (10,-103)): once a second the stop is checked against the
+    -- areas under attack now; inside one, the walk holds where it is (held_short says which attack and where) until the
+    -- attack has had no hit for 30 s, then goes on. unsafe_goal walks anyway.
+    if action.avoid_mode and action.unsafe_goal~=true and api.goal_check and game.tick>=(action.attack_check or 0) then
+      action.attack_check=game.tick+60
+      local okc,c=pcall(api.goal_check,p,p.position,t.position,action.avoid_mode)
+      local m=okc and c and c.m
+      if action.unsafe_goal=='moving' and c and c.moving_only then m=nil end
+      -- (d17 batch35 A3, Haiku: rearm retried the whole tour) a rearm stop under attack is skipped, named, and the tour
+      -- goes on; other tours hold short
+      if m and m.attack and action.op=='rearm' then
+        api.stop_walking(p)
+        local why=api.goal_text(t.entity and t.entity.valid and t.entity.name or 'place',t.position,c)
+        action.skipped_attack=action.skipped_attack or {}
+        if #action.skipped_attack<8 then action.skipped_attack[#action.skipped_attack+1]=why end
+        action.first_unreached=action.first_unreached or string.format('(%g,%g): %s (skipped; unsafe_goal: "moving" walks there)',t.position.x,t.position.y,why)
+        action.index=action.index+1; action.unreached=(action.unreached or 0)+1; action.nav=nil
+        return nil
+      elseif m and m.attack then
+        if not action.holding then
+          api.stop_walking(p)
+          action.holding={since=game.tick,name=m.name,at={x=math.floor(m.x+0.5),y=math.floor(m.y+0.5)}}
+          action.held_short=string.format('held short at (%.1f,%.1f): the stop (%g,%g) is in %s at (%d,%d), under attack now; the walk goes on when it has had no hit for 30 s',
+            p.position.x,p.position.y,t.position.x,t.position.y,m.name,action.holding.at.x,action.holding.at.y)
+        end
+        return nil
+      elseif action.holding then
+        action.holding=nil; action.held_short=nil; action.nav=nil
+        return nil
+      end
+    end
+    if action.holding then return nil end
+    local outcome=api.navigate(p,action.nav)
+    -- A leg round a nest ended: the next one starts.
+    if outcome and action.nav.foes and api.leg_done and api.leg_done(p,action.nav,outcome) then outcome=nil end
+    -- Arrived yet still out of reach, or blocked (or no way round the worms): skip this place (the first one's why in
+    -- first_unreached).
+    if outcome then
+      if outcome=='no_safe_route' then
+        action.unsafe=(action.unsafe or 0)+1
+        local report={}
+        if api.avoid_report then api.avoid_report(report,action.nav) end
+        action.route_failures=action.route_failures or {}
+        if #action.route_failures<8 then report.position=t.position;action.route_failures[#action.route_failures+1]=report end
+        action.nav.why=report.why or action.nav.why
+        if report.smaller_margins then action.nav.why=(action.nav.why or 'no route at requested clearance')..'; '..report.smaller_margins.line end
+      end
+      -- No path to it (d17 batch17 B2, Haiku ~6x: turrets in solar-panel pockets at (140..149,-40..-85) said only
+      -- "no path request found a way"): the fewest of our entities to mine for a way, as move_to says it.
+      if outcome=='unreachable' and api.corridor and not action.nav.corridor_said then
+        action.nav.corridor_said=true
+        local near=(t.entity and t.entity.valid and (p.reach_distance or 10)-1) or 2
+        local okc,c=pcall(api.corridor,p,action.nav.reachable or p.position,t.position,near)
+        if okc and c and c.mine and #c.mine>0 then
+          local names={}
+          for i,e in ipairs(c.mine) do if i<=6 then names[i]=string.format('%s (%g,%g)',e.name,e.position.x,e.position.y) end end
+          action.nav.why=(action.nav.why and action.nav.why..'; ' or '')..string.format('mining %s%s opens a way from (%.1f,%.1f) to (%.1f,%.1f)',
+            table.concat(names,' and '),#c.mine>6 and string.format(' (+%d more)',#c.mine-6) or '',c.from.x,c.from.y,c.to.x,c.to.y)
+          action.mine_for_a_way=action.mine_for_a_way or names
+        end
+      end
+      -- Blocked after its stalls (batch25 A1, Haiku): where it stopped and what stood in the way there.
+      if outcome=='blocked' and not action.nav.why and api.stall_why then
+        local okw,why=pcall(api.stall_why,p,action.nav,t.position)
+        if okw then action.nav.why=why end
+      end
+      action.first_unreached=action.first_unreached or string.format('(%g,%g): %s%s',t.position.x,t.position.y,outcome,
+        action.nav.why and ': '..action.nav.why or '')
+      action.index=action.index+1; action.nav=nil; action.unreached=(action.unreached or 0)+1; api.stop_walking(p)
+      -- A courier's take not reached: nothing taken, so no give either (it gave from the inventory before).
+      if action.legs and action.index==2 then return 'unreached' end
+      if action.chain then action.chain_at=action.index-1; return 'unreached' end
+    end
+  end
+  return M
+end

@@ -1,0 +1,11 @@
+{
+  "name": "factorio-ai-harness",
+  "version": "0.1.0",
+  "title": "Factorio AI Harness",
+  "author": "Factorio Harness contributors",
+  "description": "Survival actions and local observations for external agents (factorio-ai-party's agent-harness, MIT, ported to Factorio 2.1; see NOTICE). In Factorio AI the same Lua runs outside the game on memory reads; this in-game copy is only used by tests as ground truth.",
+  "factorio_version": "2.1",
+  "dependencies": [
+    "base >= 2.1.0"
+  ]
+}

@@ -1,0 +1,12 @@
+Factorio AI includes third-party code:
+
+game/mod/factorio-ai-harness/
+  The agent-harness mod from factorio-ai-party by Nick Winter, https://github.com/nwinter/factorio-ai-party
+  (vendor/factorio-harness as of commit a9a5556a, 2026-11-04; MIT License, see game/mod/factorio-ai-harness/LICENSE), itself a
+  fork of factorio-harness by Carson Burke, https://github.com/CarsonBurke/factorio-harness (MIT License).
+  Changes: renamed to factorio-ai-harness; ported to Factorio 2.1 (compat21.lua, defines.inventory aliases, rewritten fluidbox /
+  category reads, helpers.create_profiler, a require cache so modules can be loaded as plain files, UTF-8 safe reply truncation,
+  relaxed bot name rule). In this project the same Lua also runs outside the game (game/offgame/) on top of a fake game API fed
+  by process memory reads; the in-game copy is only used by tests as ground truth.
+  game/mod/factorio-ai-harness/rates.lua ports formulas from RateCalculator v3.3.8 by Caleb Heuer (raiguard), MIT License,
+  https://codeberg.org/raiguard/RateCalculator (noted in the file).

@@ -12,6 +12,7 @@
     "test": "node --env-file-if-exists=.env --test --test-timeout=30000 \"test/*.test.ts\"",
     "test:sandbox": "node --env-file-if-exists=.env --test --test-timeout=3600000 \"test/sandbox/*.test.ts\"",
     "sandbox:demo": "node --env-file-if-exists=.env game/sandbox/cli.ts demo",
-    "memory:setup": "node --env-file-if-exists=.env game/memory/setup.ts"
+    "memory:setup": "node --env-file-if-exists=.env game/memory/setup.ts",
+    "offgame:setup": "node --env-file-if-exists=.env game/offgame/setup.ts"
   }
 }

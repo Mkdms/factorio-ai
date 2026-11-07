@@ -200,6 +200,17 @@ export class SandboxServer {
     return path.join(dataRoot(), "prototypes", mods.map((m) => `${m.name}-${m.version}`).join("_"));
   }
 
+  /** 导出游戏运行时的常量表 defines (原型目录下 defines.json; 游戏外的模组宿主要它): 没有就经 RCON 读一次。要服务器在跑 */
+  async dumpDefines(): Promise<string> {
+    const file = path.join(this.prototypesDir(), "defines.json");
+    if (!fs.existsSync(file)) {
+      const d = await this.exec("return defines", undefined, { maxReplyBytes: 64 * 1024 * 1024, timeoutMs: 60_000 });
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(d));
+    }
+    return file;
+  }
+
   /** 导出当前版本的原型数据 (data-raw-dump.json) 和英文、简体中文的名称 (locale/<语言>/*.json); 已有就跳过。先写临时目录再改名, 多个实例同时导出也不会写坏 */
   async dumpPrototypes(): Promise<string> {
     const outDir = this.prototypesDir();

@@ -1,0 +1,483 @@
+-- A spidertron's route round wide water (d24 batch191 addendum, viewer Aurora site:4826: "Could batch 191 route
+-- Spidertrons around wide water, validate every waypoint segment and detect no progress? Apply this to travel and
+-- retreat, with a tested shore-recovery fallback."). In 2.0.77 a script's route gets no pathing: add_autopilot_destination
+-- walks the straight line (copy of world n's 20:12 save: no waypoints were added; at a wide lake it stood at the shore
+-- with the target kept). Its legs (layers player and rail) stand on no tile with the water_tile layer (in 2.0.77 every
+-- tile they cannot stand on has it: water, deepwater, lava, ammoniacal ocean, brash ice, empty space, out of map), and
+-- they stepped across a strip of deepwater 14 tiles wide; 16 stopped it.
+-- - segment(surface, a, b): the straight line read tile by tile; a run of more than GAP tiles its legs cannot stand on
+--   blocks it;
+-- - plan(spider, targets, rec): each segment from where it stands through its targets; a blocked one gets a
+--   LuaSurface.request_path with the doodad layer only (the tiles its legs cannot stand on; below) and a
+--   BOX box; the path comes back thinned to points SPACING tiles apart along it (each straight leg read again, the
+--   path's own points kept where one is blocked), and the route becomes the targets with those points between;
+-- - shore(surface, pos, target): the tile its legs stand on nearest the target, on rings 4..24 tiles round pos.
+-- (d26 batch243 SR, viewer Aurora 13:42: spidertron #27069154 stood 1 tile from water at (78,339) for 8 min while every
+-- path round it came back "found no path") a path request from a start or to a goal whose box touches water finds
+-- none, a goal on water none, and a start on a patch the box cannot leave (an island to the pathfinder that legs step
+-- off) none; so:
+-- - dry(surface, q, rmax): the nearest point within rmax tiles whose BOX box holds no water: starts and goals move there;
+-- - a failed path is asked again from up to HOPS dry spots its legs can step to across water (a straight line with no
+--   run of over GAP tiles), nearest the goal first; the first path that comes wins, with that spot first (island escape);
+-- - a path over MAX_POINTS points is thinned again at twice the spacing (it was "no path" before).
+-- - (copy of world n's 13:37 save) in 2.0.77 most entities' collision masks hold water_tile (buildings, belts, poles,
+--   inserters, trees, rocks: 223 prototypes), so a path request with that layer took the base for walls: from the shore at
+--   (57,337) to (601,551) it found none (29 ticks); with doodad, 570 points. The 13 tiles its legs (player, rail) stand on
+--   none of are exactly the 13 with doodad (water, deepwater, lava, out-of-map, empty space ...; shallow water and mud
+--   have neither), and only corpses and rail remnants carry doodad among entities: requests use doodad, and wet() the
+--   legs' own layers. The pathfinder's cache kept a failure for a later request between the same spots: cache off.
+-- The callers say what was done; facts only.
+return function(api)
+  local M = {}
+  -- (d26 batch243) BOX 0.5: a 1x1 box at a tile's centre covers that tile; the 2x2 box (BOX 1) at a centre overlaps 3x3
+  -- tiles, and on the islet at (75,338), where #27069154 stood, no spot had room for it (8 had for 1x1)
+  -- (d26 batch247 NV4, copy) GAP 14: straight strips its legs crossed 14 (3 of 3) and 15 (4 of 4), 16 (2 of 3), not 17
+  -- or 18; 45-degree strips up to 18 across (25 along the line) and jagged strips up to 18 on the line all crossed
+  M.GAP, M.SPACING, M.BOX, M.MAX_POINTS = 14, 12, 0.4, 120
+  M.HOPS, M.HOP_MIN, M.DRY_START, M.DRY_GOAL, M.LAND, M.DRY_FAR = 4, 4, 8, 24, 20, 48
+  -- (d26 batch247, operator 16:44: Opus's go_to (0,850) and (400,850) on d26, mid-lake, nothing dry within 48 tiles)
+  -- past DRY_FAR: rings every FAR_STEP tiles to FAR_MAX, FAR_POINTS points each; then the straight line back from the
+  -- target toward the spidertron, every 2 tiles
+  M.FAR_MAX, M.FAR_STEP, M.FAR_POINTS = 160, 4, 64
+  local water = {}  -- tile name -> its legs cannot stand on it (player or rail layer; prototype facts: the same on every peer)
+  local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+  local function at(q) return string.format('(%g,%g)', math.floor(q.x * 10 + 0.5) / 10, math.floor(q.y * 10 + 0.5) / 10) end
+  M.at = at
+  -- (read per tile: no pcall or closure; get_tile answers out-of-map off the generated chunks)
+  local function wet(surface, x, y)
+    local t = surface.get_tile(x, y)
+    local name = t.name
+    local w = water[name]
+    if w == nil then w = (t.collides_with('player') or t.collides_with('rail')) and true or false; water[name] = w end
+    return w, name
+  end
+  M.wet = wet
+  local function store()
+    local s = api.state()
+    s.spiderpaths = s.spiderpaths or {req={}, plans={}, seq=0}
+    return s.spiderpaths
+  end
+  -- The straight line a -> b: nil when its legs can walk it, else {at, run, tile, line} for the first run of more
+  -- than GAP tiles they cannot stand on.
+  function M.segment(surface, a, b, gap)
+    gap = gap or M.GAP
+    local d = dist(a, b)
+    local n = math.max(1, math.ceil(d))
+    local run, start, name = 0, nil, nil
+    for k = 0, n do
+      local x, y = a.x + (b.x - a.x) * k / n, a.y + (b.y - a.y) * k / n
+      local w, tile = wet(surface, x, y)
+      if w then
+        if run == 0 then start, name = {x=math.floor(x) + 0.5, y=math.floor(y) + 0.5}, tile end
+        run = run + d / n
+      elseif run > 0 then
+        if run > gap then break end
+        run = 0
+      end
+    end
+    if run <= gap then return nil end
+    run = math.floor(run + 0.5)
+    return {at=start, run=run, tile=name, line=string.format('%s -> %s crosses %d tiles of %s from %s', at(a), at(b), run, name, at(start))}
+  end
+  -- The path's points SPACING tiles apart (and its end), each straight leg read again: a blocked leg keeps the path's
+  -- own points between. nil when over MAX_POINTS.
+  function M.thin(surface, path, spacing)
+    spacing = spacing or M.SPACING
+    local pts = {}
+    for i, w in ipairs(path) do pts[i] = w.position end
+    local keep, last, acc = {}, 1, 0
+    for i = 2, #pts do
+      acc = acc + dist(pts[i - 1], pts[i])
+      if acc >= spacing or i == #pts then
+        if M.segment(surface, pts[last], pts[i]) then
+          for j = last + 1, i do keep[#keep + 1] = {x=pts[j].x, y=pts[j].y} end
+        else
+          keep[#keep + 1] = {x=pts[i].x, y=pts[i].y}
+        end
+        last, acc = i, 0
+      end
+    end
+    if #keep > M.MAX_POINTS then
+      -- (d26 batch243) a long detour: twice the spacing, up to 4 times; a blocked leg still keeps the path's own points
+      if spacing < M.SPACING * 16 then return M.thin(surface, path, spacing * 2) end
+      return nil
+    end
+    return keep
+  end
+  -- (d26 batch243) the BOX box round q holds no tile its legs cannot stand on
+  function M.clear(surface, q)
+    local b = M.BOX
+    for x = math.floor(q.x - b), math.floor(q.x + b - 0.001) do
+      for y = math.floor(q.y - b), math.floor(q.y + b - 0.001) do
+        if wet(surface, x + 0.5, y + 0.5) then return false end
+      end
+    end
+    return true
+  end
+  -- The nearest point within rmax tiles of q (q itself first, then rings 1 tile apart, 8 points per tile of radius)
+  -- whose box holds no water; nil when none.
+  function M.dry(surface, q, rmax)
+    if M.clear(surface, q) then return {x=q.x, y=q.y} end
+    for r = 1, rmax or M.DRY_GOAL do
+      if r <= 16 or r % 2 == 0 then  -- every ring to 16 tiles, then every second one; 48 points at most a ring
+        -- (copy: a target mid-lake read ~5300 tiles, 12.8 ms a go_to; capped, ~1400)
+        local n = math.min(8 * r, 48)
+        for k = 0, n - 1 do
+          local a = 2 * math.pi * k / n
+          local c = {x=math.floor(q.x + r * math.cos(a)) + 0.5, y=math.floor(q.y + r * math.sin(a)) + 0.5}
+          if M.clear(surface, c) then return c end
+        end
+      end
+    end
+    return nil
+  end
+  -- (d26 batch243) a back-off spot: 3..8 tiles from pos straight away from q (back the way it came) with room for the
+  -- box, else the nearest spot with room at least 3 tiles away; nil when none.
+  function M.back(surface, pos, q)
+    local d = dist(pos, q)
+    if d > 0.01 then
+      local ux, uy = (pos.x - q.x) / d, (pos.y - q.y) / d
+      for k = 3, 8 do
+        local c = {x=math.floor(pos.x + ux * k) + 0.5, y=math.floor(pos.y + uy * k) + 0.5}
+        if M.clear(surface, c) then return c end
+      end
+    end
+    for r = 3, 8 do
+      for k = 0, 8 * r - 1 do
+        local a = 2 * math.pi * k / (8 * r)
+        local c = {x=math.floor(pos.x + r * math.cos(a)) + 0.5, y=math.floor(pos.y + r * math.sin(a)) + 0.5}
+        if M.clear(surface, c) then return c end
+      end
+    end
+    return nil
+  end
+  -- The longest run of tiles its legs cannot stand on along the straight line a -> b (0: none).
+  function M.run(surface, a, b)
+    local d = dist(a, b)
+    local n = math.max(1, math.ceil(d))
+    local run, most = 0, 0
+    for k = 0, n do
+      if wet(surface, a.x + (b.x - a.x) * k / n, a.y + (b.y - a.y) * k / n) then run = run + d / n; if run > most then most = run end else run = 0 end
+    end
+    return most
+  end
+  -- Dry tiles in the 5x5 round q (25: open land; an islet has few).
+  local function land(surface, q)
+    local n = 0
+    for dx = -2, 2 do for dy = -2, 2 do if not wet(surface, q.x + dx, q.y + dy) then n = n + 1 end end end
+    return n
+  end
+  -- Island escape: up to HOPS dry spots from `from` its legs step to across water (a straight line crossing a run of
+  -- 1..GAP tiles of it: not the same land), HOP_MIN..GAP + 4 tiles away; those on open land (LAND of the 25 tiles round
+  -- them dry) first, then nearest the goal. (copy: from the islet at (76,338) the 4 nearest the goal were other islets.)
+  function M.hops(surface, from, goal)
+    local cands = {}
+    for r = M.HOP_MIN, M.GAP + 4, 2 do
+      for k = 0, 23 do
+        local a = k * math.pi / 12
+        local c = {x=math.floor(from.x + r * math.cos(a)) + 0.5, y=math.floor(from.y + r * math.sin(a)) + 0.5}
+        if M.clear(surface, c) then
+          local most = M.run(surface, from, c)
+          if most >= 1 and most <= M.GAP then cands[#cands + 1] = {q=c, d=dist(c, goal), open=land(surface, c) >= M.LAND} end
+        end
+      end
+    end
+    table.sort(cands, function(a, b) if a.open ~= b.open then return a.open end return a.d < b.d end)
+    local out = {}
+    for i = 1, math.min(M.HOPS, #cands) do out[i] = cands[i].q end
+    return out
+  end
+  -- Water within n tiles on the line pos -> q (a shore ahead): how many tiles ahead (a number), else false.
+  function M.water_ahead(surface, pos, q, n)
+    local d = dist(pos, q)
+    for k = 1, math.min(math.floor(d), n or M.GAP + 4) do
+      if wet(surface, pos.x + (q.x - pos.x) * k / d, pos.y + (q.y - pos.y) * k / d) then return k end
+    end
+    return false
+  end
+  -- The tile its legs stand on nearest the target, on rings round pos (4..24 tiles, 16 directions), with room for the box
+  -- and a straight line its legs walk; nil when none (spider_kite's shore recovery).
+  function M.shore(surface, pos, target)
+    local best, bd
+    for r = 4, 24, 4 do
+      for k = 0, 15 do
+        local a = k * math.pi / 8
+        local q = {x=math.floor(pos.x + r * math.cos(a)) + 0.5, y=math.floor(pos.y + r * math.sin(a)) + 0.5}
+        -- (d26 batch243) with room for a path's box, and a straight line its legs walk (d26: (77.5,314.5) and
+        -- (74.5,337.5), across water from where it stood, stalled again 1 tile from it)
+        if M.clear(surface, q) and not M.segment(surface, pos, q) then
+          local d = dist(q, target)
+          if not bd or d < bd then best, bd = q, d end
+        end
+      end
+    end
+    return best
+  end
+  function M.request(surface, force, from, to, rec)
+    local st = store()
+    local id = surface.request_path{bounding_box={{-M.BOX, -M.BOX}, {M.BOX, M.BOX}}, collision_mask={layers={doodad=true}},
+      start=from, goal=to, force=force, radius=3, pathfind_flags={prefer_straight_paths=true, no_break=true, cache=false}}
+    st.req[id] = rec
+    return id
+  end
+  -- Pending path requests for a spidertron's plan (a stall waits for them instead of recovering).
+  function M.pending(unit)
+    local st = api.state().spiderpaths
+    return st and st.plans[unit] ~= nil or false
+  end
+  -- A stored route's points as a segment's path from start (sharedroutes.lua): its first point left out when the
+  -- spidertron starts on it.
+  local function seg_of(R, kept, reversed, start)
+    local out = {}
+    for _, q in ipairs(R.points(kept, reversed)) do
+      if #out > 0 or dist(q, start) > 0.5 then out[#out + 1] = q end
+    end
+    return out
+  end
+  -- (d28 batch305 NR) a blocked segment from a stored route (sharedroutes.lua), read again first: -> {pts} (every leg
+  -- unchanged: the segment's path now), {span, from, to} (its stale legs and those between them to ask again as one
+  -- stretch), or {} (none, or asked over MAX_AGE ago, or the lines from start or to goal cross water: the pathfinder as
+  -- before); with .line for the reply when a route was found or named.
+  function M.from_store(surface, start, goal, rec)
+    local R = api.routes
+    local kept, rev = R.find('spider', surface, start, goal, {id=rec.route})
+    if not kept then return {line=rec.route and string.format('route %d not used: %s; a path was asked', rec.route, rev) or nil} end
+    local res = R.check(kept, surface)
+    local line = R.line(kept, res, rev)
+    if res.old then return {line=line} end
+    local pts = R.points(kept, rev)
+    local b = M.segment(surface, start, pts[1]) or M.segment(surface, pts[#pts], goal)
+    if b then return {line=string.format('route %d not used: the line from here to its start or from its end to the target crosses water (%s); a path was asked', kept.id, b.line)} end
+    if res.n == 0 then
+      R.used(kept)
+      return {pts=seg_of(R, kept, rev, start), line=line, id=kept.id}
+    end
+    local P, Q = kept.pts[res.first], kept.pts[res.last + 1]
+    return {id=kept.id, span={id=kept.id, i0=res.first, i1=res.last, rev=rev, respliced=kept.respliced}, from=M.dry(surface, P, M.DRY_START) or P,
+      to=M.dry(surface, Q, M.DRY_GOAL) or Q, line=line}
+  end
+  -- Each segment from the spidertron (or rec.from) through targets; the blocked ones' paths requested, from and to
+  -- spots with room for the box (dry). rec: {owner, unit, by, index, from?, gap?, reuse?, route?} (owner 'route': plan's
+  -- own route write when every path is in; 'kite': spiderkite.lua's; gap 0 after a stall at the water: any water on the
+  -- line blocks it, its legs having failed to cross; (d28 batch305 NR) reuse: a stored route serves a blocked segment,
+  -- read again first, and route names the one; never with gap 0, where its legs failed to cross). -> lines (nil: none
+  -- blocked), the reply's lines on stored routes (or nil), and, when every blocked segment came from the store with no
+  -- path asked, {plan, route, notes} to write now (else the plan is stored for the results).
+  function M.plan(spider, targets, rec)
+    local st = store()
+    local surface = spider.surface
+    local lines, segs, wait, starts, goals = {}, {}, {}, {}, {}
+    local from = rec.from or spider.position
+    local pending = 0
+    local R = rec.reuse and rec.gap ~= 0 and api.routes
+    local shared, reused = {}, false
+    st.seq = st.seq + 1
+    for i, q in ipairs(targets) do
+      local b = M.segment(surface, from, q, rec.gap)
+      if b then
+        lines[#lines + 1] = b.line
+        -- (d26 batch243) a start or goal whose box touches water gets no path: the nearest spot with room for it
+        starts[i] = M.dry(surface, from, M.DRY_START) or from
+        goals[i] = M.dry(surface, q, M.DRY_GOAL) or q
+        local got = {}
+        if R then
+          local okr, g = pcall(M.from_store, surface, starts[i], goals[i], rec)
+          got = okr and g or {line='the stored routes could not be read: ' .. tostring(g)}
+          if got.line then shared[#shared + 1] = got.line end
+        end
+        if got.id then rec.used = rec.used or {}; rec.used[#rec.used + 1] = got.id end
+        if got.pts then
+          segs[i] = got.pts; reused = true
+        elseif got.span then
+          local ok = pcall(M.request, surface, spider.force, got.from, got.to, {owner=rec.owner, unit=spider.unit_number, seq=st.seq, seg=i, index=rec.index, span=got.span})
+          if ok then pending = pending + 1; segs[i] = 'pending'; wait[i] = 1 else segs[i] = false end
+        else
+          local ok = pcall(M.request, surface, spider.force, starts[i], goals[i], {owner=rec.owner, unit=spider.unit_number, seq=st.seq, seg=i, index=rec.index})
+          if ok then pending = pending + 1; segs[i] = 'pending'; wait[i] = 1 else segs[i] = false end
+        end
+      end
+      from = q
+    end
+    if rec.route and R and #shared == 0 then
+      shared[1] = string.format('route %d not used: no leg of this go_to crosses water its legs cannot step across', rec.route)
+    end
+    if #lines == 0 then st.plans[spider.unit_number] = nil; return nil, shared[1] and shared or nil end
+    local copy = {}
+    for i, q in ipairs(targets) do copy[i] = {x=q.x, y=q.y} end
+    -- (d28 batch310 item 5) claim: the route's claim number when asked (spiderroute.claim); a result after another call
+    -- set or cleared the route is not written
+    local plan = {seq=st.seq, targets=copy, segs=segs, wait=wait, starts=starts, goals=goals, hops={}, pending=pending,
+      by=rec.by, owner=rec.owner, tick=game.tick, via=rec.from and {x=rec.from.x, y=rec.from.y} or nil, claim=rec.claim}
+    if pending == 0 and reused then
+      st.plans[spider.unit_number] = nil
+      local route, notes = M.assemble(plan, surface)  -- (defined below)
+      return lines, shared, {plan=plan, route=route, notes=notes}
+    end
+    st.plans[spider.unit_number] = plan
+    return lines, shared[1] and shared or nil
+  end
+  -- Past DRY_FAR: the first spot with room on rings DRY_FAR + FAR_STEP .. FAR_MAX round q, else nil.
+  function M.dry_far(surface, q)
+    for r = M.DRY_FAR + M.FAR_STEP, M.FAR_MAX, M.FAR_STEP do
+      for k = 0, M.FAR_POINTS - 1 do
+        local a = 2 * math.pi * k / M.FAR_POINTS
+        local c = {x=math.floor(q.x + r * math.cos(a)) + 0.5, y=math.floor(q.y + r * math.sin(a)) + 0.5}
+        if M.clear(surface, c) then return c end
+      end
+    end
+    return nil
+  end
+  -- The first spot with room on the straight line from q back toward `from`, every 2 tiles, else nil.
+  function M.dry_line(surface, q, from)
+    local d = dist(q, from)
+    for k = 2, math.floor(d), 2 do
+      local c = {x=math.floor(q.x + (from.x - q.x) * k / d) + 0.5, y=math.floor(q.y + (from.y - q.y) * k / d) + 0.5}
+      if M.clear(surface, c) then return c end
+    end
+    return nil
+  end
+  -- A target on water ends at the dry spot nearest it (its legs stand nowhere on it): within DRY_FAR tiles, then on
+  -- rings to FAR_MAX, then along the line back toward `from` (the spidertron). -> the point, a note or nil, and true
+  -- when none was found (unlanded: no path is asked and no recovery spent on it).
+  function M.landing(surface, q, from)
+    if not wet(surface, q.x, q.y) then return q, nil end
+    local d = M.dry(surface, q, M.DRY_FAR)
+    if d then return d, string.format('the target %s is on water: the route ends at %s, the nearest spot its legs stand on', at(q), at(d)) end
+    d = M.dry_far(surface, q)
+    if d then return d, string.format('the target %s is on water: the route ends at %s, the nearest spot its legs stand on (%.0f tiles from it)', at(q), at(d), dist(q, d)) end
+    d = from and M.dry_line(surface, q, from)
+    if d then return d, string.format('the target %s is on water with no tile its legs stand on within %d tiles round it: the route ends at %s, the first spot its legs stand on along the line back toward the spidertron (%.0f tiles short of the target)', at(q), M.FAR_MAX, at(d), dist(q, d)) end
+    return q, string.format('the target %s is on water with no tile its legs stand on within %d tiles round it or on the line back toward the spidertron: it walks toward it and stops at the shore; no path is asked and no recovery spent on it', at(q), M.FAR_MAX), true
+  end
+  -- The route a plan gives: (its back-off spot,) each target (on water: the dry spot nearest it), with a found path's
+  -- points before it.
+  local function assemble(plan, surface)
+    local out, notes = {}, {}
+    if plan.via then out[1] = plan.via end
+    for i, q in ipairs(plan.targets) do
+      local seg = plan.segs[i]
+      local final, landed = M.landing(surface, q)
+      if landed then notes[#notes + 1] = landed end
+      if type(seg) == 'table' then
+        if plan.hopped and plan.hopped[i] then notes[#notes + 1] = string.format('no path from where it stands (land its box cannot leave): its legs step first to %s across the water, and the path goes on from there', at(plan.hopped[i])) end
+        if plan.ghopped and plan.ghopped[i] then notes[#notes + 1] = string.format('no path onto the land of %s (its box cannot reach it): the path goes to %s, and its legs step across the water from there', at(final), at(plan.ghopped[i])) end
+        for _, w in ipairs(seg) do out[#out + 1] = w end
+        if #seg == 0 or dist(seg[#seg], final) > 1 then out[#out + 1] = final end
+      else
+        if seg == false then
+          local tried = plan.hops[i] and plan.hops[i] > 0 and string.format('; asked again from %d spot%s its legs step to across the water: none either', plan.hops[i], plan.hops[i] == 1 and '' or 's') or ''
+          notes[#notes + 1] = 'the pathfinder found no path round the water to ' .. at(q) .. (wet(surface, q.x, q.y) and ' (the target itself is on water)' or '') .. tried
+        end
+        out[#out + 1] = final
+      end
+    end
+    for _, t in ipairs(plan.after or {}) do notes[#notes + 1] = t end
+    return out, notes
+  end
+  M.assemble = assemble
+  -- on_script_path_request_finished: true when the id is ours. Calls back route(rec, plan, points, notes) once a
+  -- plan's last path is in (owner 'route' writes the route itself and calls back with it written). (d26 batch243) a
+  -- segment with no path is asked again from up to HOPS spots its legs step to (island escape), and to up to HOPS spots
+  -- it steps from onto the target's land (a target on an island); the first path wins.
+  function M.on_path(event, done)
+    local st = api.state().spiderpaths
+    local rec = st and st.req[event.id]
+    if not rec then return false end
+    st.req[event.id] = nil
+    local plan = st.plans[rec.unit]
+    if not plan or plan.seq ~= rec.seq then return true end  -- a later plan replaced it
+    local spider = game.get_entity_by_unit_number(rec.unit)
+    if not (spider and spider.valid) then st.plans[rec.unit] = nil; return true end
+    local i = rec.seg
+    plan.wait = plan.wait or {}
+    plan.wait[i] = (plan.wait[i] or 1) - 1
+    plan.pending = plan.pending - 1
+    if rec.span then
+      -- (d28 batch305 NR) a stored route's stale stretch: its path spliced in (the route updated for the next use),
+      -- else the whole segment asked as before (with island escape)
+      local span, R = rec.span, api.routes
+      local kept = R and R.get(span.id)
+      local pts = event.path and kept and kept.respliced == span.respliced and M.thin(spider.surface, event.path)
+      local why = not event.path and 'no path came for legs %d-%d' or string.format('it changed or was dropped meanwhile (legs %%d-%%d)')
+      plan.after = plan.after or {}
+      local done
+      if pts then
+        local list = {kept.pts[span.i0]}
+        for _, w in ipairs(pts) do list[#list + 1] = w end
+        local Q = kept.pts[span.i1 + 1]
+        if dist(list[#list], Q) > 0.5 then list[#list + 1] = Q end
+        local oks, got = pcall(R.splice, kept, spider.surface, span.i0, span.i1, list)
+        if oks and got then
+          R.used(got)
+          plan.segs[i] = seg_of(R, got, span.rev, plan.starts[i])
+          plan.after[#plan.after + 1] = string.format('route %d: the path for legs %d-%d came and was spliced in (the route now has %d legs)', got.id, span.i0, span.i1, #got.legs)
+          done = true
+        end
+      end
+      if not done then
+        plan.after[#plan.after + 1] = string.format('route %d: ', span.id) .. string.format(why, span.i0, span.i1) .. '; the whole way was asked again'
+        local ok = pcall(M.request, spider.surface, spider.force, plan.starts[i], plan.goals[i], {owner=rec.owner, unit=rec.unit, seq=rec.seq, seg=i, index=rec.index})
+        if ok then plan.wait[i] = plan.wait[i] + 1; plan.pending = plan.pending + 1 elseif plan.wait[i] <= 0 then plan.segs[i] = false end
+      end
+    elseif type(plan.segs[i]) ~= 'table' then
+      local pts = event.path and M.thin(spider.surface, event.path)
+      if pts then
+        if rec.hop then
+          table.insert(pts, 1, {x=rec.hop.x, y=rec.hop.y})
+          plan.hopped = plan.hopped or {}
+          plan.hopped[i] = rec.hop
+        end
+        if rec.ghop then
+          plan.ghopped = plan.ghopped or {}
+          plan.ghopped[i] = rec.ghop
+        end
+        plan.segs[i] = pts
+        -- (d28 batch305 NR) kept for reuse by any agent (sharedroutes.lua): from the start, through its points, to the goal
+        if api.routes and plan.starts and plan.starts[i] then
+          local list = {plan.starts[i]}
+          for _, w in ipairs(pts) do list[#list + 1] = w end
+          local g = plan.goals and plan.goals[i]
+          if g and dist(list[#list], g) > 1 then list[#list + 1] = g end
+          local oks, kept = pcall(api.routes.save, 'spider', spider.surface, list, {by=plan.by})
+          if oks and kept then plan.kept = plan.kept or {}; plan.kept[i] = kept.id end
+        end
+      elseif not rec.hop and not rec.ghop and not plan.hops[i] and plan.goals and plan.goals[i] then
+        -- island escape from the start's side (spots its legs step to from where it stands), and to the target's side
+        -- (spots it steps from onto the target's land: a target on an island), up to HOPS each
+        plan.hops[i] = 0
+        local function ask(from, to, key, h)
+          local r2 = {owner=rec.owner, unit=rec.unit, seq=rec.seq, seg=i, index=rec.index}
+          r2[key] = h
+          local ok = pcall(M.request, spider.surface, spider.force, from, to, r2)
+          if ok then plan.hops[i] = plan.hops[i] + 1; plan.wait[i] = plan.wait[i] + 1; plan.pending = plan.pending + 1 end
+        end
+        for _, h in ipairs(M.hops(spider.surface, plan.starts[i], plan.goals[i])) do ask(h, plan.goals[i], 'hop', h) end
+        for _, h in ipairs(M.hops(spider.surface, plan.goals[i], plan.starts[i])) do ask(plan.starts[i], h, 'ghop', h) end
+      end
+      if type(plan.segs[i]) ~= 'table' and plan.wait[i] <= 0 then plan.segs[i] = false end
+    end
+    if plan.pending > 0 then return true end
+    st.plans[rec.unit] = nil
+    local route, notes = assemble(plan, spider.surface)
+    done(rec, plan, spider, route, notes)
+    return true
+  end
+  -- (d28 batch305 NR) stored routes a spidertron stalled on: dropped from the store. -> "route 3, 7" or nil.
+  function M.drop_routes(ids)
+    if not api.routes then return nil end
+    local parts = {}
+    for _, id in ipairs(ids) do
+      if api.routes.get(id) then pcall(api.routes.drop, id); parts[#parts + 1] = tostring(id) end
+    end
+    return #parts > 0 and table.concat(parts, ', ') or nil
+  end
+  -- The route written as the remote's clicks: emptied, then each point. -> the error text, or nil.
+  function M.write(spider, route)
+    local ok, err = pcall(function()
+      spider.autopilot_destination = nil
+      for _, q in ipairs(route) do spider.add_autopilot_destination(q) end
+    end)
+    if not ok then return tostring(err) end
+  end
+  return M
+end
