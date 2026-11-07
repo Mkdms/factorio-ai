@@ -39,6 +39,11 @@ import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "../brains/hooks/
 import { appendScanHints, collectNotesLessons, lessonDelivery } from "./deliver.ts";
 import { composeBrief } from "./brief.ts";
 import { loadZhNames } from "../../commands/chattags.ts";
+import { Supervisor } from "./supervisor.ts";
+import { tellModel } from "./tell.ts";
+import { HumanChatBridge, isUrgent, mentioned, tellText } from "./human-chat.ts";
+import { pointsMd } from "./training.ts";
+import { writeSummary } from "../records/summary.ts";
 
 const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
@@ -75,6 +80,10 @@ if (brain !== "none") {
   catch (e) { console.error((e as Error).message); process.exit(2); }
 }
 let child: ChildProcess | null = null;
+let supervisor: Supervisor | null = null;
+let supTimer: NodeJS.Timeout | null = null, chatTimer: NodeJS.Timeout | null = null;
+/** 真人说紧急, 打断了这一轮: 下一轮马上开, 不等 */
+let urgentNow = false;
 
 const runId = values["run-id"] ?? new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const runDir = path.join(dataRoot(), "play", "online", runId);
@@ -337,6 +346,43 @@ try {
     } catch (e) { log(`开班扫描没做成: ${(e as Error).message.slice(0, 200)}`); }
   }
 
+  // 监工 + 真人聊天 (能动手时就开, 不叫模型的验证班也开: 话经模组账本 tell 进下一条回复)。只给事实: 闲了催、体检、研究队列空、产量播报、截止提醒、工具诉求
+  const zhNames = loadZhNames(protoDir);
+  const zh = (n: string) => zhNames.get(n) ?? n;
+  if (broker && !readOnly && t) {
+    const b = broker, tt = t;
+    const tell = (text: string, from?: string) => tellModel(b, { to: name, dir, runDir, text, from });
+    const idle = { ...(process.env.FA_IDLE_MS ? { idleMs: Number(process.env.FA_IDLE_MS), spawnIdleMs: Number(process.env.FA_IDLE_MS) } : {}), ...(process.env.FA_GRACE_MS ? { graceMs: Number(process.env.FA_GRACE_MS) } : {}) };
+    supervisor = new Supervisor({ evalLua: (c) => b.evalLua(c), player: async () => { const p = await readPlayer(tt.call); return { x: p.position.x, y: p.position.y, hasCharacter: p.hasCharacter }; }, tell, journal: path.join(dir, "journal.jsonl"), runDir, t0: Date.now(), deadline, zh, log, points: pointsMd(), idle });
+    supTimer = setInterval(() => void supervisor!.tick(), 30_000);
+    // 真人的话: 自己客户端的聊天 + 管理员写在记录目录的 tell.txt; 进模型下一条回复, 说紧急才打断这一轮
+    const bridge = new HumanChatBridge(tt, { self: name, aiNames: () => [] });
+    await bridge.start().catch(() => undefined);
+    let chatBusy = false;
+    const interrupt = () => { if (child) { urgentNow = true; killBrain(child); } };
+    chatTimer = setInterval(() => {
+      if (chatBusy) return;
+      chatBusy = true;
+      void (async () => {
+        const tellFile = path.join(runDir, "tell.txt");
+        if (fs.existsSync(tellFile)) {
+          const said = fs.readFileSync(tellFile, "utf8").trim();
+          fs.rmSync(tellFile);
+          if (said) { const urgent = isUrgent(said); await tell(tellText("界面", "管理员", said, "direct", urgent), "管理员"); log(`管理员的话转给模型: ${said.replace(/\s+/g, " ").slice(0, 120)}`); if (urgent) interrupt(); }
+        }
+        for (const m of await bridge.poll()) {
+          const urgent = isUrgent(m.text);
+          const scope = mentioned(m.text, [{ id: "a", name }]).length ? "direct" : "team";
+          await tell(tellText("游戏聊天", m.from, m.text, scope, urgent), m.from);
+          fs.appendFileSync(path.join(runDir, "chat.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), from: m.from, text: m.text, scope, urgent })}\n`);
+          log(`真人 ${m.from} 说话, 转给模型${urgent ? " (紧急, 打断这一轮)" : ""}`);
+          if (urgent) interrupt();
+        }
+      })().catch((e: Error) => log(`读聊天出错: ${e.message.slice(0, 120)}`)).finally(() => { chatBusy = false; });
+    }, 5000);
+    log("监工和真人聊天开着 (30 秒一采样, 5 秒一看聊天; 管理员要说话写记录目录的 tell.txt)");
+  }
+
   // 5. 大脑 (不叫模型时只等到点, 留给人在角色目录里试 ./fh)
   const doneFile = path.join(dir, "DONE");
   const viewerAlive = () => useRcon ? true : values["steam-pid"] ? (() => { try { process.kill(clientPid, 0); return true; } catch { return false; } })() : viewer.alive;
@@ -359,16 +405,28 @@ try {
         return r.code;
       },
       stopped, first: FIRST, next: NEXT, log,
+      interrupted: () => { const u = urgentNow; urgentNow = false; return u; },
     });
     clearInterval(watch);
   }
+  if (supTimer) clearInterval(supTimer);
+  if (chatTimer) clearInterval(chatTimer);
   const why = clientDown !== null ? `掉线 (${clientDown})` : fs.existsSync(stopFile) ? "STOP" : fs.existsSync(doneFile) ? "模型说任务做完了" : viewerAlive() ? "到点" : "客户端关了";
   // 模型这班记的教训 (notes.md "## 教训") 收进训练集待核区, 留给以后的班 (通用的才记; 带坐标、只对这局有用的筛掉)
+  let collected = 0;
   if (driver && !readOnly) {
     try {
-      const m = collectNotesLessons(fs.readFileSync(path.join(dir, "notes.md"), "utf8"), loadZhNames(protoDir), model, runId);
+      const m = collectNotesLessons(fs.readFileSync(path.join(dir, "notes.md"), "utf8"), zhNames, model, runId);
+      collected = m.added;
       log(`教训: 笔记里 ${m.candidates} 条, 收进待核区 ${m.added} 条${m.skipped.length ? ` (跳过 ${m.skipped.length}: ${m.skipped.slice(0, 2).map((s) => s.why).join(" / ")})` : ""}`);
     } catch (e) { log(`收教训没做成: ${(e as Error).message.slice(0, 160)}`); }
+  }
+  // 班末总结和复盘 (core/records/summary.ts): summary.json + review.md
+  if (supervisor || driver) {
+    try {
+      const r = writeSummary({ runDir, dir, runId, brain, model, minutes: Number(values.minutes), why, supervisor: supervisor?.stats ?? {}, lessons: delivery ? { ...delivery.stats(), collected } : null, zh });
+      log(`复盘: ${r.lines.slice(0, 2).join(" | ")}; 下一班先修 ${r.fixes.length} 条 (review.md)`);
+    } catch (e) { log(`总结没写成: ${(e as Error).message.slice(0, 160)}`); }
   }
   if (broker) {
     log(`收工: ${why}; 走哪条路 ${JSON.stringify(Object.fromEntries(Object.entries(broker.stats.byAction).map(([k, v]) => [k, `${v.route}×${v.n} ${Math.round(v.ms / Math.max(v.n, 1))} 毫秒`])))}${delivery ? `; 教训带出 ${delivery.stats().shown} 次 (${delivery.stats().distinct} 条)` : ""}`);
@@ -380,6 +438,8 @@ try {
   code = 2;
 } finally {
   if (dropWatch) clearInterval(dropWatch);
+  if (supTimer) clearInterval(supTimer);
+  if (chatTimer) clearInterval(chatTimer);
   killBrain(child);
   await driver?.close?.().catch(() => undefined);
   await broker?.stop().catch(() => undefined);

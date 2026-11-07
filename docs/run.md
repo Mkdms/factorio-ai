@@ -14,7 +14,9 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 3. 起代理 (`commands/broker.ts`) 和游戏外的模组宿主 (账本 `ledger.lua` 在记录目录); 读 `where` 写 `where.json`。
 4. 角色目录 (`workspace.ts`): 简报 AGENTS.md / CLAUDE.md (`brief.ts`: 训练集 manuals/brief.md 模板 + 世界真实值 + 用户目标 + 手册目录)、notes.md (训练集的模板)、ref/ (手册主题 + 思路 pattern-*.md + facts.md + names.tsv)、deadline.txt、`./fh` / `./know` 各两版 (脚本里只有管道名, 没有 RCON 密码)。教训从训练集读进内存 (`deliver.ts`), 行动层做对应动作时在回复里带 2 条。
 5. 开班扫描 (`scan.ts`): 现状写 world-scan.md, 后面附对得上的要点 (`hints.ts`); 判断 / 规划等计算器那块接上再有。
-6. 大脑 (`--brain claude`): 角色目录写 `.claude/settings.json` (压缩点 + 钩子) 和 `.context-hooks`; 一轮一个 Claude Code 进程, 第 1 轮开场提示词 (先读简报、笔记、world-scan.md, 再看 status / observe, 然后动手), 之后"继续"; 会话号接力 (`--resume`); 一轮很快结束就等满 30 秒再叫; 到点 / STOP / DONE / 客户端关了 / 掉线就连子进程一起杀。`--brain none`: 只等到点 / STOP。收工写 `end.json`、`probe-stats.json`, 联机时抹掉客户端日志里的地址和密码。
+6. 监工 + 真人聊天 (`supervisor.ts`, `human-chat.ts`; 能动手就开, 不叫模型的验证班也开): 30 秒一采样记 `monitor.jsonl`; 闲了 (没发动作、没走; 出生点 3 分钟 / 别处 5 分钟, 开局宽限 3 分钟, 隔 15 分钟) 就催; 5 分钟一次体检 (`health.ts`: 缺燃料 / 采空 / 研究中心停 / 缺料和堵满 / 缺电 / 带子尽头堵死), 只递新出现的和连 3 次没修的; 研究队列空了说能排什么 (`research.ts`, 不替它排); 30 分钟播报产量 (`science.ts`); 截止前 10 / 3 分钟提醒; journal 里的"工具诉求"记 `tool-requests.md`。真人的话: 5 秒一看自己客户端的聊天 (chat_read) 和记录目录的 `tell.txt` (管理员), 原话进模型下一条回复 (`tell.ts`: 经代理的 operator 通道进模组账本 tell, 能叫醒 sleep; 递不进就写 `.inbox.md`), 说"紧急"才打断这一轮; 全部记 `tells.jsonl`、`chat.jsonl`。
+7. 大脑 (`--brain claude`): 角色目录写 `.claude/settings.json` (压缩点 + 钩子) 和 `.context-hooks`; 一轮一个 Claude Code 进程, 第 1 轮开场提示词 (先读简报、笔记、world-scan.md, 再看 status / observe, 然后动手), 之后"继续"; 会话号接力 (`--resume`); 一轮很快结束就等满 30 秒再叫; 到点 / STOP / DONE / 客户端关了 / 掉线就连子进程一起杀。`--brain none`: 只等到点 / STOP。
+8. 收工: 笔记里的教训收进待核区; 班末总结 `summary.json` + 复盘 `review.md` (`core/records/summary.ts`: 轮次用量和估价、请求按动作、失败按原因、放下的建筑、经验带出次数、闲着的时间、体检比例; 下一班先修最多 3 条); `end.json`、`probe-stats.json`; 联机时抹掉客户端日志里的地址和密码。
 
 记录在 `data/play/online/<runId>/`, 角色目录在 `BRAIN_DIR` (默认 `~/factorio-ai-brain`) 下 (必须在仓库外: 模型会往上读到开发规则)。
 
@@ -27,10 +29,12 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 | `scan.ts` | 开班扫描 (SCAN_LUA 跑在游戏外的假接口上) |
 | `brief.ts` | 简报组装 (模板占位符 WORLD / PLAYER / GOAL / REF_INDEX) |
 | `deliver.ts` / `lessons.ts` / `hints.ts` / `knowledge.ts` / `training.ts` | 递积累: 教训 (种子 + 待核区; 挑选、键推断、班末收笔记)、要点、查全部积累、训练集在哪 (公开 + 只本机两份合并读) |
+| `supervisor.ts` / `tell.ts` / `health.ts` / `research.ts` / `science.ts` / `human-chat.ts` | 监工 (采样、催闲、体检、研究、播报、截止、工具诉求)、递话 (模组账本 tell / 收件箱)、体检 Lua 和清单、研究队列空了能排什么、产量读数、真人聊天 (客户端 chat_read、tell.txt、紧急判定、@ 点名) |
+| `../records/summary.ts` | 班末总结和复盘 |
 | `shell.ts` | 找 Git for Windows 的 bash (PATH 上的 bash 可能是 WSL 的) |
 
 ## 还没搬 (旧项目有; 顺序见 docs/brains.md)
-别家大脑 (Agent SDK / Codex / Grok / 中转站 / DeepSeek)、监工和体检、真人聊天进模型回复、教训自动带出、`./know` `./calc` `./bp`、换班不关游戏、看门狗、群和界面。
+别家大脑 (Agent SDK / Codex / Grok / 中转站 / DeepSeek)、`./calc` `./bp` `./plan`、真人的话没回就催 (旧 replies.ts)、换班不关游戏、看门狗、死亡计数、多角色 (team.md、按负责人发)、群和界面。
 
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。

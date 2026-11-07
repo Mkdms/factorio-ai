@@ -211,6 +211,8 @@ export class ClientTarget implements IoTarget {
 
   async setRendering(enabled: boolean) { return outcome(await this.mcp.call("set_rendering", { enabled })); }
   async chatSend(text: string) { return outcome(await this.mcp.call("chat_send", { text })); }
+  /** 自己客户端保留的聊天 (真人说话从这里读, core/run/human-chat.ts): {messages, next_offset, has_more, history_lost} */
+  async chatRead(args: Record<string, unknown>) { return outcome(await this.mcp.call("chat_read", args)); }
 
   async chatWait(timeoutS: number, watchdogMs: number) {
     const head = await this.#must("chat_read", { limit: 1 });

@@ -800,7 +800,8 @@ export class PlayerActions {
   }
 
   private async say(a: Record<string, unknown>) {
-    const text = String(a.text ?? "");
+    // 压成一行、去掉开头的 / (以 / 开头是控制台命令, 发了这张图就不算成就; 客户端也会拒, 这里先挡)
+    const text = String(a.text ?? "").replace(/\s*\r?\n\s*/g, " ").trim().replace(/^\/+/, "").trim();
     if (!text) throw new Error("say 要 text");
     const r = await this.d.chatSend(text);
     if (!r.ok) throw new Error(`chat_send 失败: ${(r.error ?? "").slice(0, 200)}`);

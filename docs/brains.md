@@ -41,7 +41,7 @@ commands/                        (已有 fh)
 ## 搬的顺序
 1. ✅ `core/brains/driver.ts` + `claude-code.ts` + `loop.ts` + `hooks/` (permit / read-guard / context / hook), `online.ts` 叫大脑 → 一句试通 `npm run brains:probe` (证据见下)。
 2. ✅ 代码部分 (2026-11-08): `training/` 按树放进去 (training/README.md 第 7 节), `brief.ts` (模板 + 世界真实值 + 手册目录)、`deliver.ts` (开班读教训 → 行动层带出 → 扫描附要点 → 班末收笔记)、`./know`、`./fh` 包装 (手册分段、聊天标签、封顶、附经验) 接上; 单元 27/27, 沙盘 (见证据)。**真模型一班验收还没跑 (花额度, 等用户说开)**。
-3. 其余驱动 (codex / grok / relay / agent-sdk / deepseek)、`supervisor.ts`、`human-chat.ts`、`core/records/`。
+3. 监工 `supervisor.ts` + 递话 `tell.ts` + 体检 / 研究 / 产量 + 真人聊天 `human-chat.ts` + 班末总结 `core/records/summary.ts` ✅ (2026-11-08: 单元 `test/supervisor.test.ts` 8/8、`test/summary.test.ts` 3/3; 沙盘 run.test.ts 7/7: 0.9 分体检递"缺燃料 1 台: 石炉(0,0)", 2.4 分催闲 (门槛调到 20 秒), 话经模组账本进 `./fh call status` 的回复, 收工写 summary.json / review.md); 其余驱动 (codex / grok / relay / agent-sdk / deepseek) 和 "问题"表里的两个修法还没做。
 4. `./calc` `./bp` `./plan` (连 src/calc、src/blueprint 一起)。
 条目格式 (training/README.md 第 3 节) 边搬边定, 搬完再统一; 每步有测试, 旧项目对应文件搬完就删。
 

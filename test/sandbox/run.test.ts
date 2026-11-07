@@ -22,7 +22,8 @@ const readJson = (f: string) => JSON.parse(fs.readFileSync(f, "utf8"));
 const waitFor = async (what: string, f: () => boolean, ms: number) => { const t = Date.now(); while (!f()) { assert.ok(exitCode === null, `主循环提前退出 (${exitCode}) 等 ${what} 时:\n${out.slice(-1500)}`); assert.ok(Date.now() - t < ms, `${ms / 1000} 秒没等到 ${what}:\n${out.slice(-1500)}`); await sleep(1000); } };
 
 before(() => {
-  child = spawn(process.execPath, ["--env-file-if-exists=.env", "core/run/online.ts", "--lab", "--minutes", "15", "--name", "RunCheck", "--run-id", runId], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], windowsHide: true, env: { ...process.env, BRAIN_DIR: path.join(dataRoot(), "brain-test") } });
+  // 监工的闲置门槛调到 20 秒、不要开局宽限: 测试里角色放完东西就闲着, 要能看到催
+  child = spawn(process.execPath, ["--env-file-if-exists=.env", "core/run/online.ts", "--lab", "--minutes", "15", "--name", "RunCheck", "--run-id", runId], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], windowsHide: true, env: { ...process.env, BRAIN_DIR: path.join(dataRoot(), "brain-test"), FA_IDLE_MS: "20000", FA_GRACE_MS: "0" } });
   child.stdout!.setEncoding("utf8"); child.stdout!.on("data", (d: string) => { out += d; });
   child.stderr!.setEncoding("utf8"); child.stderr!.on("data", (d: string) => { out += d; });
   child.on("exit", (c) => { exitCode = c; });
@@ -114,11 +115,27 @@ test("角色目录的 ./know 和 ./fh help: 查积累 (sh 和 ps1), 手册大的
   assert.match(fs.readFileSync(path.join(roleDir, "journal.jsonl"), "utf8"), /"event":"help"/, "查手册也记 journal");
 });
 
-test("放 STOP 正常收工: 记录齐全, 服务器没装模组、没有不同步, 游戏进程都关了", async () => {
+test("监工: 角色闲着就催 (话经模组账本递, 下一条 ./fh 回复带上); 采样和体检都记了", async () => {
+  const tellsFile = path.join(runDir, "tells.jsonl");
+  await waitFor("监工催闲", () => { try { return /闲了/.test(fs.readFileSync(tellsFile, "utf8")); } catch { return false; } }, 150_000);
+  const tells = fs.readFileSync(tellsFile, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { how: string; text: string });
+  assert.equal(tells.find((t) => /闲了/.test(t.text))?.how, "tell", "要走模组账本, 不是收件箱");
+  const { stdout } = await run(bashExe(), [path.join(roleDir, "fh"), "call", "status"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true });
+  assert.match(stdout, /监工/, `回复里没带监工的话:\n${stdout.slice(-800)}`);
+  assert.ok(fs.readFileSync(path.join(runDir, "monitor.jsonl"), "utf8").split("\n").filter(Boolean).length >= 2, "采样");
+  assert.ok(fs.existsSync(path.join(runDir, "health.jsonl")), "体检");
+  console.log(`  ${out.split("\n").filter((l) => /监工/.test(l)).join("\n  ").slice(0, 600)}`);
+});
+
+test("放 STOP 正常收工: 记录齐全 (含总结和复盘), 服务器没装模组、没有不同步, 游戏进程都关了", async () => {
   fs.writeFileSync(path.join(runDir, "STOP"), "test");
   for (let i = 0; i < 90 && exitCode === null; i++) await sleep(1000);
   assert.equal(exitCode, 0, out.slice(-1500));
   assert.match(out, /收工: STOP/);
+  assert.match(out, /复盘: /);
+  const summary = readJson(path.join(runDir, "summary.json")) as { supervisor: { nudges: number }; journal: { requests: number }; review: { lines: string[] } };
+  assert.ok(summary.supervisor.nudges >= 1 && summary.journal.requests >= 5, JSON.stringify(summary).slice(0, 300));
+  assert.match(fs.readFileSync(path.join(runDir, "review.md"), "utf8"), /^# 复盘 /);
   const end = readJson(path.join(runDir, "end.json")) as { why: string };
   assert.equal(end.why, "STOP");
   assert.ok(fs.existsSync(path.join(runDir, "probe-stats.json")));
