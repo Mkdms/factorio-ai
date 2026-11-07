@@ -15,6 +15,13 @@ commands/cli/
   model names). Our broker (commands/broker.ts) speaks its FH_SOCKET protocol; the command name stays fh because the
   reference manuals the models read use it.
 
+core/brains/hooks/
+  permit.ts ports the Bash permit rules of factorio-ai-party tools/permit.py and the examples of tools/test_permit.py
+  (test/permit.test.ts); context.ts and hook.ts port the Claude Code parts of tools/context.py, agent/compact.md and
+  agent/context.tsv (same repository and licence as below). Changes: our own tokenizer (stricter: word-initial # only,
+  unknown operators rejected, for-lists and redirect targets checked, Windows paths), our command whitelist, the wait
+  rules (sleepVerdict), the read guard, lower compaction points.
+
 game/mod/factorio-ai-harness/
   The agent-harness mod from factorio-ai-party by Nick Winter, https://github.com/nwinter/factorio-ai-party
   (vendor/factorio-harness as of commit a9a5556a, 2026-11-04; MIT License, see game/mod/factorio-ai-harness/LICENSE), itself a

@@ -2,14 +2,16 @@
 // 开班主循环: 一个 AI = 一个干净的真客户端 (独立版, 不装模组) + 游戏外的模组 + 玩家操作 + 大脑。沙盘和联机同一条路。
 //   npm run run:online -- --lab [--save 存档.zip] --minutes 5                沙盘试: 本机起一个干净的服务器 (不装任何模组), 不叫模型
 //   npm run run:online -- --server --read-only --minutes 5                   连 data/accounts/keys.json 的 server, 只读, 不叫模型 (上真服要用户在场)
-//   npm run run:online -- --lab --brain claude --minutes 30                  真模型 (大脑那块搬进来之前报错)
+//   npm run run:online -- --lab --brain claude --model opus --effort low --minutes 30   真模型 (Claude Code 订阅登录; 花额度, 用户说开才跑)
 // --minutes 从进世界开始算。停: 记录目录里放 STOP 文件; 模型做完在角色目录放 DONE。
+// --brain none|claude (别家第二块第 ③ 步搬: core/brains/driver.ts), --model, --effort low|medium|high, --compact-at token 数 (压缩点, 默认按模型 core/brains/hooks/context.ts)。
 // --read-only 怎么保证只读: 不注入客户端、不发键鼠; 只有游戏外的进程 ReadProcessMemory 和读客户端日志; 所有动作在代理就拒了。对服务器只是多了一个站着不动的玩家。
 // --backend auto|memory|rcon (默认 auto): 没填 RCON 走外挂; 填了 RCON 的自动: 先用干净客户端试进, 进得去 = 服务器没装模组, 走外挂, 一条 Lua 都不跑 (RCON 上跑了这张图就不能拿成就); 进不去就带上我们的模组再试, 进得去才走 RCON。
 // --steam-pid 进程号: 不开新客户端, 挂到已经连着的 Steam 客户端 (操控用户的账号, 用户要拿成就: 只有玩家操作这条路; 用户自己在玩时不许用)。
 // --own-world: 用户自己的新图, 没有协助模式。--lua: 只读时也注入客户端做只读查询 (流体、红绿线、物流网、别的玩家)。
-// 还没搬进来的 (旧项目有): 大脑驱动、真人聊天进模型回复、教训自动带出、./know ./calc ./bp、监工和体检。
+// 还没搬进来的 (旧项目有): 别家大脑、真人聊天进模型回复、教训自动带出、./know ./calc ./bp、监工和体检 (docs/brains.md 的顺序)。
 import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -31,10 +33,14 @@ import { readPlayer } from "../../commands/query.ts";
 import { botNameCandidates, clientPhase, onlineBrief, parseHostPort, readServer, scrubClientLogs, scrubText, secretsOf, whereLine, type ClientPhase, type ServerConn } from "./online-lib.ts";
 import { setupWorkspace } from "./workspace.ts";
 import { writeScan } from "./scan.ts";
+import { brainDriver, brainProblem, defaultModel, killBrain, runBrainTurn, type Driver } from "../brains/driver.ts";
+import { brainLoop } from "../brains/loop.ts";
+import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "../brains/hooks/context.ts";
 
 const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
-  brain: { type: "string", default: "none" }, minutes: { type: "string", default: "5" }, "own-world": { type: "boolean", default: false },
+  brain: { type: "string", default: "none" }, model: { type: "string" }, effort: { type: "string", default: "low" }, "compact-at": { type: "string" },
+  minutes: { type: "string", default: "5" }, "own-world": { type: "boolean", default: false },
   name: { type: "string", default: "Claude-Opus" }, "steam-pid": { type: "string" },
   keys: { type: "string" }, backend: { type: "string" }, reveal: { type: "boolean", default: false }, lua: { type: "boolean", default: false },
   "run-id": { type: "string" }, "goal-file": { type: "string" },
@@ -42,7 +48,10 @@ const { values } = parseArgs({ options: {
 const toServer = values.server;
 if (values.lab === toServer) { console.error("要 --lab (本机沙盘试) 或 --server (联机服务器), 二选一"); process.exit(2); }
 if (values.backend !== undefined && !BACKEND_PREFS.includes(values.backend as BackendPref)) { console.error(`--backend 只能是 ${BACKEND_PREFS.join(" / ")}`); process.exit(2); }
-if (values.brain !== "none") { console.error(`--brain ${values.brain}: 大脑那块还没搬进来, 现在只有 none (不叫模型)`); process.exit(2); }
+const brain = values.brain!;
+const model = values.model ?? defaultModel(brain);
+{ const bad = brainProblem(brain, model); if (bad) { console.error(bad); process.exit(2); } }
+if (!/^(low|medium|high|xhigh|max)$/.test(values.effort!)) { console.error("--effort 只能是 low / medium / high / xhigh / max"); process.exit(2); }
 if (values["run-id"] !== undefined && !/^[\w-]{1,40}$/.test(values["run-id"])) { console.error("--run-id 只能是字母数字和 - _"); process.exit(2); }
 for (const [ok, what] of [[clientReady(), "data/client (npm run client:setup)"], [venvReady(), "data/venv 里的 lupa (npm run offgame:setup)"], [fs.existsSync(pdbDumpExe()), "data/tools/pdb-dump.exe (npm run memory:setup)"]] as const) if (!ok) { console.error(`缺 ${what}`); process.exit(2); }
 const prefer = cleanBackendPref(values.backend);
@@ -51,6 +60,18 @@ const readOnly = values["read-only"]!;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const t0 = Date.now();
 const log = (s: string) => console.log(`[${((Date.now() - t0) / 60000).toFixed(1)} 分] ${s}`);
+const fwd = (p: string) => p.replace(/\\/g, "/");
+
+// 哪个模型来玩: 开游戏之前就建驱动, 没登录、没填密钥别等进了世界才发现。模型手里只有这些工具; Bash 只放行我们的命令 (循环 / 管道由钩子 core/brains/hooks/permit.ts 放行)
+const ALLOW = ["Bash(./fh *)", "Bash(./know *)", "Bash(./calc *)", "Bash(./bp *)", "Bash(./plan *)", "Read", "Edit", "Write", "Grep", "Glob"];
+const CC_TOOLS = ["Bash", "Read", "Edit", "Write", "Grep", "Glob"];
+const ZH = "语言: 你输出的每一句话 (包括一两个词的短句、做事前后的小结)、笔记、游戏聊天都用简体中文; 工具回复是英文也照样用中文说。建筑、物品、科技用游戏官方中文名; 命令和参数里的内部名照写。";
+let driver: Driver | null = null;
+if (brain !== "none") {
+  try { driver = await brainDriver({ brain, model, effort: values.effort!, allow: ALLOW, tools: CC_TOOLS, system: ZH, log }); }
+  catch (e) { console.error((e as Error).message); process.exit(2); }
+}
+let child: ChildProcess | null = null;
 
 const runId = values["run-id"] ?? new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const runDir = path.join(dataRoot(), "play", "online", runId);
@@ -93,6 +114,16 @@ const PROBE_NAME = "FactorioAI-Probe";
 const JOIN_TIMEOUT_MS = 10 * 60_000;
 /** 连接这一步最多等多久: 服务器没开时客户端会一直停在这里不报错 */
 const CONNECT_TIMEOUT_MS = 90_000;
+
+/** 大脑输出的一行 (Claude 形状): 命令和说的话进日志; 一轮的结果不是 success 也记 */
+function logBrainEvent(ev: unknown): void {
+  const m = ev as { type?: string; subtype?: string; is_error?: boolean; result?: unknown; message?: { content?: { type?: string; name?: string; input?: { command?: unknown }; text?: string }[] } };
+  if (m.type === "assistant") for (const b of m.message?.content ?? []) {
+    if (b.type === "tool_use" && b.name === "Bash") log(`  大脑: ${String(b.input?.command ?? "").slice(0, 140)}`);
+    else if (b.type === "text" && b.text?.trim()) log(`  大脑说: ${b.text.trim().replace(/\s+/g, " ").slice(0, 160)}`);
+  }
+  if (m.type === "result" && (m.is_error || m.subtype !== "success")) log(`  这一轮结束: ${m.subtype} ${String(m.result ?? "").slice(0, 200)}`);
+}
 
 /** 等客户端日志说进了世界 (不注入客户端, 只读模式靠这个)。连不上回原因, 不干等 */
 async function waitInGame(): Promise<string | null> {
@@ -260,15 +291,24 @@ try {
   }
 
   // 4. 角色目录: 简报 + ./fh (sh 和 ps1), 经管道; 模型手里没有 RCON
-  const brief = onlineBrief({ name, server: toServer, readOnly, steam: !!values["steam-pid"], rcon: useRcon, ownWorld: values["own-world"] }) + (values["goal-file"] && !readOnly ? `\n## 用户这一班给你的任务\n${fs.readFileSync(values["goal-file"], "utf8").trim()}\n` : "");
+  const brief = onlineBrief({ name, server: toServer, readOnly, steam: !!values["steam-pid"], rcon: useRcon, ownWorld: values["own-world"] }) + (values["goal-file"] && !readOnly ? `\n## 用户这一班给你的任务\n${fs.readFileSync(values["goal-file"], "utf8").trim()}\n` : "") + (driver ? COMPACT_INSTRUCTIONS : "");
   setupWorkspace({ dir, name, pipe, brief, deadline });
+  // 大脑会话的设置 (只在角色目录生效): 压缩点、钩子 (命令放行、读文件禁区、压缩前后、收件箱); .context-hooks 标记让钩子只在这里起作用
+  const at = Number(values["compact-at"] ?? compactAt(model));
+  if (driver) {
+    const hookCmd = (event: string, ...extra: string[]) => [`'${fwd(process.execPath)}'`, `'${fwd(path.join(ROOT, "core", "brains", "hooks", "hook.ts"))}'`, event, ...extra].join(" ");
+    fs.mkdirSync(path.join(dir, ".claude"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".claude", "settings.json"), JSON.stringify(brainSettings(at, hookCmd), null, 2));
+    fs.writeFileSync(path.join(dir, ".context-hooks"), "");
+  }
   log(`角色目录 ${dir}; 记录 ${runDir}; 停: 放 STOP 文件`);
-  fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify({ runId, name, dir, server: toServer, backend: choice?.backend ?? "memory", why: choice?.why ?? "沙盘试外挂", prefer, reveal, readOnly, brain: values.brain, steam: !!values["steam-pid"], startedAt: new Date().toISOString() }, null, 1));
+  fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify({ runId, name, dir, server: toServer, backend: choice?.backend ?? "memory", why: choice?.why ?? "沙盘试外挂", prefer, reveal, readOnly, brain, model, effort: values.effort, compactAt: at, steam: !!values["steam-pid"], startedAt: new Date().toISOString() }, null, 1));
 
-  // 开班扫描: 现状写成 world-scan.md (Lua 跑在游戏外的假接口上, 服务器上一条都不跑)
+  // 开班扫描: 现状写成 world-scan.md (Lua 跑在游戏外的假接口上, 服务器上一条都不跑); 第一轮提示词让模型先读
+  let scanNote = "";
   if (broker) {
     const b = broker;
-    try { log(`开班扫描: ${await writeScan((c) => b.evalLua(c), dir, runDir)}`); }
+    try { log(`开班扫描: ${await writeScan((c) => b.evalLua(c), dir, runDir)}`); scanNote = "先读 world-scan.md (开班扫描: 按读数自动算的现状), "; }
     catch (e) { log(`开班扫描没做成: ${(e as Error).message.slice(0, 200)}`); }
   }
 
@@ -276,8 +316,27 @@ try {
   const doneFile = path.join(dir, "DONE");
   const viewerAlive = () => useRcon ? true : values["steam-pid"] ? (() => { try { process.kill(clientPid, 0); return true; } catch { return false; } })() : viewer.alive;
   const stopped = () => Date.now() >= deadline || fs.existsSync(stopFile) || fs.existsSync(doneFile) || !viewerAlive() || clientDown !== null;
-  log("不叫模型: 等到点或 STOP; 这段时间可以在角色目录里跑 ./fh");
-  while (!stopped()) await sleep(2000);
+  if (!driver) {
+    log("不叫模型: 等到点或 STOP; 这段时间可以在角色目录里跑 ./fh");
+    while (!stopped()) await sleep(2000);
+  } else {
+    // 一轮一个命令行进程, 会话号接力 (第 1 轮新建, 之后 --resume); 停了就连子进程一起杀 (模型正在跑的 ./fh 也要停)
+    const GOAL = values["goal-file"] && !readOnly ? `\n\n用户这一班给你的任务:\n${fs.readFileSync(values["goal-file"], "utf8").trim()}` : "";
+    const FIRST = `先读 CLAUDE.md 最前面"先读这一节", 再读 notes.md。${scanNote}然后 ./fh call status 和 ./fh call observe 看清楚世界、队友在做什么、缺什么; ${readOnly ? "现在只读, 动作和聊天都发不出去, 不要试; 把看到的写进 notes.md。" : values["own-world"] || !toServer ? "然后动手。" : "在聊天里用一句话打招呼说你是谁、打算帮什么 (./fh call say), 然后动手。"}${GOAL}`;
+    const NEXT = `继续。先看 ./fh call status 里有没有新消息和报警; 真人的话先回。把学到的写进 notes.md。${GOAL}`;
+    let sessionId = randomUUID();
+    const watch = setInterval(() => { if (child && stopped()) killBrain(child); }, 2000);
+    log(`大脑 ${brain} ${model} (强度 ${values.effort}, 压缩点 ${at}); 停: 放 STOP 文件, 模型做完会在角色目录放 DONE`);
+    await brainLoop({
+      turn: async (n, prompt) => {
+        const r = await runBrainTurn(driver!, { n, sessionId, prompt, cwd: dir, runDir, model, onChild: (c) => { child = c; }, onEvent: (ev) => logBrainEvent(ev) });
+        sessionId = r.sessionId;
+        return r.code;
+      },
+      stopped, first: FIRST, next: NEXT, log,
+    });
+    clearInterval(watch);
+  }
   const why = clientDown !== null ? `掉线 (${clientDown})` : fs.existsSync(stopFile) ? "STOP" : fs.existsSync(doneFile) ? "模型说任务做完了" : viewerAlive() ? "到点" : "客户端关了";
   if (broker) {
     log(`收工: ${why}; 走哪条路 ${JSON.stringify(Object.fromEntries(Object.entries(broker.stats.byAction).map(([k, v]) => [k, `${v.route}×${v.n} ${Math.round(v.ms / Math.max(v.n, 1))} 毫秒`])))}`);
@@ -289,6 +348,8 @@ try {
   code = 2;
 } finally {
   if (dropWatch) clearInterval(dropWatch);
+  killBrain(child);
+  await driver?.close?.().catch(() => undefined);
   await broker?.stop().catch(() => undefined);
   await rconPipe?.stop().catch(() => undefined);
   (rcon as RconClient | null)?.close();

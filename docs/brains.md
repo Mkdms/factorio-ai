@@ -39,11 +39,22 @@ commands/                        (已有 fh)
 ```
 
 ## 搬的顺序
-1. `core/brains/driver.ts` + `claude-code.ts` + `hooks/`, `online.ts` 叫大脑 → 沙盘 `--brain claude` 一句试通 (几分钱)。
+1. ✅ `core/brains/driver.ts` + `claude-code.ts` + `loop.ts` + `hooks/` (permit / read-guard / context / hook), `online.ts` 叫大脑 → 一句试通 `npm run brains:probe` (证据见下)。
 2. `training/` 按树原样放进去 (复制改名, 不改格式), `brief.ts` + `deliver.ts` + `./know` 接上 → 真模型一班验收 (上面三样)。
 3. 其余驱动 (codex / grok / relay / agent-sdk / deepseek)、`supervisor.ts`、`human-chat.ts`、`core/records/`。
 4. `./calc` `./bp` `./plan` (连 src/calc、src/blueprint 一起)。
 条目格式 (training/README.md 第 3 节) 边搬边定, 搬完再统一; 每步有测试, 旧项目对应文件搬完就删。
 
+## 怎么用
+```
+npm run brains:probe -- [--brain claude] [--model claude-haiku-5-5] [--effort low]   一句试通 (不开游戏, 花几厘钱): 命令行、登录、钩子
+npm run run:online -- --lab --brain claude --model opus --effort low --minutes 30   沙盘真模型一班 (花额度, 用户说开才跑)
+```
+角色目录里: `.claude/settings.json` (压缩点、钩子; 只对这个目录生效)、`.context-hooks` (钩子只在有这个标记的目录起作用)、`context.log` (钩子日志: 放行 / 拒绝 / 提醒 / 压缩)、`.context-state.json` (hooksSeen = 钩子装上了的证明)、`compactions.md` (每次压缩的摘要)、`.inbox.md` (监工的话, 下次工具调用后塞给模型)。记录目录里: `turn-N.jsonl` (每轮的事件, Claude 形状)、`brain-stderr.txt`。
+
+模型手里的工具: Bash (只放行 ./fh ./know ./calc ./bp ./plan 开头的, 循环 / 管道 / cd 自己目录由 permit 钩子放行, 别的拒并说明原因)、Read / Grep / Glob (只读自己目录和上一层; 源码 / 模组 / 本机数据不给读; > 30KB 要分页; 简报不重读)、Edit / Write。
+
 ## 证据
-(待填)
+- 第 ① 步 (2026-11-07): 单元 `test/brains.test.ts` 6/6 (拦截、参数、跑一轮的会话号接力和假命令行、轮次循环的间隔 / 停 / 打断、试通判定、设置指向真实的 hook.ts)、`test/permit.test.ts` 5/5 (派对的例子 + 旧项目实跑被拒的命令都放行, 派对版的 3 个漏洞和 22 种绕法都拒, 钩子进程真跑)、`test/context.test.ts` 5/5 (压缩点换算、提醒、日志裁剪、会话日志读数、钩子进程: 收件箱 / 压缩后贴笔记 / 截止前 2 分钟拦自动压缩)、`test/read-guard.test.ts` 3/3。
+- 一句试通 `npm run brains:probe` (Claude Code 2.1.319 订阅, claude-haiku-5-5, low): 通, 8.5 秒, $0.0035; 模型跑了 `echo 收到` (echo 不在 --allowedTools 里, 是 permit 钩子放行的: context.log 有 permitted), post-tool 钩子记了 hooksSeen; 记录在 data/play/probe/2026-11-07T15-24-05。
+- `online.ts` 的参数检查: 无参数 / `--brain codex` / `--effort 坏` 各报对应的话退出码 2 (模块能加载)。带大脑的一班还没跑 (第 ② 步验收)。
