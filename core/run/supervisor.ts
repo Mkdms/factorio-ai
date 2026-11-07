@@ -85,7 +85,8 @@ export type SupervisorDeps = {
 
 export class Supervisor {
   readonly samples: Sample[] = [];
-  readonly stats = { nudges: 0, healthTells: 0, researchTells: 0, rateTells: 0, deadlineTells: 0, toolRequests: 0 };
+  readonly stats = { nudges: 0, healthTells: 0, researchTells: 0, rateTells: 0, deadlineTells: 0, toolRequests: 0, toolTells: 0 };
+  private lastToolTell = 0;
   private d: SupervisorDeps;
   private idleOpts: IdleOpts;
   private idleSince: number | null = null;
@@ -132,6 +133,12 @@ export class Supervisor {
       const msg = `监工 (只给事实): 你的角色已经闲了约 ${v.idleMin} 分钟 (没发动作、没走)。思考时角色站着不动, 时钟不停; 睡觉不算玩。${atSpawn ? " 你还在出生点附近, 矿不在这里: ./fh call nearest 找矿, 走过去再动手。" : ""}${this.#hint(["闲了"])}`;
       await d.tell(msg);
       d.log(`监工: 闲了 ${v.idleMin} 分钟, 催了`);
+    }
+    // ②b 开班 8 分钟后还没有机器做出过红瓶: 把能一条命令建整条线的工具递上 (只给事实和命令; 第二版四班都手放到底, 简报里写着没人用); 10 分钟一次
+    if (s.redTotal === 0 && now - d.t0 >= 8 * 60_000 && now - this.lastToolTell >= 10 * 60_000) {
+      this.lastToolTell = now; this.stats.toolTells++;
+      await d.tell(`监工 (只给事实): 开班 ${Math.round((now - d.t0) / 60_000)} 分钟, 场上机器 ${s.machines} 台, 机器做出的红瓶 0。一条命令建整条红瓶线 (算全链 → 挑蓝图块 → 找空地 → 备料 → 放): ./plan automation-science-pack 30 --build; 只看方案: ./plan automation-science-pack 30; 库里的块: ./bp list 冶炼 / ./bp list 组装。手放也行, 工具只是省步数。`);
+      d.log("监工: 红瓶还是 0, 递了 ./plan");
     }
     // ③ 体检: 每 5 分钟; 新出现的类别马上说, 一直没修的 (连 3 次) 隔 15 分钟点名
     if (now - this.lastHealthAt >= 5 * 60_000) {

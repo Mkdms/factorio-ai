@@ -399,7 +399,7 @@ try {
   } else {
     // 一轮一个命令行进程, 会话号接力 (第 1 轮新建, 之后 --resume); 停了就连子进程一起杀 (模型正在跑的 ./fh 也要停)
     const GOAL = values["goal-file"] && !readOnly ? `\n\n用户这一班给你的任务:\n${fs.readFileSync(values["goal-file"], "utf8").trim()}` : "";
-    const FIRST = `先读 CLAUDE.md 最前面"先读这一节", 再读 notes.md。${scanNote}然后 ./fh call status 和 ./fh call observe 看清楚世界、队友在做什么、缺什么; ${readOnly ? "现在只读, 动作和聊天都发不出去, 不要试; 把看到的写进 notes.md。" : values["own-world"] || !toServer ? "然后动手。" : "在聊天里用一句话打招呼说你是谁、打算帮什么 (./fh call say), 然后动手。"}${GOAL}`;
+    const FIRST = `先读 CLAUDE.md 最前面"先读这一节", 再读 notes.md。${scanNote}然后 ./fh call status 和 ./fh call observe 看清楚世界、队友在做什么、缺什么; ${readOnly ? "现在只读, 动作和聊天都发不出去, 不要试; 把看到的写进 notes.md。" : values["own-world"] || !toServer ? "然后先跑 ./plan automation-science-pack 30 看整条红瓶线要几台、放哪 (加 --build 一条命令放整块; 手放也行), 再动手。" : "在聊天里用一句话打招呼说你是谁、打算帮什么 (./fh call say), 然后动手 (整条线用 ./plan 物品 每分钟 --build, 手放也行)。"}${GOAL}`;
     const NEXT = `继续。先看 ./fh call status 里有没有新消息和报警; 真人的话先回。把学到的写进 notes.md。${GOAL}`;
     let sessionId = randomUUID();
     const watch = setInterval(() => { if (child && stopped()) killBrain(child); }, 2000);

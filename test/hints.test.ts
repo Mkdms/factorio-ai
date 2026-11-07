@@ -31,6 +31,14 @@ test("放机器附经验: 隔 45 分钟重新给; 压缩后 (forgetShown) 马上
   assert.match(buildHint(c, { ...deps, now: deps.now + 120_000 + 46 * 60_000 })!, /倒推/, "别家看不到压缩: 靠时间");
   assert.equal(buildHint(call({ item: "stone-furnace" }), { ...deps, know: () => [] }), null);
   assert.equal(JSON.parse(fs.readFileSync(stateFile, "utf8"))["n:iron-gear-wheel"], 4, "手放计数");
+  // 给了 calc / blocks: 放机器时配比、能直接跑的 ./plan 命令、库里的块一起递 (第二版四班没人主动用这些命令)
+  const rich = buildHint(call({ item: "assembling-machine-1", recipe: "iron-gear-wheel" }), { ...deps, now: deps.now + 100 * 60_000, calc: (it) => `算好的 (${it}): 1 台`, blocks: (k) => [`7. 组装机排 ${k} × 3`] })!;
+  assert.match(rich, /算好的 \(iron-gear-wheel\)/);
+  assert.match(rich, /\.\/plan iron-gear-wheel 30 --build/);
+  assert.match(rich, /7\. 组装机排 铁齿轮 × 3/);
+  assert.match(rich, /倒推/, "经验照附");
+  const furnace = buildHint(call({ item: "stone-furnace" }), { ...deps, know: () => [], now: deps.now + 100 * 60_000, calc: () => null, blocks: () => [] })!;
+  assert.match(furnace, /\.\/plan automation-science-pack 30 --build/, "没配方的机器给红瓶线的命令");
   fs.rmSync(d, { recursive: true });
 });
 

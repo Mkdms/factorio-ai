@@ -78,6 +78,9 @@ if (!forProgram && !process.env.FH_NO_EXTRAS) {
         const items = loadKnowledge();
         return { zh: (id) => zh.get(id), know: (q, n = 2) => { const t = knowHint(q, zh, n, 180, true, items); return t.length ? t : knowHint(q, zh, n, 180, false, items); } };
       },
+      // 放机器时顺手递上: 配比 (src/play/calc-brief.ts) 和库里现成的块 (src/play/bp.ts); 算不出来 / 没库就不给, 不影响命令
+      calc: async (item) => { try { const { calcBrief } = await import("../src/play/calc-brief.ts"); const { loadZhNames } = await import("./chattags.ts"); const zh = loadZhNames(process.env.FH_PROTO ?? ""); return calcBrief(item, (id) => zh.get(id)); } catch (e) { note("配比", e); return null; } },
+      blocks: async (keyword) => { try { const { entries } = await import("../src/play/bp.ts"); const k = keyword.toLowerCase(); return entries().filter((e) => `${e.label} ${e.io ?? ""}`.toLowerCase().includes(k)).slice(0, 3).map((e) => `${e.no}. ${e.label}`); } catch (e) { note("蓝图候选", e); return []; } },
     });
     if (extra) process.stdout.write(`\n${extra}\n`);
   } catch (e) { note("附加", e); }

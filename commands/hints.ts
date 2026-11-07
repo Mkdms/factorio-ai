@@ -43,9 +43,12 @@ export function countAction(cmd: string | undefined, stateFile: string): void {
   writeState(stateFile, s);
 }
 
-export type HintDeps = { zh: (id: string) => string | undefined; stateFile: string; now: number; /** 相关的思路 / 事实 / 教训, 几行 */ know: (name: string) => string[] };
+export type HintDeps = { zh: (id: string) => string | undefined; stateFile: string; now: number; /** 相关的思路 / 事实 / 教训, 几行 */ know: (name: string) => string[];
+  /** 这个产物按 30/分 的配比 (src/play/calc-brief.ts calcBrief); 给了才附 ./plan / ./bp 那几行 */ calc?: (item: string) => string | null;
+  /** 蓝图库里和这个词相关的块, 每行 "编号. 名字 | 大小" (src/play/bp.ts entries) */ blocks?: (keyword: string) => string[] };
 
-/** ./fh call build 成功后追加的提示; 没有就 null。每个角色每种东西隔一段时间才给一次 (放机器正是想怎么摆、要几台的时候) */
+/** ./fh call build 成功后追加的提示; 没有就 null。每个角色每种东西隔一段时间才给一次 (放机器正是想怎么摆、要几台的时候)。
+ *  第二版量过 (2026-11-05 ~ 11-08 四班): 简报里写着的 ./calc ./plan ./bp 没人用, 手放到底; 所以放下第一台机器时把配比、能直接跑的 ./plan 命令、库里现成的块一起递到眼前。只给事实和命令, 手放也行 */
 export function buildHint(args: string[], d: HintDeps): string | null {
   const m = builtMachine(args);
   if (!m) return null;
@@ -54,14 +57,22 @@ export function buildHint(args: string[], d: HintDeps): string | null {
   const key = m.recipe ?? m.item;
   const nKey = `n:${key}`;
   state[nKey] = (state[nKey] ?? 0) + (m.count ?? 1);
-  let out: string | null = null;
+  const parts: string[] = [];
   if (d.now - (state[`pic:${key}`] ?? 0) >= REPEAT_MS) {
     state[`pic:${key}`] = d.now;
+    if (d.calc || d.blocks) {
+      const calc = m.recipe && d.calc ? d.calc(m.recipe) : null;
+      if (calc) parts.push(calc);
+      const target = m.recipe ?? "automation-science-pack";
+      parts.push(`整块建 (一条命令: 算全链 → 减场上已有 → 挑蓝图块 → 找空地 → 备料 → 放): ./plan ${target} 30 --build; 只看方案不放: ./plan ${target} 30; 自己算配比: ./calc '{"targets":{"${target}":30}}'`);
+      const blocks = d.blocks?.(name) ?? [];
+      if (blocks.length) parts.push(`库里现成的块 (./bp show 编号 看要什么料; ./bp build 编号 --at x,y 整块建): ${blocks.slice(0, 3).join("; ")}`);
+    }
     const notes = d.know(name);
-    if (notes.length) out = `相关经验 (工具附的; ./know ${name} 看更多):\n${notes.join("\n")}`;
+    if (notes.length) parts.push(`相关经验 (工具附的; ./know ${name} 看更多):\n${notes.join("\n")}`);
   }
   writeState(d.stateFile, state);
-  return out;
+  return parts.length ? parts.join("\n") : null;
 }
 
 const jsonArgs = (args: string[]): Record<string, unknown> => { const i = args.indexOf("--args"); if (i < 0 || !args[i + 1]) return {}; try { return JSON.parse(args[i + 1]); } catch { return {}; } };
@@ -124,6 +135,9 @@ export function teamFact(state: HintState, now: number, me: string, read: () => 
 export type ExtraDeps = { stateFile: string; now: number; me: string;
   /** 用到时才加载 (知识库、游戏名单要几百毫秒, 大多数 ./fh 用不上) */ load: () => Promise<{ zh: (id: string) => string | undefined; know: (q: string, n?: number) => string[] }>;
   teamFile?: string;
+  /** 放机器时递的配比和蓝图候选 (都是附带的; 没给就只附经验) */
+  calc?: (item: string) => Promise<string | null>;
+  blocks?: (keyword: string) => Promise<string[]>;
 };
 
 /** 一条 ./fh 回复后面附什么: 放机器 > 查东西 / 报错; 队友事实另算; 全部是附带的, 调用方兜住错误 */
@@ -133,7 +147,11 @@ export async function replyExtras(args: string[], out: string, status: number, d
   countAction(status === 0 ? cmd : undefined, d.stateFile);
   if (cmd === "build" && status === 0 && builtMachine(args)) {
     const deps = await d.load();
-    const h = buildHint(args, { zh: deps.zh, know: (n) => deps.know(n, 2), stateFile: d.stateFile, now: d.now });
+    // calc / blocks 是异步的, buildHint 是同步的: 先算好再给 (每种机器 45 分钟才给一次, 多算一次不碍事)
+    const m = builtMachine(args)!;
+    const calcText = d.calc && m.recipe ? await d.calc(m.recipe) : null;
+    const blockList = d.blocks ? await d.blocks((m.recipe && deps.zh(m.recipe)) || deps.zh(m.item) || m.item) : [];
+    const h = buildHint(args, { zh: deps.zh, know: (n) => deps.know(n, 2), stateFile: d.stateFile, now: d.now, ...(d.calc ? { calc: () => calcText } : {}), ...(d.blocks ? { blocks: () => blockList } : {}) });
     if (h) parts.push(h);
   }
   const state = readState(d.stateFile);

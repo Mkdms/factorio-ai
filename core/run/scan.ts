@@ -79,8 +79,11 @@ export function composeScan(raw: ScanRaw, at = new Date().toISOString()): Scan {
   const e = raw.enemy;
   if (e && !e.peaceful && e.nests > 0 && (e.polluted > 0 || e.nearest < 200) && e.turrets < 8) judgement.push(`有虫子, 最近的虫巢 ${e.nearest} 格${e.polluted > 0 ? ", 污染已碰到它" : ""}, 炮塔只有 ${e.turrets} 座: 实测没有防御时几分钟内就开始被啃, 这是最先要解决的`);
   const summary = `${stage}; 红 ${r1(raw.rates.red)} / 绿 ${r1(raw.rates.green)} / 蓝 ${r1(raw.rates.blue)} 每分钟; 研究中心 ${raw.labs.working}/${raw.labs.total}`;
-  const md = [`# 开班扫描 (${at.slice(0, 16).replace("T", " ")} 读的; 先看这个再动手)`, "", "## 现状", ...lines.map((l) => `- ${l}`), "", "## 判断", ...judgement.map((l) => `- ${l}`), "",
-    "这是开班时按读数自动算的, 不是命令: 情况变了以你看到的为准。规划和配比 (下一档要补什么) 等计算器那块接上再有。"].join("\n");
+  // 下一档要补什么: 红瓶还没自动化就把能一条命令建整条线的递上 (只给命令, 用不用模型定)
+  const next = raw.rates.red <= 0 ? "automation-science-pack" : raw.rates.green <= 0 ? "logistic-science-pack" : raw.rates.blue <= 0 ? "chemical-science-pack" : null;
+  const plan = next ? [`下一档: ${next} 还没有机器在出。整条线一条命令 (算全链 → 减场上已有 → 挑蓝图块 → 找空地 → 备料 → 放): ./plan ${next} 30 --build; 只看方案: ./plan ${next} 30; 配比: ./calc '{"targets":{"${next}":30}}'; 库里的块: ./bp list`] : [];
+  const md = [`# 开班扫描 (${at.slice(0, 16).replace("T", " ")} 读的; 先看这个再动手)`, "", "## 现状", ...lines.map((l) => `- ${l}`), "", "## 判断", ...judgement.map((l) => `- ${l}`), ...(plan.length ? ["", "## 规划", ...plan.map((l) => `- ${l}`)] : []), "",
+    "这是开班时按读数自动算的, 不是命令: 情况变了以你看到的为准。"].join("\n");
   return { at, stage, summary, lines, md };
 }
 
