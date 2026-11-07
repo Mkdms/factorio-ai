@@ -1,0 +1,114 @@
+/** Transport through an RCON broker (pog tools/fh_broker.py): the broker holds the RCON password and listens on
+ * one Unix socket per bot; it forwards only harness requests for that bot. The wire format is JSON lines:
+ * {"command": "<the RCON command>"} in, {"ok": true, "text": "<the RCON reply>"} or
+ * {"ok": false, "error": "...", "refused"?: true, "unknown"?: true, "unavailable"?: true} out, one exchange at a time.
+ * unavailable (the RCON connection or login failed: nothing was sent) and any other failure without a flag become
+ * RconUnavailable, which the CLI reports as game_unreachable with since when (pace.ts).
+ */
+import { createConnection } from 'node:net';
+import { RconOutcomeUnknown, RconUnavailable, RconError } from './rcon.js';
+/** The broker would not forward this command (not a harness request, or another bot's). Nothing was sent. */
+export class BrokerRefused extends RconError {
+}
+const MAX_LINE_BYTES = 16 * 1024 * 1024;
+export class BrokerTransport {
+    path;
+    timeoutMs;
+    /** (d29 batch336 FL6) tools/fh_broker.py puts the wall clock in the request: it refuses other fields from fh. */
+    stampsWall = true;
+    socket;
+    buffer = '';
+    waiting;
+    queue = Promise.resolve();
+    closed = false;
+    constructor(path, timeoutMs = 5000) {
+        this.path = path;
+        this.timeoutMs = timeoutMs;
+    }
+    fail(error) {
+        const waiting = this.waiting;
+        this.waiting = undefined;
+        this.socket?.destroy();
+        this.socket = undefined;
+        this.buffer = '';
+        waiting?.reject(error);
+    }
+    connect() {
+        if (this.socket && !this.socket.destroyed)
+            return Promise.resolve(this.socket);
+        // macOS caps a Unix socket path at 104 bytes (103 and the terminator); a longer one fails with a bare EINVAL.
+        if (Buffer.byteLength(this.path) > 103) {
+            return Promise.reject(new RconUnavailable(`RCON broker socket path is longer than the 103 bytes a Unix socket allows (${Buffer.byteLength(this.path)}): ${this.path}`));
+        }
+        return new Promise((resolve, reject) => {
+            const socket = createConnection({ path: this.path });
+            socket.setEncoding('utf8');
+            socket.once('connect', () => { this.socket = socket; resolve(socket); });
+            socket.on('error', error => {
+                if (this.socket !== socket)
+                    reject(new RconUnavailable(`RCON broker socket ${this.path} is unavailable: ${error.message}`));
+                else
+                    this.fail(error);
+            });
+            socket.on('close', () => { if (this.socket === socket)
+                this.fail(new Error('RCON broker connection closed')); });
+            socket.on('data', (chunk) => {
+                if (this.socket !== socket)
+                    return;
+                this.buffer += chunk;
+                if (this.buffer.length > MAX_LINE_BYTES) {
+                    this.fail(new Error('RCON broker reply exceeds size limit'));
+                    return;
+                }
+                const end = this.buffer.indexOf('\n');
+                if (end < 0)
+                    return;
+                const line = this.buffer.slice(0, end);
+                this.buffer = this.buffer.slice(end + 1);
+                const waiting = this.waiting;
+                this.waiting = undefined;
+                waiting?.resolve(line);
+            });
+        });
+    }
+    command(text) {
+        const operation = this.queue.then(async () => {
+            if (this.closed)
+                throw new RconUnavailable('RCON broker client is closed');
+            const socket = await this.connect();
+            let line;
+            try {
+                line = await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => this.fail(new Error('RCON broker exchange timed out')), this.timeoutMs);
+                    this.waiting = { resolve: v => { clearTimeout(timer); resolve(v); }, reject: e => { clearTimeout(timer); reject(e); } };
+                    socket.write(JSON.stringify({ command: text }) + '\n');
+                });
+            }
+            catch (error) {
+                throw new RconOutcomeUnknown('RCON command outcome unknown; command was not replayed', { cause: error });
+            }
+            let reply;
+            try {
+                reply = JSON.parse(line);
+            }
+            catch {
+                throw new RconOutcomeUnknown(`RCON broker sent invalid JSON: ${line.slice(0, 200)}`);
+            }
+            if (reply.ok && typeof reply.text === 'string')
+                return reply.text;
+            const message = `RCON broker: ${reply.error ?? 'no reply text'}`;
+            if (reply.refused)
+                throw new BrokerRefused(message);
+            if (reply.unknown)
+                throw new RconOutcomeUnknown(message);
+            throw new RconUnavailable(message);
+        });
+        this.queue = operation.catch(() => undefined);
+        return operation;
+    }
+    close() {
+        this.closed = true;
+        this.fail(new Error('RCON broker client closed'));
+    }
+}
+//# sourceMappingURL=broker.js.map

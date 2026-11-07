@@ -16,7 +16,7 @@
 app\        桌面界面 (Tauri + React): 群 / 对话 / 账号 / 选训练集目录
 core\       程序本体: run (开班、监工) brains (接模型) control (界面接口) records (记录、复盘、统计)
 game\       和游戏打交道: mod (沙盘模组; 测试用的 harness 模组) client (注入客户端: 键鼠、只读查询、界面) memory (进程外读内存) offgame (harness 的 Lua 在游戏外跑) sandbox (本机服务器、窗口、导数据)
-commands\   给模型用的命令: 建、挖、走、查、算配比、贴蓝图
+commands\   给模型用的命令: fh 命令行 (cli/) → 代理 (broker) → 读走游戏外的模组宿主, 动作翻译成玩家操作 (actions / body / walk / gui)
 training\   训练集 (规范见 training\README.md)
 docs\       开发文档
 test\       测试
