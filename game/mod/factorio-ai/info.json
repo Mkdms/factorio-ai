@@ -1,0 +1,10 @@
+{
+  "name": "factorio-ai",
+  "version": "0.1.0",
+  "title": "factorio-ai (sandbox body)",
+  "author": "factorio-ai contributors",
+  "homepage": "https://github.com/Mkdms/factorio-ai",
+  "description": "Sandbox-only helper for factorio-ai: remote interface, single event dispatcher, UDP fast channel. Not meant for multiplayer servers you do not own.",
+  "factorio_version": "2.1",
+  "dependencies": ["base >= 2.1.0", "? space-age", "? quality", "? elevated-rails"]
+}

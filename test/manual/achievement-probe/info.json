@@ -1,0 +1,9 @@
+{
+  "name": "achievement-probe",
+  "version": "0.1.0",
+  "title": "achievement-probe",
+  "author": "factorio-ai",
+  "description": "一次性测试: 装着模组、不发控制台命令时 Steam 给不给成就。进游戏时往背包放一辆内燃机车、铁轨、一块太阳能板, 其余什么都不做。",
+  "factorio_version": "2.1",
+  "dependencies": ["base >= 2.1.0", "? space-age", "? quality", "? elevated-rails"]
+}
