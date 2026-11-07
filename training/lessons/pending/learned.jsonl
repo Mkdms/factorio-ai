@@ -201,3 +201,13 @@
 {"rule":"craft 手搓会吃掉中间的石炉: 做 3 台风钻要 15 石, 先看 inventory 再排。","keys":{"action":"craft","recipe":"stone-furnace"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
 {"rule":"情况: 矿点采空 (no_minable_resources) 还在跑 → 做法: 用 nearest 找新矿, mine 收回挪走 → 为什么: 采空的钻机只占位不出货。","keys":{"action":"mine"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
 {"rule":"情况: 没树 (nearest tree 空) 还想接电 → 做法: 先探路找树再做电件 → 为什么: 小电线杆只能用木头做。","keys":{"item":"small-electric-pole"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"燃烧矿机放在边缘矿上几分钟就采空 (no_minable_resources), 先 map / nearest 看厚的区域。","keys":{"item":"electric-mining-drill"},"who":"claude-haiku-5-5","run":"haiku-2026-11-08b"}
+{"rule":"transfer: to_entity=给, to_player=取。 炉子 full_output 时 to_player 取板。","keys":{"action":"transfer","item":"stone-furnace"},"who":"claude-haiku-5-5","run":"haiku-2026-11-08b"}
+{"rule":"手搓: 红瓶/组装机1 没解锁时 craft 直接报错, 别反复试。","keys":{"action":"craft","recipe":"assembling-machine-1"},"who":"claude-haiku-5-5","run":"haiku-2026-11-08b"}
+{"rule":"抽水泵 build 报 placement blocked 时先 observe scan 看岸线, 别盲试。","keys":{"action":"build"},"who":"claude-haiku-5-5","run":"haiku-2026-11-08b"}
+{"rule":"refuel 返回 skipped 且 moved 0 = 燃料已满, 不是失败。","keys":{"action":"refuel"},"who":"claude-haiku-5-5","run":"haiku-2026-11-08b"}
+{"rule":"开局只有 1 木头 → 先砍几棵树再放矿机 → 木头很快烧完","keys":{"item":"electric-mining-drill"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
+{"rule":"批量 build 放矿机后后面的项会报失败 → 单条 build, 再 rotate 转 south, inspect 看 drop_position, 炉子盖住该点 → 热能矿机向…","keys":{"action":"build","item":"stone-furnace"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
+{"rule":"手搓热能矿机要吃 1 个石炉 (5 石+9 铁): 先算石头","keys":{"recipe":"stone-furnace"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
+{"rule":"煤是开局瓶颈, 手采太慢 → 早点放煤机+箱子","keys":{"item":"wooden-chest"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
+{"rule":"工具: transfer 要 position+direction:to_entity (没有 positions 数组); collect 要 item","keys":{"action":"transfer"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
