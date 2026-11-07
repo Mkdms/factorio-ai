@@ -4,12 +4,13 @@
 //   npm run run:online -- --server --read-only --minutes 5                   连 data/accounts/keys.json 的 server, 只读, 不叫模型 (上真服要用户在场)
 //   npm run run:online -- --lab --brain claude --model opus --effort low --minutes 30   真模型 (Claude Code 订阅登录; 花额度, 用户说开才跑)
 // --minutes 从进世界开始算。停: 记录目录里放 STOP 文件; 模型做完在角色目录放 DONE。
-// --brain none|claude (别家第二块第 ③ 步搬: core/brains/driver.ts), --model, --effort low|medium|high, --compact-at token 数 (压缩点, 默认按模型 core/brains/hooks/context.ts)。
+// --brain none|claude|claude-api|deepseek|relay|codex|grok|gemini (core/brains/driver.ts; 密钥在 data/accounts/keys.json), --model (没给按家默认, 中转站用 keys.json 的 relay_model), --effort low|medium|high, --compact-at token 数 (压缩点, 默认按模型 core/brains/hooks/context.ts)。
+// codex / gemini / 中转站的 Responses 模型没有命令白名单钩子, 只能在本机的图上用 (--server 直接拒)。--name 不给 = 模型名规范写法 (lineup.ts botName)。
 // --read-only 怎么保证只读: 不注入客户端、不发键鼠; 只有游戏外的进程 ReadProcessMemory 和读客户端日志; 所有动作在代理就拒了。对服务器只是多了一个站着不动的玩家。
 // --backend auto|memory|rcon (默认 auto): 没填 RCON 走外挂; 填了 RCON 的自动: 先用干净客户端试进, 进得去 = 服务器没装模组, 走外挂, 一条 Lua 都不跑 (RCON 上跑了这张图就不能拿成就); 进不去就带上我们的模组再试, 进得去才走 RCON。
 // --steam-pid 进程号: 不开新客户端, 挂到已经连着的 Steam 客户端 (操控用户的账号, 用户要拿成就: 只有玩家操作这条路; 用户自己在玩时不许用)。
 // --own-world: 用户自己的新图, 没有协助模式。--lua: 只读时也注入客户端做只读查询 (流体、红绿线、物流网、别的玩家)。
-// 还没搬进来的 (旧项目有): 别家大脑、真人聊天进模型回复、教训自动带出、./know ./calc ./bp、监工和体检 (docs/brains.md 的顺序)。
+// 还没搬进来的 (旧项目有): ./calc ./bp ./plan、换班不关游戏、看门狗、多角色 (docs/brains.md 的顺序)。
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
@@ -35,6 +36,7 @@ import { setupWorkspace } from "./workspace.ts";
 import { writeScan } from "./scan.ts";
 import { brainDriver, brainProblem, defaultModel, killBrain, runBrainTurn, type Driver } from "../brains/driver.ts";
 import { brainLoop } from "../brains/loop.ts";
+import { botName } from "../brains/lineup.ts";
 import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "../brains/hooks/context.ts";
 import { appendScanHints, collectNotesLessons, lessonDelivery } from "./deliver.ts";
 import { composeBrief } from "./brief.ts";
@@ -49,7 +51,7 @@ const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
   brain: { type: "string", default: "none" }, model: { type: "string" }, effort: { type: "string", default: "low" }, "compact-at": { type: "string" },
   minutes: { type: "string", default: "5" }, "own-world": { type: "boolean", default: false },
-  name: { type: "string", default: "Claude-Opus" }, "steam-pid": { type: "string" },
+  name: { type: "string" }, "steam-pid": { type: "string" },
   keys: { type: "string" }, backend: { type: "string" }, reveal: { type: "boolean", default: false }, lua: { type: "boolean", default: false },
   "run-id": { type: "string" }, "goal-file": { type: "string" },
 } });
@@ -57,8 +59,11 @@ const toServer = values.server;
 if (values.lab === toServer) { console.error("要 --lab (本机沙盘试) 或 --server (联机服务器), 二选一"); process.exit(2); }
 if (values.backend !== undefined && !BACKEND_PREFS.includes(values.backend as BackendPref)) { console.error(`--backend 只能是 ${BACKEND_PREFS.join(" / ")}`); process.exit(2); }
 const brain = values.brain!;
-const model = values.model ?? defaultModel(brain);
+const keysFile = values.keys ?? path.join(dataRoot(), "accounts", "keys.json");
+const model = values.model ?? defaultModel(brain, keysFile);
 { const bad = brainProblem(brain, model); if (bad) { console.error(bad); process.exit(2); } }
+/** 游戏里的角色名 = 模型名规范写法 (--name 可改); 不叫模型的验证班叫 Test */
+const roleName = values.name ?? botName(brain, 1, model);
 if (!/^(low|medium|high|xhigh|max)$/.test(values.effort!)) { console.error("--effort 只能是 low / medium / high / xhigh / max"); process.exit(2); }
 if (values["run-id"] !== undefined && !/^[\w-]{1,40}$/.test(values["run-id"])) { console.error("--run-id 只能是字母数字和 - _"); process.exit(2); }
 for (const [ok, what] of [[clientReady(), "data/client (npm run client:setup)"], [venvReady(), "data/venv 里的 lupa (npm run offgame:setup)"], [fs.existsSync(pdbDumpExe()), "data/tools/pdb-dump.exe (npm run memory:setup)"]] as const) if (!ok) { console.error(`缺 ${what}`); process.exit(2); }
@@ -76,8 +81,10 @@ const CC_TOOLS = ["Bash", "Read", "Edit", "Write", "Grep", "Glob"];
 const ZH = "语言: 你输出的每一句话 (包括一两个词的短句、做事前后的小结)、笔记、游戏聊天都用简体中文; 工具回复是英文也照样用中文说。建筑、物品、科技用游戏官方中文名; 命令和参数里的内部名照写。";
 let driver: Driver | null = null;
 if (brain !== "none") {
-  try { driver = await brainDriver({ brain, model, effort: values.effort!, allow: ALLOW, tools: CC_TOOLS, system: ZH, log }); }
+  try { driver = await brainDriver({ brain, model, effort: values.effort!, allow: ALLOW, tools: CC_TOOLS, system: ZH, log, keysFile }); }
   catch (e) { console.error((e as Error).message); process.exit(2); }
+  if (toServer && driver.unguarded) { console.error(`${brain} ${driver.unguarded}; 联机只能用 claude / claude-api / deepseek / relay (站标 Claude 格式的模型) / grok`); process.exit(2); }
+  log(`大脑: ${driver.note}`);
 }
 let child: ChildProcess | null = null;
 let supervisor: Supervisor | null = null;
@@ -93,11 +100,10 @@ fs.mkdirSync(runDir, { recursive: true });
 fs.mkdirSync(dir, { recursive: true });
 const stopFile = path.join(runDir, "STOP");
 const pipe = `\\\\.\\pipe\\factorio-ai-online-${process.pid}`;
-const keysFile = values.keys ?? path.join(dataRoot(), "accounts", "keys.json");
 
 // 沙盘试: 本机起一个干净的服务器 (一个我们的模组都不装, 当联机服务器的替身)
 const lab = new SandboxServer({ name: "online", view: false, clean: true });
-const viewer = new Viewer("online-a", undefined, { playerName: values.name });
+const viewer = new Viewer("online-a", undefined, { playerName: roleName });
 const gameExe = values["steam-pid"] ? factorioExe(findFactorioDir()) : factorioExe(viewer.factorioDir);
 let target: Body | null = null;
 let broker: CommandBroker | null = null;
@@ -242,7 +248,7 @@ try {
   const useRcon = choice?.backend === "rcon";
   // 2. 走外挂要动手才注入客户端; 只读默认不注入 (给 --lua 才注入, 只读 Lua, 不发键鼠); 走 RCON 没有客户端
   const useLua = !useRcon && (!readOnly || values.lua);
-  let name = values.name!;
+  let name = roleName;
   const protoDir = lab.prototypesDir();
   if (useLua) {
     target = new Body(await freeTcpPort(), loadDefines(protoDir), { gameExe });

@@ -41,7 +41,7 @@ commands/                        (已有 fh)
 ## 搬的顺序
 1. ✅ `core/brains/driver.ts` + `claude-code.ts` + `loop.ts` + `hooks/` (permit / read-guard / context / hook), `online.ts` 叫大脑 → 一句试通 `npm run brains:probe` (证据见下)。
 2. ✅ 代码部分 (2026-11-08): `training/` 按树放进去 (training/README.md 第 7 节), `brief.ts` (模板 + 世界真实值 + 手册目录)、`deliver.ts` (开班读教训 → 行动层带出 → 扫描附要点 → 班末收笔记)、`./know`、`./fh` 包装 (手册分段、聊天标签、封顶、附经验) 接上; 单元 27/27, 沙盘 (见证据)。**真模型一班验收还没跑 (花额度, 等用户说开)**。
-3. 监工 `supervisor.ts` + 递话 `tell.ts` + 体检 / 研究 / 产量 + 真人聊天 `human-chat.ts` + 班末总结 `core/records/summary.ts` ✅ (2026-11-08: 单元 `test/supervisor.test.ts` 8/8、`test/summary.test.ts` 3/3; 沙盘 run.test.ts 7/7: 0.9 分体检递"缺燃料 1 台: 石炉(0,0)", 2.4 分催闲 (门槛调到 20 秒), 话经模组账本进 `./fh call status` 的回复, 收工写 summary.json / review.md); 其余驱动 (codex / grok / relay / agent-sdk / deepseek) 和 "问题"表里的两个修法还没做。
+3. 监工 `supervisor.ts` + 递话 `tell.ts` + 体检 / 研究 / 产量 + 真人聊天 `human-chat.ts` + 班末总结 `core/records/summary.ts` ✅ (2026-11-08: 单元 `test/supervisor.test.ts` 8/8、`test/summary.test.ts` 3/3; 沙盘 run.test.ts 7/7: 0.9 分体检递"缺燃料 1 台: 石炉(0,0)", 2.4 分催闲 (门槛调到 20 秒), 话经模组账本进 `./fh call status` 的回复, 收工写 summary.json / review.md)。**其余驱动 ✅ (2026-11-08 02:3x)**: `driver.ts` 八家都接 (claude / claude-api / deepseek / relay 按站标协议分流 / codex / grok / gemini / none), 翻译器登记, `online.ts` 的 `--brain` 放开、角色名默认 = 模型名 (`lineup.ts botName`), codex / gemini / 中转站 Responses 模型没有命令白名单钩子所以 `--server` 直接拒; 单元 `test/brains*.test.ts` 43/43 (接线用临时 keys.json: 程序 / 参数 / 环境 / 翻译 / 代理起停; Codex 形状的一轮翻成 Claude 形状并接 thread_id; Grok 形状的试通从 assistant 取正文); `online.ts` 四种参数错都在开游戏前退出码 2 (不认识的家 / 中转站没模型 / 联机拒 codex / 密钥没填报在哪填)。**各家真跑 (一句试通) 还没在新项目做** (旧项目 11-04 ~ 11-05 的实测见各文件头): `npm run brains:probe -- --brain codex|grok|deepseek|relay|claude-api` 花一点额度, 用户说开才跑。"问题"表里的两个修法 ✅ 02e57d1 (下面)。
 4. `./calc` `./bp` `./plan` (连 src/calc、src/blueprint 一起)。
 条目格式 (training/README.md 第 3 节) 边搬边定, 搬完再统一; 每步有测试, 旧项目对应文件搬完就删。
 
@@ -64,7 +64,7 @@ npm run run:online -- --lab --brain claude --model opus --effort low --minutes 3
 ## 问题 (实跑查出, 待修)
 | 发现 | 班次 | 要改的 |
 |---|---|---|
-| transfer 给燃料 / 取东西 "放了 4 轮还不对: 那格 N 个 (要 M)" ×5、"背包窗口没打开" ×2 | 11-08 Haiku | commands/body.ts 的取放读回和开窗口: 看 journal 里那几条的上下文, 沙盘里复现 |
-| 自己放的建筑在第二次 build 被挡时, 回复不说是谁的, 模型当成别人的、绕着走 | 同上 | build 被挡时回复带上 last_user (自己的就说"你自己放的") |
+| transfer 给燃料 / 取东西 "放了 4 轮还不对: 那格 N 个 (要 M)" ×5、"背包窗口没打开" ×2 | 11-08 Haiku | ✅ 02e57d1: 按手上减少的数算成功, 不再数目标格 (在烧的炉子燃料格会被烧掉); 一组不够就取最大的一组再来 (`commands/body.ts` #splitUntil / takeExactDirect); 沙盘用例 `test/sandbox/actions.test.ts` "相邻两台在烧的炉子" (单跑过; 全量跑时和前面用例的组装机重叠, 坐标已挪到 +28 列, 全量还没重跑) |
+| 自己放的建筑在第二次 build 被挡时, 回复不说是谁的, 模型当成别人的、绕着走 | 同上 | ✅ 02e57d1: 放不下的回复带上是谁放的 (自己的就说"你自己放的") |
 | 模型闲了就 sleep 到截止 | 同上 | 第 ③ 步监工: 闲 3 分钟就催 + 报瓶颈 |
 | `./know` 零次 | 同上 | 回复附经验已经在做 (74 次); 简报里把 ./know 放到"看"那一行最前面再看下一班 |

@@ -6,7 +6,7 @@
 npm run run:online -- --lab [--save 存档.zip] --minutes 5       沙盘: 开一张新图 (或存档), 不叫模型, 等到点 / STOP; 这段时间可以在角色目录里跑 ./fh
 npm run run:online -- --server --read-only --minutes 5          连 data/accounts/keys.json 的 server, 只读 (上真服要用户在场)
 ```
-选项: `--name 角色名` (= 模型名规范写法), `--steam-pid 进程号` (挂到用户的 Steam 客户端; 用户自己在玩时不许用), `--own-world`, `--backend auto|memory|rcon`, `--reveal`, `--lua`, `--goal-file`, `--run-id`。大脑: `--brain none|claude --model 模型 --effort low|medium|high --compact-at token数` (别家第二块第 ③ 步搬; docs/brains.md)。
+选项: `--name 角色名` (= 模型名规范写法), `--steam-pid 进程号` (挂到用户的 Steam 客户端; 用户自己在玩时不许用), `--own-world`, `--backend auto|memory|rcon`, `--reveal`, `--lua`, `--goal-file`, `--run-id`。大脑: `--brain none|claude|claude-api|deepseek|relay|codex|grok|gemini --model 模型 --effort low|medium|high --compact-at token数` (`core/brains/driver.ts`; 密钥在 `data/accounts/keys.json`; codex / gemini / 中转站的 Responses 模型没有命令白名单钩子, `--server` 直接拒; docs/brains.md)。
 
 ## 一班的流程
 1. 客户端: 开独立版连服务器 (沙盘 / 别人的), 看客户端日志等它进世界 (`online-lib.ts clientPhase`; 连不上报原因, 密码错和模组不一样客户端日志都只有 "refused"); 联机 `--backend auto` 时先用干净客户端试进, 进得去 = 服务器没装模组 → 走外挂, 一条 Lua 都不跑。
@@ -32,9 +32,10 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 | `supervisor.ts` / `tell.ts` / `health.ts` / `research.ts` / `science.ts` / `human-chat.ts` | 监工 (采样、催闲、体检、研究、播报、截止、工具诉求)、递话 (模组账本 tell / 收件箱)、体检 Lua 和清单、研究队列空了能排什么、产量读数、真人聊天 (客户端 chat_read、tell.txt、紧急判定、@ 点名) |
 | `../records/summary.ts` | 班末总结和复盘 |
 | `shell.ts` | 找 Git for Windows 的 bash (PATH 上的 bash 可能是 WSL 的) |
+| `../brains/driver.ts` + `claude-code.ts` / `agent-sdk.ts` (+ `agent-sdk-runner.ts`) / `codex.ts` / `grok.ts` / `gemini.ts` / `relay.ts` / `keys.ts` / `lineup.ts` / `probe.ts` | 大脑驱动: 八家按家起进程、事件翻成 Claude 形状、中转站分流和本机代理、密钥文件、角色名 = 模型名、一句试通 (docs/brains.md) |
 
 ## 还没搬 (旧项目有; 顺序见 docs/brains.md)
-别家大脑 (Agent SDK / Codex / Grok / 中转站 / DeepSeek)、`./calc` `./bp` `./plan`、真人的话没回就催 (旧 replies.ts)、换班不关游戏、看门狗、死亡计数、多角色 (team.md、按负责人发)、群和界面。
+`./calc` `./bp` `./plan`、真人的话没回就催 (旧 replies.ts)、换班不关游戏、看门狗、死亡计数、多角色 (team.md、按负责人发)、群和界面 (含账号页的中转站"核实全部模型"队列, 旧 relay-verify.ts VerifyJob)。
 
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。

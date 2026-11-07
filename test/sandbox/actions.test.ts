@@ -229,7 +229,8 @@ test("refuel 补到 4 个; feed 喂 3 个进组装机", () => check(async () => 
 }));
 
 test("相邻两台在烧的炉子: 煤进指定的那台不进旁边的, 按背包少的算成功; 箱子里一组不够的分几组取 (真跑 11-08 的 7 条取放失败)", () => check(async () => {
-  const a = { x: furnace.x + 8.5, y: furnace.y + 0.5 }, b = { x: a.x + 2, y: a.y };
+  // 往右 15 格 (x +28 列): 原来 +8.5 和前面用例放的组装机 P(20, 3) (3x3) 重叠, 全量跑时放不下 (单跑才过)
+  const a = { x: furnace.x + 15.5, y: furnace.y + 0.5 }, b = { x: a.x + 2, y: a.y };
   const rb = await act("build", { builds: [{ item: "stone-furnace", position: a }, { item: "stone-furnace", position: b }], walk: true }, "--wait");
   if (!rb.ok) return { pass: false, seen: `放两台炉子没成: ${seenOf(rb)}` };
   // 各放 1 个煤和矿让它烧起来: 那 1 个煤进了燃烧器, 燃料格又是空的 (真跑里失败的都是在烧的机器)
