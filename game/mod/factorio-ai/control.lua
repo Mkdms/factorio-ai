@@ -6,6 +6,7 @@
 --   4. 每个回复都带 ok / error / tick, "没读到"和"读到空"分得清。
 
 local production_score = require("production-score")
+local agent = require("agent") -- 角色和模型的动作 (agent.lua)
 
 local MOD_VERSION = script.active_mods["factorio-ai"]
 local UDP_CHUNK = 60000 -- 单个 UDP 包的正文上限 (字节)
@@ -30,6 +31,8 @@ local function init_storage()
 end
 script.on_init(init_storage)
 script.on_configuration_changed(init_storage)
+on(defines.events.on_tick, function(e) agent.tick(e.tick) end)
+on(defines.events.on_console_chat, agent.on_console_chat)
 
 ---------------------------------------------------------------- 小工具
 local function surface_of(a)
@@ -750,6 +753,14 @@ function methods.save(a)
   game.server_save(a.name)
   return { saved = a.name or "(默认名)" }
 end
+
+---------------------------------------------------------------- 角色 (管理操作, 只有程序能调; 模型的命令行连不到这些)
+function methods.agent_create(a) return agent.create(a.name) end
+function methods.agent_remove(a) return agent.remove(a.name) end
+function methods.agents() return { agents = agent.list() } end
+function methods.agent_tell(a) return agent.tell(a.name, a.text) end
+-- 模型的命令: 一个请求 {id, who, action, args} → 回复 {id, ok, tick, result | error} (agent.lua)
+function methods.agent_dispatch(a) return agent.dispatch(a.request) end
 
 ---------------------------------------------------------------- 统一入口
 local function rpc(request_json, compress)
