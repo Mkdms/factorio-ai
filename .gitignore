@@ -1,0 +1,14 @@
+# 本机数据: 密钥、群、班次记录、存档链、蓝图编辑器、下载件
+data/
+# 本机配置
+.env
+*.local.json
+.claude/
+# 依赖和产物
+node_modules/
+dist/
+target/
+__pycache__/
+*.log
+.DS_Store
+Thumbs.db
