@@ -8,6 +8,7 @@ import { labRoot, REPO } from "../lab/gamedir.ts";
 import { decodeBlueprint, encodeBlueprint } from "../lab/blueprint.ts";
 import { flatten } from "../blueprint/inspect.ts";
 import { argvFromFile } from "./argv-file.ts";
+import { BP_DATA, datasetDir } from "./bp-data.ts";
 import { gather, handRecipeOf, lacking } from "./bp-gather.ts";
 import type { At, BpEntity, Dry, Verify, WireCheck } from "./bp-fit.ts";
 
@@ -18,13 +19,9 @@ export const machineCount = (counts: Record<string, number>) => Object.entries(c
 export type Entry = { no: number; source: string; label: string; w: number; h: number; entities: number; counts: Record<string, number>; io: string; get: () => Record<string, unknown> };
 // 本机数据走 labRoot() (LAB_DATA_DIR): 写死仓库/lab-data 时, 在共用数据的工作树里找不到蓝图库 (2026-11-03 play:check "没有编号 1")
 // 本机没有就用仓库带的 (tools/export-public.ts 导的: 自己生成的、CC0 的)
-// 新项目的本机数据在 data/training-private/blueprints/ (第二版是 lab-data/ 直接放), 公开区在 training/blueprints/
-const BP_DATA = path.join(labRoot(), "training-private", "blueprints");
 const GEN = fs.existsSync(path.join(BP_DATA, "generated")) ? path.join(BP_DATA, "generated") : path.join(REPO, "training", "blueprints", "generated");
 // 数据集索引直接读 (src/dataset/ingest.ts 是脚本, import 会跑它的命令行)
 const loadDataset = () => { const local = path.join(BP_DATA, "datasets", "index.jsonl"); const f = fs.existsSync(local) ? local : path.join(REPO, "training", "blueprints", "index.jsonl"); return fs.existsSync(f) ? fs.readFileSync(f, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l)) : []; };
-// 数据集条目的 dir 是第二版相对仓库根写的 ("lab-data/datasets/..."): 换成新项目的本机数据目录
-export const datasetDir = (dir: string) => (dir.startsWith("lab-data/datasets/") ? path.join(BP_DATA, "datasets", dir.slice("lab-data/datasets/".length)) : dir.startsWith("lab-data/") ? path.join(labRoot(), dir.slice("lab-data/".length)) : path.join(REPO, dir));
 const readText = (f: string) => fs.readFileSync(f, "utf8").trim();
 const readObj = (f: string): Record<string, unknown> => (f.endsWith(".json") ? JSON.parse(readText(f)) : decodeBlueprint(readText(f)));
 

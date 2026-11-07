@@ -11,7 +11,7 @@ import { flatten } from "../blueprint/inspect.ts";
 import { loadRules, type Rules } from "../blueprint/rules.ts";
 import type { Placed } from "../blueprint/placed.ts";
 import { loadZhNames } from "./chattags.ts";
-import { datasetDir } from "./bp.ts";
+import { datasetDir } from "./bp-data.ts";
 import { blocksOf, machineKey, nearBlock, overview, placeAll, study, studyText, type Block } from "./layout-study.ts";
 
 const SOURCE_LABEL = "朋友的新地星基地 (2026-10-31 本人同意参考)";
