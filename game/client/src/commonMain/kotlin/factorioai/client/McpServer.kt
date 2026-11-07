@@ -1,0 +1,348 @@
+package factorioai.client
+
+import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import io.modelcontextprotocol.kotlin.sdk.types.*
+import kotlin.io.encoding.Base64
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.serialization.json.*
+
+private fun toolResult(value: JsonObject, error: Boolean = false) =
+    CallToolResult(
+        content = listOf(TextContent(Json.encodeToString(JsonObject.serializer(), value))),
+        structuredContent = value,
+        isError = if (error) true else null,
+    )
+
+internal fun createServer(game: GameSession): Server {
+    val server =
+        Server(
+            Implementation("factorio-ai-client", BuildVersion.VERSION),
+            ServerOptions(capabilities = ServerCapabilities(tools = ServerCapabilities.Tools())),
+            instructions =
+                """
+                Attach to an existing, fully loaded Factorio client; this server never launches it.
+                Prefer structured reads: world_query for objects, properties and collections, world_overview for spatial observations, chat_read for retained messages, and ui_read for interface state. Discover inspect members and use paths, filters, fields and pages. Query limits are caller-selected positive 32-bit integers; start with the defaults and increase them for bulk reads. Each snapshot is collected at one safe point; pages are fresh observations. Use screenshot for missing visual information, verification or requested images.
+                Use ui_action with live selectors for widgets and input for concurrent keyboard/mouse timelines. Discover current bindings with input_bindings. Use set_text for editable text.
+                Interpret native values, text, repetitions and hierarchy yourself. Missing, null and unavailable are distinct, widget flags are local, and controller context can differ from the physical character. Check truncation before treating results as complete.
+                Every action, including chat, reports client dispatch/execution and cleanup. Completion does not confirm server acceptance, delivery or gameplay success. Network latency and prediction rollback can delay, change or undo effects; reads observe current state. Actions do not wait for a resulting state. Observe effects before dependent actions. Do not blindly repeat a mutation whose result was lost or uncertain.
+                Tools have no execution timeout. Send explicit MCP cancellation to stop unwanted work; HTTP disconnection alone is not guaranteed to cancel. All clients share this server's attachment.
+                All tools assume the player is not operating the game concurrently. Errors or unexpected results from concurrent player actions are outside the tool contract; tools do not detect or compensate for that interference.
+                """
+                    .trimIndent(),
+        )
+
+    fun register(
+        name: String,
+        description: String,
+        properties: JsonObject = buildJsonObject {},
+        required: List<String> = emptyList(),
+        operation: suspend (JsonObject) -> CallToolResult,
+    ) {
+        server.addTool(
+            name,
+            description,
+            ToolSchema(properties = properties, required = required),
+        ) { request ->
+            try {
+                val args = request.arguments ?: buildJsonObject {}
+                require(args.keys.all { it in properties }) { "Unknown argument" }
+                operation(args)
+            } catch (failure: CancellationException) {
+                if (!currentCoroutineContext().isActive) throw failure
+                toolResult(
+                    buildJsonObject { put("error", failure.message ?: "Tool aborted") },
+                    error = true,
+                )
+            } catch (failure: Exception) {
+                toolResult(
+                    buildJsonObject { put("error", failure.message ?: "Operation failed") },
+                    error = true,
+                )
+            }
+        }
+    }
+
+    fun tool(
+        name: String,
+        description: String,
+        properties: JsonObject = buildJsonObject {},
+        required: List<String> = emptyList(),
+        operation: suspend (JsonObject) -> JsonObject,
+    ) {
+        register(name, description, properties, required) { args -> toolResult(operation(args)) }
+    }
+
+    tool(
+        "status",
+        "Observe attachment, PID, game state and pause status without attaching or searching for a process. Null paused means unknown. Each tool checks its own prerequisites; status is not a capability guarantee. Detected exit clears the attachment.",
+    ) {
+        game.status()
+    }
+    tool(
+        "attach",
+        "Attach to an existing local Factorio client after startup loading finishes. Supply exactly one PID or executable process_name; ambiguous names fail. Matching developer debug information is required. Repeating attach to the same process reuses the attachment; detach before selecting another live process. After updating or moving factorio-ai-client, restart Factorio before attaching. Returns attachment status.",
+        buildJsonObject {
+            putJsonObject("pid") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("description", "Existing client PID. Mutually exclusive with process_name.")
+            }
+            putJsonObject("process_name") {
+                put("type", "string")
+                put(
+                    "description",
+                    "Executable name, e.g. factorio.exe; must identify exactly one process. Mutually exclusive with pid.",
+                )
+            }
+        },
+    ) { args ->
+        require(args.size == 1) { "Specify exactly one of pid or process_name" }
+        val pid =
+            args["pid"]?.intArgument()
+                ?: run {
+                    val name = args.getValue("process_name").stringArgument()
+                    val matches = Platform.findProcesses(name)
+                    check(matches.size == 1) {
+                        "Expected one process named $name; found PIDs: $matches"
+                    }
+                    matches.single()
+                }
+        require(pid > 0) { "PID must be positive" }
+        game.attach(pid)
+    }
+    tool(
+        "detach",
+        "Cancel pending tools across all clients, wait for cooperative cleanup, and release the attachment without closing Factorio. Takes no arguments and is repeatable. An inert library may remain loaded for reuse. A cleanup error retains ownership; retry detach before attaching elsewhere.",
+    ) {
+        game.detach()
+    }
+    tool(
+        "ui_read",
+        "Read interface structure and native properties in menus, paused worlds and gameplay. Returns postorder nodes with text, own flags, parent links and snapshot-local IDs; actions require live selectors. Selected subtrees narrow output, while selector resolution requires a complete bounded traversal. Missing properties mean unsupported or unavailable; inspect reasons and truncation. Flags and bounds do not establish effective visibility or action eligibility. Options and selected_index are zero-based. Icon references are snapshot-local, with game-registered names when available. Tooltip reads copy stored plain text without hovering or invoking providers. Script GUI icon paths and tooltip expressions are available through world_query inspection. Interpret native values and hierarchy yourself. Use screenshot for missing visual information.",
+        buildJsonObject {
+            putJsonObject("max_nodes") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("default", 4096)
+                put(
+                    "description",
+                    "Traversal limit, including when selector is set. An incomplete selector search fails; selected subtrees only narrow the returned nodes and optional properties.",
+                )
+            }
+            putJsonObject("bounds") {
+                put("type", "boolean")
+                put("default", false)
+                put(
+                    "description",
+                    "Include widget geometry when needed for positioning; geometry does not imply visibility.",
+                )
+            }
+            put("selector", selectorSchema())
+        },
+    ) { args ->
+        val limit = args["max_nodes"]?.intArgument() ?: 4096
+        require(limit > 0) { "max_nodes must be positive" }
+        game.read(
+            limit,
+            args["bounds"]?.booleanArgument() ?: false,
+            args["selector"]?.let(::parseSelector),
+        )
+    }
+    tool(
+        "ui_action",
+        "Operate UI in menus, paused worlds and gameplay without OS input or focus. Prefer live widget actions over viewport clicks: existing offscreen controls can be selected without scrolling. click/set_text require a selector resolving exactly one target allowed by enabled ancestors and modal state; incomplete or ambiguous searches fail. click sends a complete mouse gesture; set_text replaces editable text subject to native restrictions. press_key sends one key chord including release to current focus, or focuses a selected widget first; it neither types character text nor holds across ticks. Use input_bindings for current keys, set_text for text, and input for holds. Returns dispatch:completed, not confirmation that the intended UI/game change occurred.",
+        uiActionProperties(),
+        listOf("action"),
+    ) { args ->
+        game.action(parseUiAction(args))
+    }
+    tool(
+        "input_bindings",
+        "Discover native and mod control IDs and current primary/secondary keyboard/mouse bindings; available in menus and paused worlds. Use bindings to construct input controls or ui_action press_key; control IDs themselves are not accepted as input. For linked controls use effective_bindings from binding_owner; otherwise use bindings. Include required modifiers. has_binding counts known keyboard/mouse types, not action eligibility. Controller slots and controller input are unsupported. Results sort by ID; pages are fresh observations. Check snapshot_complete, next_offset and missing_ids/unobserved_ids before concluding a control is absent. Sends no input.",
+        buildJsonObject {
+            putJsonObject("ids") {
+                put("type", "array")
+                putJsonObject("items") { put("type", "string") }
+                put(
+                    "description",
+                    "Exact control IDs. Omit to discover controls; combines with search.",
+                )
+            }
+            putJsonObject("search") {
+                put("type", "string")
+                put("description", "Case-insensitive substring of the control ID.")
+            }
+            putJsonObject("offset") {
+                put("type", "integer")
+                put("minimum", 0)
+                put("default", 0)
+                put(
+                    "description",
+                    "Zero-based offset into matching controls; use next_offset to continue.",
+                )
+            }
+            putJsonObject("limit") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("default", 64)
+            }
+        },
+    ) { args ->
+        val ids =
+            args["ids"]?.let { value ->
+                val array = value as? JsonArray ?: error("ids must be an array")
+                array.map { it.stringArgument() }.toSet()
+            }
+        val search = args["search"]?.stringArgument()
+        val offset = args["offset"]?.intArgument() ?: 0
+        val limit = args["limit"]?.intArgument() ?: 64
+        require(offset >= 0 && limit > 0) { "offset must be nonnegative and limit positive" }
+        game.bindings(ids, search, offset, limit)
+    }
+    tool(
+        "world_overview",
+        "Summarize entities in the viewport or an explicit area with group_by and optional numeric aggregates, or read individual entities with selected fields. Requires a loaded world/local player; works while paused or covered by UI. Returns bounded observations and viewport/controller context, including hidden data; UI occlusion is ignored. Check truncation, coverage and excluded aggregate values. Grouping and calculations use observed properties without interpreting gameplay. Does not move the camera or generate chunks.",
+        worldOverviewSchema(),
+    ) { args ->
+        game.query(parseWorldOverview(args))
+    }
+    tool(
+        "world_query",
+        "Read native objects, properties, inventories, catalogs and related collections without opening UI. Requires a loaded world/local player; works while paused. Use inspect members for discoverable properties and passive methods, values for selected properties, and path/entries for related objects or collections. Discover inventory references before reading slots. Narrow selections, fields and pages. Missing, nil and read errors remain distinct; localized expressions stay untranslated. Reads may include hidden data. Check truncation; pages are fresh observations and entity ordering is not stable.",
+        worldQuerySchema(),
+        listOf("selection"),
+    ) { args ->
+        game.query(parseWorldQuery(args))
+    }
+    tool(
+        "chat_read",
+        "Read retained local chat and notifications without opening UI; optionally wait for later messages. Requires a loaded world. Pass next_offset to continue the same player's history, including multiple messages at one native tick. Watermarks survive MCP restarts with unchanged history; reset them on world/player changes. text is cached text and may be empty/stale; raw preserves its localization expression. player_name is present when the game stores the sender separately from the body. Check history_lost, has_more and boundary/snapshot truncation. This is bounded observation, not a lossless subscription or server-wide log; unseen evicted messages cannot be recovered.",
+        chatReadSchema(),
+    ) { args ->
+        val request = parseChatRead(args)
+        game.readChat(request.offset, request.limit, request.timeout)
+    }
+    tool(
+        "chat_send",
+        "Submit one plain message as the local player through normal game input. Requires a loaded world. No console commands or administrator privileges. Returns dispatch:completed, not server acceptance or delivery; game/mod rules still apply. Do not retry after an uncertain result.",
+        chatSendSchema(),
+        listOf("text"),
+    ) { args ->
+        game.sendChat(parseChatMessage(args))
+    }
+    tool(
+        "player_action",
+        "Submit game input actions directly as the local player (the same InputAction path chat_send uses), without the GUI: clear_cursor, open_gui (of the selected entity), close_gui, select_entity at a map position, and the item-stack transfers cursor_transfer / cursor_split / stack_transfer / inventory_transfer against an inventory slot. count repeats the action in one safe point (cursor_split moves one item per action). The game validates each action against the player's state and silently drops invalid ones; verify with a read afterwards. Returns dispatch:completed and sent, never server acceptance.",
+        playerActionSchema(),
+        listOf("action"),
+    ) { args ->
+        game.sendPlayerAction(parsePlayerAction(args))
+    }
+    tool(
+        "memory_read",
+        "Read the attached client's memory from outside the process (ReadProcessMemory; nothing runs inside the game, so it works while the game saves and never affects simulation): the local character's position and main inventory, or the numeric prototype ids of items / qualities (the ids player_action targets carry). Layouts come from the game's debug symbols at attach; a chain that cannot be verified is refused. Values are the client's view and can trail the server by a few ticks; reads shows how many passes it took for two consecutive reads to agree.",
+        memoryReadSchema(),
+        listOf("kind"),
+    ) { args ->
+        game.readMemory(parseMemoryRead(args))
+    }
+    tool(
+        "input",
+        "Execute a finite concurrent keyboard/mouse timeline in a running world. Resolve physical keys with input_bindings; use separate entries for modifiers. Mouse paths support viewport pixels and world tile coordinates on the current viewed surface. World positions are projected using the current view each tick. Prefer ui_action for widgets; wheel routing over UI is not reliable in all states. Only one timeline runs; busy calls fail unless stop_previous:true. Pause, unload, detach or cancellation aborts and releases MCP-held buttons. Returns completed_entries and evaluated_ticks as client execution progress, never server acceptance or gameplay success.",
+        inputSequenceProperties(),
+        listOf("timeline"),
+    ) { args ->
+        game.input(parseInputSequence(args))
+    }
+    tool(
+        "set_rendering",
+        "Request drawing suppression or restoration once. Simulation and structured tools remain available, including menus and paused worlds. Window/system events may change drawing again; minimization can still suspend it after enabling. Returns dispatch:completed after local execution, without waiting for a frame. No persistent mode or restoration on detach. Shares the screenshot queue; cancel a stalled capture explicitly. Requires an attached graphical client.",
+        buildJsonObject {
+            putJsonObject("enabled") {
+                put("type", "boolean")
+                put("description", "False suppresses drawing once; true clears that suppression once.")
+            }
+        },
+        listOf("enabled"),
+    ) { args ->
+        game.setRendering(args.getValue("enabled").booleanArgument())
+    }
+    register(
+        "screenshot",
+        "Capture the next rendered game+UI frame, or cancel the active capture and wait for cleanup. Prefer structured reads; use images for missing visual information, verification or requested images. Start with JPG and max_height:720 to reduce image traffic; use PNG for lossless pixels. Only one capture may be pending. Requires active rendering (OpenGL on Linux, DirectX on Windows); suspended rendering returns an error at frontend admission. A stalled frontend or graphics backend can delay capture. Excludes desktop and OS/Steam overlays. MCP request cancellation also stops capture.",
+        buildJsonObject {
+            putJsonObject("action") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add("capture")
+                    add("cancel")
+                }
+                put("default", "capture")
+                put(
+                    "description",
+                    "Cancel stops the current capture without starting another; repeatable when idle.",
+                )
+            }
+            putJsonObject("format") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add("jpg")
+                    add("png")
+                }
+                put("default", "jpg")
+                put("description", "JPG uses lossy encoding; PNG is lossless.")
+            }
+            putJsonObject("quality") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("maximum", 100)
+                put("default", ImageEncoder.DEFAULT_JPEG_QUALITY)
+                put("description", "JPG capture only. Higher values retain more detail and generally produce larger images. Omit to use the default.")
+            }
+            putJsonObject("max_height") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("maximum", Int.MAX_VALUE)
+                put("description", "Shrink to at most this pixel height, preserving aspect ratio. Never enlarges or crops. Omit for original dimensions.")
+            }
+        },
+    ) { args ->
+        val action = args["action"]?.stringArgument() ?: "capture"
+        require(action == "capture" || action == "cancel") { "action must be capture or cancel" }
+        val format = ImageFormat.parse(args["format"]?.stringArgument() ?: "jpg")
+        val maxHeight = args["max_height"]?.intArgument()
+        val quality = args["quality"]?.intArgument()
+        require(maxHeight == null || maxHeight > 0) { "max_height must be positive" }
+        if (action == "cancel") {
+            require(args.keys.none { it == "format" || it == "max_height" || it == "quality" }) {
+                "format, max_height and quality apply only to capture"
+            }
+            return@register toolResult(game.cancelScreenshot())
+        }
+        val (snapshot, image) = game.screenshot(format, maxHeight, quality)
+        val metadata = buildJsonObject {
+            put("source", "factorio_rendered_frame")
+            put("scope", "game_and_ui")
+            put("state", snapshot.state)
+            put("ui_frame", snapshot.frame)
+            put("source_width", checkNotNull(snapshot.image).width)
+            put("source_height", snapshot.image.height)
+            put("width", image.width)
+            put("height", image.height)
+            put("format", image.format.argument)
+            image.quality?.let { put("quality", it) }
+        }
+        CallToolResult(
+            structuredContent = metadata,
+            content =
+                listOf(
+                    TextContent(Json.encodeToString(JsonObject.serializer(), metadata)),
+                    ImageContent(Base64.encode(image.bytes), image.format.mimeType),
+                ),
+        )
+    }
+    return server
+}

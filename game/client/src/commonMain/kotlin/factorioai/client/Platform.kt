@@ -1,0 +1,97 @@
+package factorioai.client
+
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.io.Sink
+import kotlinx.io.Source
+
+internal expect object Platform {
+    fun standardInput(): Source
+
+    fun standardOutput(): Sink
+
+    fun findProcesses(name: String): List<Int>
+
+    fun initializeCancellation()
+
+    val cancelled: Boolean
+
+    fun writeError(message: String)
+}
+
+internal data class GameSnapshot(
+    val state: String,
+    val attached: Boolean,
+    val frame: Long,
+    val nodes: List<WidgetSnapshot> = emptyList(),
+    val truncated: Boolean = false,
+    val paused: Boolean? = null,
+    val image: RgbImage? = null,
+    val controls: List<ControlSnapshot> = emptyList(),
+    val registryCount: Int = 0,
+    val propertiesUnavailableReason: String? = null,
+    val worldJson: String? = null,
+    val slotIdentityUnavailableReason: String? = null,
+    val numberUnavailableReason: String? = null,
+    val visibilityUnavailableReason: String? = null,
+    val progressUnavailableReason: String? = null,
+    val elementUnavailableReason: String? = null,
+    val iconsUnavailableReason: String? = null,
+    val iconNamesUnavailableReason: String? = null,
+    val tooltipsUnavailableReason: String? = null,
+    val qualityConditionUnavailableReason: String? = null,
+    val switchUnavailableReason: String? = null,
+    val chat: ChatSnapshot? = null,
+    /** player_action: how many InputAction values were submitted (operation 13). */
+    val playerActionsSent: Int? = null,
+)
+
+/** Native commands finish at a frontend safe point; cancellation is cooperative. */
+internal interface GameConnection {
+    suspend fun execute(operation: Int, limit: Int = 4096, action: UiAction? = null): GameSnapshot
+
+    suspend fun isAlive(): Boolean
+
+    suspend fun query(query: WorldQuery): GameSnapshot =
+        error("World queries are unavailable on this adapter")
+
+    suspend fun sendChat(text: String): GameSnapshot =
+        error("Chat submission is unavailable on this adapter")
+
+    suspend fun sendPlayerAction(request: PlayerActionRequest): GameSnapshot =
+        error("Player actions are unavailable on this adapter")
+
+    /** memory_read: an out-of-process read of the client's memory; no resident operation is involved. */
+    suspend fun readMemory(request: MemoryReadRequest): MemorySnapshot =
+        error("Memory reads are unavailable on this adapter")
+
+    suspend fun setRendering(enabled: Boolean): GameSnapshot =
+        error("Rendering control is unavailable on this adapter")
+
+    suspend fun beginInput(request: InputSequenceRequest): GameInputTask =
+        error("Timed input is unavailable on this adapter")
+
+    /** Optional event-driven notification; preflight checks remain required on every platform. */
+    suspend fun awaitExit(): Unit = awaitCancellation()
+
+    suspend fun close()
+}
+
+internal expect class GameProcess(pid: Int) : GameConnection {
+    override suspend fun execute(operation: Int, limit: Int, action: UiAction?): GameSnapshot
+
+    override suspend fun isAlive(): Boolean
+
+    override suspend fun query(query: WorldQuery): GameSnapshot
+
+    override suspend fun sendChat(text: String): GameSnapshot
+
+    override suspend fun sendPlayerAction(request: PlayerActionRequest): GameSnapshot
+
+    override suspend fun setRendering(enabled: Boolean): GameSnapshot
+
+    override suspend fun beginInput(request: InputSequenceRequest): GameInputTask
+
+    override suspend fun awaitExit()
+
+    override suspend fun close()
+}

@@ -1,0 +1,4 @@
+headers = bridge.h
+headerFilter = bridge.h dbghelp.h psdk_inc/_dbg* tlhelp32.h
+package = factorioai.client.nativebridge
+linkerOpts = -ldbghelp
