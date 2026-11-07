@@ -48,21 +48,43 @@ license:   蓝图和工具用: 可公开 / 只本机
 - 模型动手时: 按触发键把对应的经验、配比、蓝图递上, 每个角色每种东西一次。
 - 班末: 产出进待核实区, 写统计 (这班用了哪些条目、带出了多少次)。
 
-## 7. 从旧项目和第一版搬什么 (草图, 2026-11-07, 待定后再动手)
-第一步先做条目的程序 (`core/training/`: 读写条目、Markdown 和 JSON 互生成、正式区 + 暂用 + 私有区合并读、触发键查找), 有测试后再逐行搬; 搬一行, 旧项目对应的文件删一行。
+## 7. 目录树 (草图, 2026-11-07; `←` 后面是旧项目里的来源, 原样复制改名, 条目格式边搬边定, 不先写条目程序)
+```
+training/                        递给模型的全部积累; 独立一块, 界面里可换目录
+  README.md                      本规范
+  knowledge/                     游戏事实
+    verified/
+      facts.json                 沙盘实验写入的事实, 每条带出处和版本            ← knowledge/facts.json
+      facts.md                   同一份给人和模型读 (由 .json 生成)              ← knowledge/facts.md
+      points.md                  简报要点, 每条带 facts 出处                     ← knowledge/brief-points.md
+      names.json                 建筑 / 物品 / 科技的官方中文名                   ← 游戏导出 (lab-data/prototypes)
+    pending/
+      research/                  检索来的资料, 每篇带出处、日期、版本             ← docs/research/ 3 篇, 以后的检索
+      v1/                        第一版的主题 / 手册 / 目录, 一律待核             ← I:\fn\knowledge (topics 24, manuals 6, catalogs 10)
+  patterns/                      老玩家思路: 情况 → 做法 → 为什么 → 代价 → 关联 → 流派
+    verified/                    mindset production logistics layout defense combat planets progression (.md)   ← knowledge/patterns/
+    pending/
+  lessons/                       做动作时自动带出的提醒 (触发键 action / entity / item / recipe)
+    verified/seed.json           核过的种子                                        ← knowledge/lessons-seed.json
+    pending/learned.jsonl        各班模型自己记的, 每条带班次编号                   ← lab-data/play/lessons-learned.jsonl + knowledge/lessons-learned.jsonl
+  blueprints/                    蓝图 + 实测读数
+    verified/
+      <名字>.txt                 蓝图字符串
+      <名字>.json                说明 + 实测 (产量 / 吃料 / 电, 哪次实验)          ← knowledge/blueprints/ (自己的 5 个积木 + 社区 7 份)
+      index.jsonl                索引 (程序读)
+    pending/
+    LICENSES.md                  社区蓝图各自的许可
+  tools/                         模型写的、验证过有用的脚本
+    verified/fhlib.py                                                             ← lab-data/play/team-tools-keep/
+    pending/
+  manuals/                       给模型的
+    brief.md                     简报模板 (世界 / 规矩 / 工具三节; 和平、星球、目标等真实值由程序填)   ← src/play/brief-zh.md + ours-brief.ts + run.ts BRIEF
+    notes.md                     笔记模板 (现在在做 / 坐标 / 计划 / 教训 / 日志)   ← run.ts NOTES
+    commands.md                  命令手册索引 (正文 = commands/cli 的 fh help)     ← 派对手册 (MIT, NOTICE)
 
-| 来源 (旧项目 factorio-pilot / 第一版) | 去处 | 区 | 公开 | 备注 |
-|---|---|---|---|---|
-| `knowledge/facts.json` + `facts.md` (实验写入, 每条带出处和版本) | `knowledge/` | verified | 是 | 转成第 3 节的条目; `.md` 从 `.json` 生成 |
-| `knowledge/brief-points.md` (要点, 每条带 P-xxx / facts 出处) | `knowledge/` | verified | 是 | 简报生成时引用, 不再手写进简报 |
-| `knowledge/patterns/` 9 个主题 (心法、产线、物流、布局、防御、战斗、星球、进程) | `patterns/` | 用户看过的 verified, 其余 pending | 是 | 朋友基地的案例 `case-friend-nauvis.md` 只本机 |
-| `knowledge/lessons-seed.json` (核过的种子, 按 action / entity / item / recipe 键) | `lessons/` | verified | 是 | 已经是条目形状 |
-| `lab-data/play/lessons-learned.jsonl` + `knowledge/lessons-learned.jsonl` (模型各班自己记的) | `lessons/` | pending | 是 (去掉坐标) | 每条带班次编号 |
-| `knowledge/blueprints/` (社区 7 份带 LICENSE + 自己的 5 个积木带 feed 实测) | `blueprints/` | verified (实测过产量) | 社区的按各自许可, 自己的是 | `index.jsonl` 转成说明条目 |
-| `lab-data/datasets/` (社区 660 份 + 预览图 643 + 索引) | `data/training-private/blueprints/` | pending | 否 (许可没逐份查) | 程序合并读; 查清许可的才挪进公开 |
-| `lab-data/blueprints/`、`lab-data/friend-world/` (朋友的基地和世界导出) | `data/training-private/` | — | 否 | 要他点头才公开 |
-| `lab-data/play/team-tools-keep/` (模型写的跨班工具) | `tools/` | pending | 是 | 验证过有用的才 verified |
-| `src/play/brief-zh.md` (简报模板: 世界 / 规矩 / 工具三节) + 派对的命令手册 (已在 `commands/` 里) | `manuals/` | — | 是 (派对 MIT, NOTICE 署名) | 简报由程序按世界真实值生成, 不写死 |
-| `docs/research/` 3 篇 (派对、harness、FLE 的阅读笔记) | `knowledge/` | pending | 是 | 检索资料, 标出处和日期 |
-| 第一版 `I:\fn\knowledge\` (topics 24 篇、manuals 6、catalogs 10、journal 5、playbook) | 按 `I:\fn\context\v1-knowledge-inventory.md` 清点, 仓库没有的 → `knowledge/` 或 `patterns/` | 一律 pending | 是 | 第一版的说法可能是错的 (ops.md 有几处被实测推翻) |
-| 第一版 `I:\fn\data\` (作废的目标文件、界面导出)、`lab-data/gamedata`、`prototypes` (游戏导出数据) | 不进训练集 | — | — | 游戏数据归 `data/` 不上传; 作废的删 |
+data/training-private/           只本机 (不上传), 结构同 training/, 程序合并读
+  blueprints/pending/            社区蓝图数据集 660 份 + 预览图 + 索引 (许可没逐份查)   ← lab-data/datasets/
+  blueprints/friend/             朋友的基地蓝图和世界导出 (要他点头才公开)          ← lab-data/blueprints/, friend-world/
+  patterns/pending/case-friend-nauvis.md                                            ← knowledge/patterns/
+```
+不进训练集: 第一版 `I:\fn\data\` (作废的目标文件、界面导出, 删)、游戏导出数据 (归 `data/`)。大脑驱动的树见 `docs/brains.md`, 两者一起搬 (第二块)。
