@@ -94,9 +94,16 @@ export const BACKEND_OPTIONS: { value: BackendPref; label: string; note: string 
   { value: "rcon", label: "RCON + 模组", note: "服务器要开 RCON 并装我们的模组; 功能最全, 但会跑 Lua 命令, 这张图不能再拿成就" },
 ];
 /** 群 = 对话 = 世界 (控制接口 /api/groups): kind new 新地图 / save 接着存档 / server 联机 (能只读连接, 真模型的班还开不了); server 从 keys.json 读, 密码只说有没有 */
-export type Group = { id: string; name: string; createdAt: string; kind: "new" | "save" | "server" | "mine"; /** 我的账号: 这一局要模型做什么 */ goal?: string; /** false = 关和平, 虫子真的来打 */ peaceful?: boolean; /** 有虫子时开班先留几分钟和平 */ peacefulMinutes?: number; save?: string; server?: { address: string; hasPassword: boolean; rcon: string | null } | null; /** 联机服务器走哪条路; 没写 = 自动 */ backend?: BackendPref; /** 联机服务器: 没探过的区块也读 (默认关) */ revealUncharted?: boolean; seats: RosterSeat[]; minutes: number };
+/** 沙盘的群走哪条路: memory = 不装模组 (算成就, 和联机同一条路), mods = 装模组 + RCON 全性能 (后期不要成就时) */
+export type GroupRoute = "memory" | "mods";
+export const routeLabel = (r: GroupRoute | undefined): string => (r === "mods" ? "装模组全性能 (不算成就)" : "不装模组 (算成就)");
+export const ROUTE_OPTIONS: { value: GroupRoute; label: string; note: string }[] = [
+  { value: "memory", label: "不装模组 (算成就)", note: "读内存 + 像玩家一样操作, 每个动作真人速度; 和联机服务器同一条路, 这张图能拿成就。一班一个角色。" },
+  { value: "mods", label: "装模组全性能 (不算成就)", note: "沙盘装模组 + RCON, 贴蓝图瞬间建好, 能多角色; 这张图不算成就。后期不要成就时用。" },
+];
+export type Group = { id: string; name: string; createdAt: string; kind: "new" | "save" | "server" | "mine"; /** 沙盘群走哪条路; 没写 = memory */ route?: GroupRoute; /** 我的账号: 这一局要模型做什么 */ goal?: string; /** false = 关和平, 虫子真的来打 */ peaceful?: boolean; /** 有虫子时开班先留几分钟和平 */ peacefulMinutes?: number; save?: string; server?: { address: string; hasPassword: boolean; rcon: string | null } | null; /** 联机服务器走哪条路; 没写 = 自动 */ backend?: BackendPref; /** 联机服务器: 没探过的区块也读 (默认关) */ revealUncharted?: boolean; seats: RosterSeat[]; minutes: number };
 /** 新建对话填的 (地址和密码存 keys.json, 不进群文件) */
-export type NewGroupInput = { name: string; kind: Group["kind"]; save?: string; server?: { address: string; password?: string; rcon?: { address: string; password: string } }; minutes?: number; revealUncharted?: boolean; backend?: BackendPref; goal?: string };
+export type NewGroupInput = { name: string; kind: Group["kind"]; route?: GroupRoute; save?: string; server?: { address: string; password?: string; rcon?: { address: string; password: string } }; minutes?: number; revealUncharted?: boolean; backend?: BackendPref; goal?: string };
 export const groupKindLabel = (k: Group["kind"]): string => (k === "new" ? "新地图" : k === "save" ? "接着存档" : k === "mine" ? "我的账号" : "联机服务器");
 /** 用模型玩用户账号的状态 (GET /api/mk, src/play/mk-lib.ts mkView) */
 export type MkState = { current: { runId: string; group?: string; brain: string; model?: string; effort: string; minutes: number; startedAt: string; ended?: string; error?: string; result?: { before: number; after: number | null; fresh: string[] } } | null; running: boolean; stopping: boolean; lines: string[] };

@@ -10,8 +10,14 @@ import { cleanBackendPref, type BackendPref } from "../io/backend.ts";
 
 /** mine = 用户的账号玩本机自己的图 (mk-world.ts): 全程玩家操作, 能拿成就; 只有一席, 第 1 席选模型 */
 export type GroupKind = "new" | "save" | "server" | "mine";
+/** 沙盘的群 (new / save) 走哪条路 (docs/decisions.md 2026-11-08): memory = 不装模组 (读内存 + 玩家操作, core/run/online.ts; 算成就, 和联机同一条路), mods = 装模组 + RCON (第二版 run.ts; 后期不要成就时全性能) */
+export type GroupRoute = "memory" | "mods";
+export const GROUP_ROUTES: GroupRoute[] = ["memory", "mods"];
+export const routeLabel = (r: GroupRoute | undefined): string => (r === "mods" ? "装模组全性能 (不算成就)" : "不装模组 (算成就)");
 export type Group = {
   id: string; name: string; createdAt: string; kind: GroupKind;
+  /** kind = new / save: 走哪条路; 没写 = memory */
+  route?: GroupRoute;
   /** kind = save: 接着哪个存档开第一班 (.zip 路径; 之后的班接这个群自己最近一班的 end.zip) */
   save?: string;
   /** kind = server: 走哪条路 (没写 = 自动, src/io/backend.ts)。服务器地址和密码不在这里: 群文件进备份, 它们只在 keys.json (accounts.ts saveGroupServer) */
@@ -44,6 +50,7 @@ function cleanGroup(raw: unknown): Group | null {
   // 默认每班 180 分钟; 开班 = 连跑到停班, 换班不关游戏 (control.ts 起 shifts.ts --shifts 0 --live)
   const minutes = typeof r.minutes === "number" && Number.isFinite(r.minutes) ? Math.min(600, Math.max(5, Math.round(r.minutes))) : 180;
   return { id: r.id, name: r.name.trim().slice(0, GROUP_NAME_MAX), createdAt: typeof r.createdAt === "string" ? r.createdAt : "", kind,
+    ...((kind === "new" || kind === "save") && r.route === "mods" ? { route: "mods" as const } : {}),
     ...(kind === "save" && typeof r.save === "string" ? { save: r.save } : {}),
     ...(kind === "server" && cleanBackendPref(r.backend) !== "auto" ? { backend: cleanBackendPref(r.backend) } : {}),
     ...(kind === "server" && r.revealUncharted === true ? { revealUncharted: true } : {}),
@@ -69,7 +76,7 @@ function writeGroup(playDir: string, g: Group): Group {
 }
 
 /** 新建一个群 (界面 "新建对话"): 名字 1~40 字; 接存档要给存在的 .zip; 联机要有地址 (本次填的, 或本机已存的 savedServer), 但地址不写进群文件, 由调用方存 keys.json; 成员默认管理员 Claude Opus */
-export function createGroup(playDir: string, input: { name: string; kind: GroupKind; save?: string; server?: { address?: string }; savedServer?: boolean; seats?: unknown[]; minutes?: number; revealUncharted?: boolean; backend?: unknown; goal?: unknown }, now = new Date()): Group {
+export function createGroup(playDir: string, input: { name: string; kind: GroupKind; route?: unknown; save?: string; server?: { address?: string }; savedServer?: boolean; seats?: unknown[]; minutes?: number; revealUncharted?: boolean; backend?: unknown; goal?: unknown }, now = new Date()): Group {
   const name = (input.name ?? "").replace(/\s+/g, " ").trim();
   if (!name || name.length > GROUP_NAME_MAX) throw new Error(`群的名字要 1~${GROUP_NAME_MAX} 个字`);
   if (!["new", "save", "server", "mine"].includes(input.kind)) throw new Error("类型要是 new (新地图) / save (接着存档) / server (联机服务器) / mine (我的账号)");
@@ -81,7 +88,7 @@ export function createGroup(playDir: string, input: { name: string; kind: GroupK
   const seats = (input.seats ?? []).map(cleanSeat);
   if (seats.some((s) => !s)) throw new Error("成员里有不认识的家或模型名");
   const id = `g-${now.getTime().toString(36)}${Math.floor(Math.random() * 36).toString(36)}`;
-  const g: Group = { id, name, createdAt: now.toISOString(), kind: input.kind, seats: seats.length ? (input.kind === "mine" ? (seats as RosterSeat[]).slice(0, 1) : (seats as RosterSeat[])) : [{ brain: "claude", model: "opus" }],
+  const g: Group = { id, name, createdAt: now.toISOString(), kind: input.kind, ...((input.kind === "new" || input.kind === "save") && input.route === "mods" ? { route: "mods" as const } : {}), seats: seats.length ? (input.kind === "mine" ? (seats as RosterSeat[]).slice(0, 1) : (seats as RosterSeat[])) : [{ brain: "claude", model: "opus" }],
     minutes: typeof input.minutes === "number" && Number.isFinite(input.minutes) ? Math.min(600, Math.max(5, Math.round(input.minutes))) : 180,
     ...(input.kind === "save" ? { save: path.resolve(input.save!.trim()) } : {}), ...(input.kind === "server" ? { ...(cleanBackendPref(input.backend) !== "auto" ? { backend: cleanBackendPref(input.backend) } : {}), ...(input.revealUncharted === true ? { revealUncharted: true } : {}) } : {}),
     ...(input.kind === "mine" && typeof input.goal === "string" && input.goal.trim() ? { goal: input.goal.trim().slice(0, GROUP_GOAL_MAX) } : {}) };
@@ -183,18 +190,32 @@ export function groupStartProblem(g: Group, save: string | undefined, last: { ru
   return null;
 }
 
-/** 按群开一班的 run.ts 参数 (控制接口 POST /api/group/start 用): 派对配置, 世界 = 群, 名单 = 群成员, 接这个群最近一班 (或群里指定的存档) */
-export function startArgs(playDir: string, g: Group): string[] {
-  if (g.kind === "server") throw new Error("联机服务器的群还开不了班: 真模型没上过真服, 现在只能只读连接");
-  if (g.kind === "mine") throw new Error("我的账号的群不走班次, 走 mk-world.ts");
-  const args = ["--kit", "party", "--mod", "agent-harness-party", "--minutes", String(g.minutes), "--group", g.id, "--brains", rosterToBrains(g.seats)];
+/** 接哪个存档、接谁的笔记 (两条路共用): 这个群最近一班的 end.zip + 它的大脑目录; 没有班次时 kind = save 的群用它指定的存档 (是我们某一班的 end.zip 就连笔记一起) */
+function continueArgs(playDir: string, g: Group): string[] {
+  const args: string[] = [];
   const last = latestRunOfGroup(playDir, g.id);
   if (last) { args.push("--save", last.endZip); if (last.brainDir) args.push("--notes", last.brainDir); }
   else if (g.kind === "save" && g.save) {
     args.push("--save", g.save);
-    // 存档是我们某一班的 end.zip 时, 把那一班的大脑笔记也接过来
     const dir = path.dirname(g.save);
     try { const s = JSON.parse(fs.readFileSync(path.join(dir, "summary.json"), "utf8")); if (typeof s.brainDir === "string" && fs.existsSync(s.brainDir)) args.push("--notes", s.brainDir); } catch { /* 不是我们的班 */ }
   }
   return args;
+}
+
+/** 不装模组那条路 (route = memory, 默认) 的 core/run/online.ts 参数: 一班一个角色 (第 1 席), 沙盘新图或接存档, 世界 = 群 (--group 让它把记录写进 play/runs 并带 world.json) */
+export function onlineStartArgs(playDir: string, g: Group): string[] {
+  if (g.kind === "server") throw new Error("联机服务器的群还开不了班: 真模型没上过真服, 现在只能只读连接");
+  if (g.kind === "mine") throw new Error("我的账号的群不走班次, 走 mk-world.ts");
+  const seat = g.seats[0] ?? { brain: "claude", model: "opus" };
+  const args = ["--lab", "--minutes", String(g.minutes), "--group", g.id, "--brain", seat.brain, ...(seat.model ? ["--model", seat.model] : []), ...(seat.effort ? ["--effort", seat.effort] : [])];
+  return [...args, ...continueArgs(playDir, g)];
+}
+
+/** 装模组 + RCON 那条路 (route = mods) 的第二版 run.ts 参数 (控制接口经 shifts.ts 起): 派对配置, 世界 = 群, 名单 = 群成员, 接这个群最近一班 (或群里指定的存档) */
+export function startArgs(playDir: string, g: Group): string[] {
+  if (g.kind === "server") throw new Error("联机服务器的群还开不了班: 真模型没上过真服, 现在只能只读连接");
+  if (g.kind === "mine") throw new Error("我的账号的群不走班次, 走 mk-world.ts");
+  const args = ["--kit", "party", "--mod", "agent-harness-party", "--minutes", String(g.minutes), "--group", g.id, "--brains", rosterToBrains(g.seats)];
+  return [...args, ...continueArgs(playDir, g)];
 }

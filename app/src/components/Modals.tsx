@@ -2,7 +2,7 @@
 // 中转站 (New API, 2026-11-04) 填站点 + 令牌、选给大脑的模型; 读控制接口 /api/accounts)。
 import { useEffect, useState, type ReactNode } from "react";
 import { BASE } from "../api.ts";
-import { BACKEND_OPTIONS, MAX_SEATS, SOURCES, type BackendPref, type NewGroupInput, accountStatus, alertLine, fmtBalance, fmtNum, fmtPct, fmtSigned, groupKindLabel, lineupOptions, parseSeatValue, relayModelGroups, remainPct, resetIn, runLabel, seatLabel, seatValue, vendorOf, EFFORTS, verifyLine, type Account, type Alert, type Group, type KeyPatch, type ModelStat, type RosterSeat, type ShiftAgentStat, type VerifyStatus, type WorldInfo } from "../logic.ts";
+import { BACKEND_OPTIONS, MAX_SEATS, ROUTE_OPTIONS, SOURCES, type BackendPref, type GroupRoute, type NewGroupInput, accountStatus, alertLine, fmtBalance, fmtNum, fmtPct, fmtSigned, groupKindLabel, lineupOptions, parseSeatValue, relayModelGroups, remainPct, resetIn, runLabel, seatLabel, seatValue, vendorOf, EFFORTS, verifyLine, type Account, type Alert, type Group, type KeyPatch, type ModelStat, type RosterSeat, type ShiftAgentStat, type VerifyStatus, type WorldInfo } from "../logic.ts";
 /** 存密钥: key 不给 = 不改密钥 (中转站只改系统访问令牌时); extra 只有中转站用 */
 type SaveKey = (id: string, key?: string, extra?: KeyPatch) => Promise<void>;
 import { Avatar } from "./Avatar.tsx";
@@ -34,6 +34,7 @@ export function NewGroupModal({ worlds, onCreate, onClose }: { worlds: WorldInfo
   const [rconPassword, setRconPassword] = useState("");
   const [name, setName] = useState("");
   const [kind, setKind] = useState<Group["kind"]>("new");
+  const [route, setRoute] = useState<GroupRoute>("memory");
   const [save, setSave] = useState("");
   const [address, setAddress] = useState("");
   const [minutes, setMinutes] = useState("180");
@@ -42,7 +43,7 @@ export function NewGroupModal({ worlds, onCreate, onClose }: { worlds: WorldInfo
   const [error, setError] = useState<string | null>(null);
   const create = async () => {
     setBusy(true); setError(null);
-    try { await onCreate({ name, kind, ...(kind === "save" ? { save } : {}), ...(kind === "server" ? { server: { address, password, ...(backend !== "memory" && (rconAddress || rconPassword) ? { rcon: { address: rconAddress, password: rconPassword } } : {}) }, revealUncharted: reveal, backend } : {}), ...(kind === "mine" ? { goal } : {}), minutes: Number(minutes) || 180 }); onClose(); }
+    try { await onCreate({ name, kind, ...(kind === "new" || kind === "save" ? { route } : {}), ...(kind === "save" ? { save } : {}), ...(kind === "server" ? { server: { address, password, ...(backend !== "memory" && (rconAddress || rconPassword) ? { rcon: { address: rconAddress, password: rconPassword } } : {}) }, revealUncharted: reveal, backend } : {}), ...(kind === "mine" ? { goal } : {}), minutes: Number(minutes) || 180 }); onClose(); }
     catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   return (
@@ -54,6 +55,15 @@ export function NewGroupModal({ worlds, onCreate, onClose }: { worlds: WorldInfo
         <div className="segmented" role="radiogroup" aria-label="类型">
           {(["new", "save", "server", "mine"] as const).map((k) => <button key={k} role="radio" aria-checked={kind === k} className={kind === k ? "on" : undefined} onClick={() => setKind(k)}>{groupKindLabel(k)}</button>)}
         </div>
+        {kind === "new" || kind === "save" ? (
+          <div style={{ marginTop: 8 }} data-group-route>
+            <div className="settings-title">走哪条路</div>
+            <div className="segmented" role="radiogroup" aria-label="路线">
+              {ROUTE_OPTIONS.map((o) => <button key={o.value} role="radio" aria-checked={route === o.value} className={route === o.value ? "on" : undefined} onClick={() => setRoute(o.value)}>{o.label}</button>)}
+            </div>
+            <div className="settings-note">{ROUTE_OPTIONS.find((o) => o.value === route)?.note}</div>
+          </div>
+        ) : null}
         {kind === "save" ? (
           <div style={{ marginTop: 8 }}>
             <div className="settings-note">存档 (.zip) 的路径; 选现有的一条存档链 = 接它最近一班的结束存档:</div>

@@ -58,7 +58,7 @@ import { parseArgs } from "node:util";
 import { factorioExe, findFactorioDir, labRoot, REPO } from "../lab/gamedir.ts";
 import { mkArgs, mkRunning, mkStop, mkView, readMkCurrent, steamClientRunning } from "./mk-lib.ts";
 import { spawn } from "node:child_process";
-import { connectArgs, createGroup, groupsDir, readGroup, readGroups, saveGroupSeats, setBackend, setGroupGoal, setRevealUncharted, startArgs, type Group } from "./groups.ts";
+import { connectArgs, createGroup, groupsDir, onlineStartArgs, readGroup, readGroups, saveGroupSeats, setBackend, setGroupGoal, setRevealUncharted, startArgs, type Group } from "./groups.ts";
 import { cleanServerConn, readServer, serverView } from "./online-lib.ts";
 import { RconClient } from "../lab/rcon.ts";
 import { luaString } from "./harness.ts";
@@ -285,7 +285,7 @@ const server = http.createServer(async (req, res) => {
         // 地址和密码进 keys.json, 不进群文件 (群文件进备份): 先核对再建群, 不留半截
         const saved = readServer(defaultKeysFile());
         const conn = b.kind === "server" ? cleanServerConn(b.server, saved) : null;
-        const g = createGroup(PLAY, { name: String(b.name ?? ""), kind: b.kind, save, server: conn ? { address: conn.address } : undefined, savedServer: !!saved, seats: Array.isArray(b.seats) ? b.seats : undefined, minutes: typeof b.minutes === "number" ? b.minutes : undefined, revealUncharted: b.revealUncharted === true, backend: b.backend, goal: b.goal });
+        const g = createGroup(PLAY, { name: String(b.name ?? ""), kind: b.kind, route: b.route, save, server: conn ? { address: conn.address } : undefined, savedServer: !!saved, seats: Array.isArray(b.seats) ? b.seats : undefined, minutes: typeof b.minutes === "number" ? b.minutes : undefined, revealUncharted: b.revealUncharted === true, backend: b.backend, goal: b.goal });
         if (conn) saveGroupServer(defaultKeysFile(), g.id, conn);
         return send(200, { group: groupView(g) });
       } catch (e) { return send(400, { error: (e as Error).message }); }
@@ -363,15 +363,18 @@ const server = http.createServer(async (req, res) => {
       }
       const cur = currentRun(PLAY);
       if (cur) { const st = runStatus(cur); if (!st.ended && !st.interrupted) return send(400, { error: `有一班在跑 (${path.basename(cur)}), 先停班再开` }); }
+      // 开班时按群的路线选主循环 (docs/decisions.md 2026-11-08): memory (默认) = 不装模组, core/run/online.ts 一班一个角色, 到点收工存 end.zip;
+      // mods = 装模组 + RCON 全性能, 第二版 run.ts 经 shifts.ts 连跑到停班 (--shifts 0 --live, 每班到点只换大脑, 服务器和窗口留着)
+      const route = g.route ?? "memory";
       let args: string[];
-      try { args = startArgs(PLAY, g); } catch (e) { return send(400, { error: (e as Error).message }); }
-      // 脱离控制接口跑 (关界面不影响这一班); 输出写进群目录的日志。
-      // : 走 shifts.ts 连跑到停班 (--shifts 0 --live), 每班到点只换大脑, 服务器和窗口留着; 界面"停班" (STOP) 才关
+      try { args = route === "mods" ? startArgs(PLAY, g) : onlineStartArgs(PLAY, g); } catch (e) { return send(400, { error: (e as Error).message }); }
+      const script = route === "mods" ? [path.join(REPO, "src", "play", "shifts.ts"), "--shifts", "0", "--live"] : [path.join(REPO, "core", "run", "online.ts")];
+      // 脱离控制接口跑 (关界面不影响这一班); 输出写进群目录的日志; 界面"停班" (记录目录放 STOP) 才关
       const logFile = path.join(PLAY, "groups", `${g.id}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.log`);
       const fd = fs.openSync(logFile, "a");
-      const c = spawn(process.execPath, ["--env-file-if-exists=" + path.join(REPO, ".env"), path.join(REPO, "src", "play", "shifts.ts"), "--shifts", "0", "--live", ...args], { cwd: REPO, detached: true, stdio: ["ignore", fd, fd], windowsHide: true, env: { ...process.env } });
+      const c = spawn(process.execPath, ["--env-file-if-exists=" + path.join(REPO, ".env"), ...script, ...args], { cwd: REPO, detached: true, stdio: ["ignore", fd, fd], windowsHide: true, env: { ...process.env } });
       c.unref();
-      return send(200, { started: true, group: g.id, args, log: logFile });
+      return send(200, { started: true, group: g.id, route, args, log: logFile });
     }
     if (req.method === "POST" && u.pathname === "/api/hide") {
       const b = await body(req);

@@ -47,6 +47,8 @@ import { tellModel } from "./tell.ts";
 import { HumanChatBridge, isUrgent, mentioned, tellText } from "./human-chat.ts";
 import { pointsMd } from "./training.ts";
 import { writeSummary } from "../records/summary.ts";
+import { groupWorld, readGroup } from "../../src/play/groups.ts";
+import { writeWorld } from "../../src/play/worlds.ts";
 
 const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
@@ -54,7 +56,7 @@ const { values } = parseArgs({ options: {
   minutes: { type: "string", default: "5" }, "own-world": { type: "boolean", default: false },
   name: { type: "string" }, "steam-pid": { type: "string" },
   keys: { type: "string" }, backend: { type: "string" }, reveal: { type: "boolean", default: false }, lua: { type: "boolean", default: false },
-  "run-id": { type: "string" }, "goal-file": { type: "string" }, notes: { type: "string" },
+  "run-id": { type: "string" }, "goal-file": { type: "string" }, notes: { type: "string" }, group: { type: "string" },
 } });
 const toServer = values.server;
 if (values.lab === toServer) { console.error("要 --lab (本机沙盘试) 或 --server (联机服务器), 二选一"); process.exit(2); }
@@ -94,11 +96,15 @@ let supTimer: NodeJS.Timeout | null = null, chatTimer: NodeJS.Timeout | null = n
 let urgentNow = false;
 
 const runId = values["run-id"] ?? new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-const runDir = path.join(dataRoot(), "play", "online", runId);
+// --group <群 id>: 界面的群点"开班"走这里 (src/play/control.ts, 路线 memory); 记录放进 play/runs/<runId> 并带 world.json, 界面按世界列班次、接力找上一班 (src/play/groups.ts latestRunOfGroup)
+const group = values.group ? readGroup(path.join(dataRoot(), "play"), values.group) : null;
+if (values.group && !group) { console.error(`没有这个群: ${values.group}`); process.exit(2); }
+const runDir = path.join(dataRoot(), "play", group ? "runs" : "online", runId);
 const brainRoot = process.env.BRAIN_DIR ?? path.join(os.homedir(), "factorio-ai-brain");
 const dir = path.join(brainRoot, `online-${runId}`, "a");
 fs.mkdirSync(runDir, { recursive: true });
 fs.mkdirSync(dir, { recursive: true });
+if (group) writeWorld(runDir, groupWorld(group));
 // --notes 上一班的角色目录 (或 notes.md 文件): 笔记一班班往下传; 这班的角色目录已有 notes.md 就不覆盖
 if (values.notes) {
   const src = fs.existsSync(values.notes) && fs.statSync(values.notes).isDirectory() ? path.join(values.notes, "notes.md") : values.notes;
@@ -441,6 +447,8 @@ try {
       const r = writeSummary({ runDir, dir, runId, brain, model, minutes: Number(values.minutes), why, supervisor: supervisor?.stats ?? {}, lessons: delivery ? { ...delivery.stats(), collected } : null, zh });
       log(`复盘: ${r.lines.slice(0, 2).join(" | ")}; 下一班先修 ${r.fixes.length} 条 (review.md)`);
     } catch (e) { log(`总结没写成: ${(e as Error).message.slice(0, 160)}`); }
+    // 群的接力 (src/play/groups.ts latestRunOfGroup) 从 summary.json 读上一班的大脑目录和名单 (全是 none 的验证班不进接力): 补上这两个字段
+    try { const f = path.join(runDir, "summary.json"); const s = JSON.parse(fs.readFileSync(f, "utf8")) as Record<string, unknown>; fs.writeFileSync(f, JSON.stringify({ ...s, brainDir: dir, lineup: [{ brain, model }] }, null, 1)); } catch { /* 总结没写成 */ }
   }
   if (broker) {
     log(`收工: ${why}; 走哪条路 ${JSON.stringify(Object.fromEntries(Object.entries(broker.stats.byAction).map(([k, v]) => [k, `${v.route}×${v.n} ${Math.round(v.ms / Math.max(v.n, 1))} 毫秒`])))}${delivery ? `; 教训带出 ${delivery.stats().shown} 次 (${delivery.stats().distinct} 条)` : ""}`);
