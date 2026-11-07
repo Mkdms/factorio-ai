@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "主窗口: 核心权限 + 换标题栏的亮暗 (外观设置); 页面用 fetch 直接连本机控制接口, 不走 Rust; 窗口先隐藏、页面画好再显示 (不先白一下)",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-theme",
+    "core:window:allow-show"
+  ]
+}

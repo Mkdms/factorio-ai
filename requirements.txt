@@ -1,0 +1,3 @@
+# Python 依赖 (npm run setup 装进 lab-data/venv)
+factorio-draftsman==4.0.1
+lupa==2.8

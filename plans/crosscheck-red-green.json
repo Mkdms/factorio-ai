@@ -1,0 +1,16 @@
+{
+  "_": "计算器对照用 (npm run calc:crosscheck): 红瓶 30 + 绿瓶 30 每分钟, 组装机 2 型, 电炉; 矿石从外面进",
+  "targets": { "automation-science-pack": 30, "logistic-science-pack": 30 },
+  "recipes": {
+    "automation-science-pack": { "machine": "assembling-machine-2" },
+    "logistic-science-pack": { "machine": "assembling-machine-2" },
+    "inserter": { "machine": "assembling-machine-2" },
+    "transport-belt": { "machine": "assembling-machine-2" },
+    "electronic-circuit": { "machine": "assembling-machine-2" },
+    "copper-cable": { "machine": "assembling-machine-2" },
+    "iron-gear-wheel": { "machine": "assembling-machine-2" },
+    "iron-plate": { "machine": "electric-furnace" },
+    "copper-plate": { "machine": "electric-furnace" }
+  },
+  "imports": ["iron-ore", "copper-ore"]
+}

@@ -37,8 +37,9 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 
 | `../../src/` (calc / blueprint / play / dataset / lab / io) | 第二版整目录搬来的 `./calc` `./bp` `./plan` (docs/brains.md 第 ④ 步; 文件名路径照旧, 几个转接文件指向新项目的家) |
 
-## 还没搬 (旧项目有; 顺序见 docs/brains.md)
-真人的话没回就催 (旧 replies.ts)、换班不关游戏、看门狗、死亡计数、多角色 (team.md、按负责人发)、群和界面 (含账号页的中转站"核实全部模型"队列, 旧 relay-verify.ts VerifyJob)。
+## 第二版剩下的整目录搬来了, 但没接进这条路 (2026-11-08)
+用户要求整目录原样复制、不改名: 第二版 `src/play/` 其余 46 个文件 (界面控制接口 control.ts、群 groups.ts、看门狗 watchdog.ts、换班 shifts.ts / live-shift.ts / shift-recover.ts、多角色 roster*.ts、账号页 accounts.ts、统计 stats.ts、催回话 replies.ts、第二版主循环 run.ts 等)、`src/lab` `src/io` `src/dataset` `src/search` `src/verify`、`experiments/` (第二版沙盘实验)、`tools/`、`app/` (Tauri 界面)、`docs/v2/` (第二版文档)、`plans/`、第二版的 48 个测试 (重名的 test/brains.test.ts 存成 v2-brains.test.ts; 第二版沙盘测试在 test/sandbox-v2/, 不在 `npm run test:sandbox` 的范围) 都在本项目里, 文件名路径照旧; 第二版里已被前几块搬走改名的模块用 `src/{play,lab,io}/*.ts` 里几行的转接文件指回新家 (shell / science / lessons / permit / model-name / viewer / running / backend / relay-route …)。全量单元 479/479。
+**没接**: 这些文件围绕第二版的主循环 run.ts (装模组 + RCON 那条路) 写, 界面的控制接口起的是 run.ts 不是 core/run/online.ts; 第二版沙盘实验要第二版的 io-lab 模组 (没搬, mods/ 留在旧项目)。要用界面 / 群 / 看门狗 / 换班, 得把它们改成起 online.ts, 这是下一块的活。
 
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。

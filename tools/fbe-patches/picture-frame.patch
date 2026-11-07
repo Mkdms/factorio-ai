@@ -1,0 +1,29 @@
+diff --git a/packages/editor/src/Editor.ts b/packages/editor/src/Editor.ts
+index f6237ec..a8de4f8 100644
+--- a/packages/editor/src/Editor.ts
++++ b/packages/editor/src/Editor.ts
+@@ -553,6 +553,12 @@ export class Editor {
+         return G.BPC.getPicture(resolution)
+     }
+ 
++    /** The frame `getPicture` renders, in container pixels (32 per tile at 1x). Local patch for factorio-pilot's render tool. */
++    public get pictureFrame(): { x: number; y: number; width: number; height: number } {
++        const r = G.BPC.getBlueprintBounds()
++        return { x: r.x, y: r.y, width: r.width, height: r.height }
++    }
++
+     public haveBlueprint(): boolean {
+         return !G.bp.isEmpty()
+     }
+diff --git a/packages/website/src/index.ts b/packages/website/src/index.ts
+index e21cdf7..3a36cf5 100644
+--- a/packages/website/src/index.ts
++++ b/packages/website/src/index.ts
+@@ -683,6 +683,7 @@ const testApi = {
+      * download. See tests/image-export.spec.ts.
+      */
+     getPicture: (resolution?: number) => editor.getPicture(resolution),
++    pictureFrame: () => editor.pictureFrame,
+     /*
+         The interaction mode the canvas is in, by name. The first thing any spec
+         driving real pointer or keyboard input needs to assert on (issue #44).

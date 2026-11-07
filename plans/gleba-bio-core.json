@@ -1,0 +1,11 @@
+{
+  "note": "句芒最小生物核心: 进玉玛果和果冻果, 出生物结晶; 营养素由生物结晶自给 (M3 完成标准用)",
+  "targets": { "bioflux": 120 },
+  "recipes": {
+    "yumako-processing": { "machine": "biochamber" },
+    "jellynut-processing": { "machine": "biochamber" },
+    "bioflux": { "machine": "biochamber" },
+    "nutrients-from-bioflux": { "machine": "biochamber" }
+  },
+  "imports": ["yumako", "jellynut"]
+}

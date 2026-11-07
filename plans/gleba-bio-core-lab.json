@@ -1,0 +1,12 @@
+{
+  "note": "沙盘验收用的生物核心: 玉玛果、果冻果各一台组装机2型加工, 直塞一台生物室做生物结晶, 一台生物室做营养素自给; 求生物结晶最大净产出",
+  "targets": {},
+  "recipes": {
+    "yumako-processing": { "machine": "assembling-machine-2", "count": 1 },
+    "jellynut-processing": { "machine": "assembling-machine-2", "count": 1 },
+    "bioflux": { "machine": "biochamber", "count": 1 },
+    "nutrients-from-bioflux": { "machine": "biochamber", "count": 1 }
+  },
+  "imports": ["yumako", "jellynut"],
+  "maximize": "bioflux"
+}

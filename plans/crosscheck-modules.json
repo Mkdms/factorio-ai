@@ -1,0 +1,12 @@
+{
+  "_": "计算器对照用 (npm run calc:crosscheck): 插件、分享塔、机器品质各自单独一条线, 两家算法最可能不同的地方。红瓶 120/分钟; 铁板从外面进",
+  "targets": { "automation-science-pack": 120, "electronic-circuit": 60 },
+  "recipes": {
+    "automation-science-pack": { "machine": "assembling-machine-3", "modules": ["productivity-module-2", "productivity-module-2", "productivity-module-2", "productivity-module-2"], "beacons": { "name": "beacon", "count": 8, "modules": ["speed-module-3", "speed-module-3"] } },
+    "iron-gear-wheel": { "machine": "assembling-machine-2", "quality": "rare", "modules": ["speed-module"] },
+    "copper-plate": { "machine": "electric-furnace", "modules": ["productivity-module", "productivity-module"] },
+    "copper-cable": { "machine": "assembling-machine-2", "beacons": { "name": "beacon", "count": 2, "modules": ["speed-module-2", "speed-module-2"] } },
+    "electronic-circuit": { "machine": "assembling-machine-2", "modules": ["speed-module-3@legendary", "quality-module-2"] }
+  },
+  "imports": ["iron-plate", "copper-ore"]
+}

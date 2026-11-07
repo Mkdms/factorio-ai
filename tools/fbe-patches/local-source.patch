@@ -1,0 +1,21 @@
+diff --git a/packages/editor/src/core/bpString.ts b/packages/editor/src/core/bpString.ts
+index 288cdd2..d55211b 100644
+--- a/packages/editor/src/core/bpString.ts
++++ b/packages/editor/src/core/bpString.ts
+@@ -513,8 +513,15 @@ function getBlueprintOrBookFromSource(source: string | undefined): Promise<Bluep
+                 const target = new URL(url)
+                 target.hostname = target.hostname.replace(/\.+$/, '')
+                 const github = target.hostname === 'api.github.com'
++                // Local patch for factorio-pilot: a file on this same host (public/local-bp/) is fetched directly with the page's own
++                // scheme (the source was rewritten to https above), never sent to the public proxy.
++                const sameHost = globalThis.location !== undefined && target.host === globalThis.location.host
+                 return fetch(
+-                    github ? target.href : `/corsproxy?url=${encodeURIComponent(url)}`
++                    sameHost
++                        ? `${globalThis.location.origin}${target.pathname}${target.search}`
++                        : github
++                          ? target.href
++                          : `/corsproxy?url=${encodeURIComponent(url)}`
+                 ).then(response => {
+                     if (response.ok) return response
+                     if (
