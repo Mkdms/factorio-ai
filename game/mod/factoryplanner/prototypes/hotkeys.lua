@@ -1,0 +1,36 @@
+---@diagnostic disable
+
+local order_string = "abcdefghijklmnopqrstuvwxyz"
+local order_counter = 0
+
+local function add_hotkey(name, sequence, alternate, consuming, linked)
+    order_counter = order_counter + 1
+    data:extend{{
+        type = "custom-input",
+        name = "fp_" .. name,
+        key_sequence = sequence,
+        alternative_key_sequence = alternate,
+        consuming = consuming,
+        linked_game_control = linked,
+        order = order_string:sub(order_counter, order_counter)
+    }}
+end
+
+add_hotkey("toggle_interface", "CONTROL + R", nil, "game-only", nil)
+add_hotkey("toggle_compact_view", "CONTROL + SHIFT + R", nil, "game-only", nil)
+add_hotkey("toggle_pause", "CONTROL + P", nil, "none", nil)
+add_hotkey("refresh_production", "R", nil, "none", nil)
+add_hotkey("up_floor", "ALT + UP", nil, "none", nil)
+add_hotkey("top_floor", "SHIFT + ALT + UP", nil, "none", nil)
+add_hotkey("navigate_back", "SHIFT + ALT + LEFT", nil, "none", nil)
+add_hotkey("navigate_forward", "SHIFT + ALT + RIGHT", nil, "none", nil)
+add_hotkey("toggle_fold_out_subfloors", "SHIFT + F", nil, "none", nil)
+add_hotkey("confirm_dialog", "RETURN", "KP_ENTER", "none", nil)
+add_hotkey("toggle_calculator", "CONTROL + SHIFT + C", nil, "game-only", nil)
+add_hotkey("delete", "BACKSPACE", "DELETE", "none", nil)
+add_hotkey("confirm_gui", "", nil, nil, "confirm-gui")
+add_hotkey("focus_searchfield", "", nil, nil, "focus-search")
+add_hotkey("put_into_combinator", "C", nil, "none", nil)
+add_hotkey("pipette", "", nil, "none", "pipette")
+add_hotkey("move_up", "UP", nil, "none", nil)
+add_hotkey("move_down", "DOWN", nil, "none", nil)

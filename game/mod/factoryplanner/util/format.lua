@@ -1,0 +1,168 @@
+local _format = {}
+
+-- Formats given number to given number of significant digits
+---@param number number Non-negative
+---@param precision integer
+---@return string formatted_number
+function _format.number(number, precision)
+    if number == 0 then return "0" end
+    if number < 10 ^ -precision then
+        return "≤" .. ("%." .. precision .. "g"):format(10 ^ -precision)
+    end
+    if number >= 1e15 then
+        -- Past 2^53 doubles can't represent consecutive integers, and %d rejects them entirely
+        return ("%." .. precision .. "g"):format(number)
+    end
+    if number >= 10 ^ precision then
+        return ("%d"):format(number)  -- %g uses scientific notation here, avoid it
+    end
+    if number < 1 then
+        -- log10 gives -(leading zero count), reducing sig figs to keep display width consistent with numbers >= 1
+        precision = precision + math.floor(math.log(number, 10))
+    end
+    return ("%." .. precision .. "g"):format(number)
+end
+
+local prefixes = {"", "kilo", "mega", "giga", "tera", "peta", "exa", "zetta", "yotta"}
+local units = {
+    ["W"] = {"fp.unit_watt"},
+    ["E/m"] = {"", {"fp.unit_emissions"}, "/", {"fp.unit_minute"}}
+}
+
+-- Returns string representing the given power
+---@param value number
+---@param unit "W" | "E/m"
+---@param precision integer
+---@return LocalisedString formatted_number
+---@return number display_value
+function _format.SI_value(value, unit, precision)
+    local sign = (value >= 0) and "" or "-"
+    value = math.abs(value)
+
+    local scale_counter = 0
+    if value > 0 then
+        scale_counter = math.max(0, math.floor(math.log(value, 10) / 3))  -- /3 because SI prefixes are powers of 1000
+        -- Values that round to 1000 would produce scientific notation in %g
+        if value / (1000 ^ scale_counter) > 999 then scale_counter = scale_counter + 1 end
+        -- Beyond the largest prefix, drop to the base unit, which formats as scientific notation
+        if scale_counter > #prefixes - 1 then scale_counter = 0 end
+    end
+
+    local scale = 1000 ^ scale_counter
+    value = value / scale
+    local formatted_number = lib.format.number(value, precision)
+    local display_value = (tonumber(formatted_number) or value) * scale
+    if sign == "-" then display_value = -display_value end
+    local prefix = scale_counter == 0 and "" or {"fp.prefix_" .. prefixes[scale_counter + 1]}
+    return {"", sign .. formatted_number .. " ", prefix, units[unit]}, display_value
+end
+
+
+-- Factorio truncates (rather than rounds) numbers on item buttons to fit the available space,
+-- so a value like 1.09 displays as "1.0" instead of "1.1". To compensate, we pre-ceil the number
+-- at the same precision Factorio will use, so that truncation produces the correct rounded result.
+--
+-- Factorio fits each number into ~4 characters including any SI suffix (k, M, G, T, P, E, ...).
+-- This means:
+--   no suffix:   1 decimal for values under 100 (e.g. "23.4"), 0 decimals from 100-999 (e.g. "234")
+--   with suffix: 1 decimal for values under 10  (e.g. "2.3k"), 0 decimals from 10 up   (e.g. "23k")
+-- The no-suffix range gets a wider threshold (100 vs 10) because the absent suffix character
+-- leaves room for an extra digit before decimals have to be dropped.
+--
+-- The 1e-9 epsilon prevents float representation noise (e.g. 2.3 stored as 2.2999...99) from
+-- spuriously bumping a clean value up to the next display increment.
+---@param value number
+---@return number
+function _format.button_number(value)
+    if value <= 0 then return value end
+
+    local tier = math.max(0, math.floor(math.log(value, 10) / 3))
+    local scale = 10 ^ (3 * tier)
+    local scaled = value / scale
+    local threshold = (tier == 0) and 100 or 10
+    local factor = (scaled < threshold) and 10 or 1
+    return math.ceil(scaled * factor - 1e-9) / factor * scale
+end
+
+
+---@param value number
+---@return number button_number
+---@return string tooltip_number
+function _format.amount(value)
+    local tooltip_number = _format.number(value, MAGIC_NUMBERS.formatting_precision)
+    -- Tiny values formatted with ≤ fall back to the raw amount
+    local display_amount = tonumber(tooltip_number) or value
+    return _format.button_number(display_amount), tooltip_number
+end
+
+
+---@param name string
+---@param amount number
+---@return number button_number
+---@return LocalisedString tooltip_line
+function _format.special_amount(name, amount)
+    local unit = lib.is_special_power_item(name) and "W" or "E/m"
+    local tooltip, display_amount = _format.SI_value(amount, unit, MAGIC_NUMBERS.formatting_precision)
+    return _format.button_number(display_amount), tooltip
+end
+
+
+---@param amount number
+---@param ceil_number boolean
+---@return number? button_number
+---@return LocalisedString tooltip_line
+function _format.machine_amount(amount, ceil_number)
+    if amount == 0 then return nil, {""} end
+
+    local button_number, tooltip_number = _format.amount(amount)
+    if ceil_number then button_number = math.ceil(button_number) end
+
+    local plural_parameter = (tooltip_number == "1") and 1 or 2
+    local tooltip_line = {"", "\n", tooltip_number, " ", {"fp.pl_machine", plural_parameter}}
+
+    return button_number, tooltip_line
+end
+
+
+---@param ticks number
+---@return LocalisedString formatted_time
+function _format.time(ticks)
+    if ticks == 0 then return {"fp.none"} end
+    local seconds = ticks / 60
+
+    local minutes = math.floor(seconds / 60)
+    local minutes_string = (minutes > 0) and {"fp.time_minutes", minutes, minutes} or ""
+
+    seconds = math.floor(seconds - (60 * minutes))
+    local seconds_string = (seconds > 0) and {"fp.time_seconds", seconds, seconds} or ""
+
+    return (seconds_string ~= "" and minutes_string ~= "")
+        and {"", minutes_string, ", ", seconds_string}
+        or {"", minutes_string, seconds_string}  -- one or none will be non-""
+  end
+
+-- Fills up the localised table in a smart way to avoid the limit of 20 strings per level
+-- To make it stateless, it needs its return values passed back as arguments
+-- Uses state to avoid needing to call table_size() because that function is slow
+---@param string_to_insert LocalisedString
+---@param current_table LocalisedString
+---@param next_index integer
+---@return LocalisedString, integer
+function _format.build_localised_string(string_to_insert, current_table, next_index)
+    current_table = current_table or {""}
+    next_index = next_index or 2
+
+    if next_index == 20 then  -- go a level deeper if this one is almost full
+        local new_table = {""}
+        current_table[next_index] = new_table
+        current_table = new_table
+        next_index = 2
+    end
+    current_table[next_index] = string_to_insert
+    next_index = next_index + 1
+
+    return current_table, next_index
+end
+
+
+return _format

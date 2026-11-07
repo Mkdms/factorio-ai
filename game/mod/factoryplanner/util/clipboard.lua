@@ -1,0 +1,112 @@
+if helpers.stage ~= "runtime" then return {} end
+
+local unpackers = {
+    FactoryItem = require("backend.data.FactoryItem").unpack,
+    Floor = require("backend.data.Floor").unpack,
+    Line = require("backend.data.Line").unpack,
+    Machine = require("backend.data.Machine").unpack,
+    Beacon = require("backend.data.Beacon").unpack,
+    Fuel = require("backend.data.Fuel").unpack,
+    Module = require("backend.data.Module").unpack
+}
+
+local _clipboard = {}
+
+---@alias CopyableObject FactoryItem | Floor | Line | Machine | Beacon | Module | Fuel | SimpleItem
+---@alias CopyableObjectClass "FactoryItem" | "Floor" | "Line" | "Machine" | "Beacon" | "Module" | "Fuel" | "SimpleItem"
+---@alias CopyableObjectParent Factory | Floor | Line | ModuleSet | Machine
+
+---@class ClipboardEntry
+---@field class CopyableObjectClass
+---@field packed_object PackedObject
+---@field parent CopyableObjectParent?
+
+-- Copies the given object into the player's clipboard as a packed object
+---@param player LuaPlayer
+---@param object CopyableObject
+---@param cut boolean? Whether the object is about to be removed
+function _clipboard.copy(player, object, cut)
+    local player_table = lib.globals.player_table(player)
+    player_table.clipboard = {
+        class = object.class,
+        packed_object = (object.pack ~= nil) and object:pack(true) or object,
+        parent = object.parent  -- just used for unpacking, will remain a reference even if deleted elsewhere
+    }  ---@as ClipboardEntry
+
+    local message = (cut) and "fp.cut_into_clipboard" or "fp.copied_into_clipboard"
+    lib.cursor.create_flying_text(player, {message, {"fp.pu_" .. object.class:lower(), 1}})
+    lib.gui.run_refresh(player, "paste_button")
+end
+
+-- Tries pasting the player's clipboard content onto the given target
+---@param player LuaPlayer
+---@param target CopyableObject
+---@return boolean success
+function _clipboard.paste(player, target)
+    local clip = lib.globals.player_table(player).clipboard
+
+    if clip == nil then
+        lib.cursor.create_flying_text(player, {"fp.clipboard_empty"})
+        return false
+    else
+        local clone
+        if clip.parent then  -- only real objects have parents
+            ---@diagnostic disable-next-line: param-type-mismatch
+            clone = unpackers[clip.class](clip.packed_object, clip.parent)  ---@as CopyableObject
+            ---@cast clone -SimpleItem
+            clone:validate(player)
+        else
+            clone = lib.flib.shallow_copy(clip.packed_object)  ---@as SimpleItem
+            clone.proto = prototyper.util.validate_prototype_object(clone.proto, "type")  ---@as FPItemPrototype
+        end
+        local success, error = target:paste(clone, player)
+
+        if success then  -- objects in the clipboard are always valid since it resets on_config_changed
+            local message = {"fp.pasted_from_clipboard", {"fp.pu_" .. clip.class--[[@as string]]:lower(), 1}}
+            lib.cursor.create_flying_text(player, message--[[@as LocalisedString]])
+
+            solver.update(player, nil, true)  -- lines can be pasted in subfloors
+            lib.gui.run_refresh(player, "production")
+        else
+            local object_lower = {"fp.pl_" .. clip.class--[[@as string]]:lower(), 1}
+            local target_lower = {"fp.pl_" .. target.class:lower(), 1}
+
+            if error == "incompatible_class" then
+                lib.cursor.create_flying_text(player, {"fp.clipboard_incompatible_class", object_lower, target_lower})
+            elseif error == "incompatible" then
+                lib.cursor.create_flying_text(player, {"fp.clipboard_incompatible", object_lower})
+            elseif error == "already_exists_as_product" or error == "already_exists_as_ingredient" then
+                local category = (error == "already_exists_as_product") and "product" or "ingredient"
+                lib.cursor.create_flying_text(player, {"fp.item_already_defined_" .. category})
+            elseif error == "no_empty_slots" then
+                lib.cursor.create_flying_text(player, {"fp.clipboard_no_empty_slots"})
+            elseif error == "temperature_not_set" then
+                lib.cursor.create_flying_text(player, {"fp.clipboard_temperature_not_set"})
+            end
+        end
+        return success
+    end
+end
+
+---@param player LuaPlayer
+---@param dummy FactoryItem | Line
+---@param parent Factory | Floor
+function _clipboard.dummy_paste(player, dummy, parent)
+    ---@diagnostic disable-next-line: param-type-mismatch
+    parent:insert(dummy)
+    if not _clipboard.paste(player, dummy) then
+        -- Prevent collapsing the floor on `Floor:remove()`
+        ---@diagnostic disable-next-line: param-type-mismatch
+        parent:remove(dummy, true)
+    end
+end
+
+---@param player LuaPlayer
+---@param classes table<CopyableObjectClass, boolean>
+---@return boolean present
+function _clipboard.check_classes(player, classes)
+    local clip = lib.globals.player_table(player).clipboard
+    return (clip ~= nil and classes[clip.class] == true)
+end
+
+return _clipboard
