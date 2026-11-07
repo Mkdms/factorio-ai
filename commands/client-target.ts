@@ -32,7 +32,7 @@ export class ClientTarget implements IoTarget {
   }
 
   bytes() { return this.mcp.bytesIn; }
-  async start() { await this.mcp.start(); }
+  async start(log?: (s: string) => void) { await this.mcp.start(log); }
   async stop() { await this.mcp.stop(); }
 
   async #must(name: string, args: Record<string, unknown>, watchdogMs?: number) {

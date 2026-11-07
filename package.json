@@ -17,6 +17,7 @@
     "sandbox:demo": "node --env-file-if-exists=.env game/sandbox/cli.ts demo",
     "memory:setup": "node --env-file-if-exists=.env game/memory/setup.ts",
     "offgame:setup": "node --env-file-if-exists=.env game/offgame/setup.ts",
-    "client:setup": "node --env-file-if-exists=.env game/client/setup.ts"
+    "client:setup": "node --env-file-if-exists=.env game/client/setup.ts",
+    "run:online": "node --env-file-if-exists=.env core/run/online.ts"
   }
 }

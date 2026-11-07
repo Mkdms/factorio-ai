@@ -79,6 +79,8 @@ export interface ServerOptions {
   serverSettings?: Record<string, unknown>;
   /** 沙盘模组之外还要装的我们的模组 (game/mod/ 下); 观看窗口自动装同一套 */
   mods?: string[];
+  /** 干净的服务器: 一个我们的模组都不装, 当联机服务器的替身 (模型那条路不装模组)。没有 rpc / exec / UDP; 测试要真值用 rcon.exec 发 /silent-command */
+  clean?: boolean;
 }
 
 export interface RpcOptions {
@@ -131,7 +133,7 @@ export class SandboxServer {
 
   /** 写好单独的配置、模组列表、服务器设置, 把我们的模组拷进去 */
   prepare(locale = "en") {
-    writeGameDir(this.dir, this.factorioDir, { dlc: !!this.opts.dlc, locale, mods: this.opts.mods });
+    writeGameDir(this.dir, this.factorioDir, { dlc: !!this.opts.dlc, locale, mods: this.opts.mods, noMod: !!this.opts.clean });
     fs.writeFileSync(
       path.join(this.dir, "server-settings.json"),
       JSON.stringify(
@@ -204,7 +206,10 @@ export class SandboxServer {
   async dumpDefines(): Promise<string> {
     const file = path.join(this.prototypesDir(), "defines.json");
     if (!fs.existsSync(file)) {
-      const d = await this.exec("return defines", undefined, { maxReplyBytes: 64 * 1024 * 1024, timeoutMs: 60_000 });
+      // 干净的服务器没有模组: 直接一条 Lua 把 defines 打成 JSON (沙盘不在乎成就)
+      const d = this.opts.clean
+        ? JSON.parse((await this.rcon!.exec("/silent-command rcon.print(helpers.table_to_json(defines))", { retry: true, timeoutMs: 60_000 })).trim())
+        : await this.exec("return defines", undefined, { maxReplyBytes: 64 * 1024 * 1024, timeoutMs: 60_000 });
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, JSON.stringify(d));
     }
@@ -318,7 +323,7 @@ export class SandboxServer {
       "--rcon-bind", `127.0.0.1:${this.rconPort}`,
       "--rcon-password", this.password,
     ];
-    if (this.opts.udp) args.push("--enable-lua-udp", String(this.udpPort));
+    if (this.opts.udp && !this.opts.clean) args.push("--enable-lua-udp", String(this.udpPort));
     // 日志直接写文件、进程 detached: 换班不关游戏时起它的程序退出了它也在; 本进程正常退出仍由 killOnExit 收掉 (release 过的除外)
     const logFd = fs.openSync(path.join(this.dir, "server.out"), "a");
     const proc = spawn(this.exe, args, { stdio: ["ignore", logFd, logFd], windowsHide: true, detached: true });
@@ -347,11 +352,14 @@ export class SandboxServer {
       if (out.trim() === READY) break;
       if (i >= 3) throw new Error(`RCON 预热失败: ${out.slice(0, 200)}`);
     }
-    const ping = (await this.rpc("ping", {}, { retry: true })) as { mod?: string };
-    if (!ping.mod) throw new Error("沙盘模组没加载");
-    if (this.opts.udp) {
-      await this.rpc("udp", { enabled: true });
-      this.udp = new UdpChannel(this.udpPort);
+    let ping: { mod?: string; clean?: boolean } = { clean: true };
+    if (!this.opts.clean) {
+      ping = (await this.rpc("ping", {}, { retry: true })) as { mod?: string };
+      if (!ping.mod) throw new Error("沙盘模组没加载");
+      if (this.opts.udp) {
+        await this.rpc("udp", { enabled: true });
+        this.udp = new UdpChannel(this.udpPort);
+      }
     }
     if (proc.pid) writeRunning(this.dir, { pid: proc.pid, gamePort: this.gamePort, udpPort: this.udpPort, rconPort: this.rconPort, password: this.password, save, startedAt: new Date().toISOString() });
     if (this.opts.view) await this.#openViewer();
@@ -364,6 +372,7 @@ export class SandboxServer {
    * 只读请求 (retry) 自动重试几次; 会改东西的请求照实报错, 不猜它执行了没有。
    */
   async rpc(method: string, args: object = {}, opts: RpcOptions = {}): Promise<unknown> {
+    if (this.opts.clean) throw new Error(`干净的服务器没装沙盘模组, 没有 rpc (${method}); 测试要真值用 rcon.exec 发 /silent-command`);
     const req = JSON.stringify({ method, args });
     let raw = "";
     for (let attempt = 0; attempt < (opts.retry ? 4 : 1); attempt++) {
