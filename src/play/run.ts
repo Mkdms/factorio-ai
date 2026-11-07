@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 import { LabInstance } from "../lab/instance.ts";
 import { ViewerClient } from "../lab/viewer.ts";
-import { labRoot, REPO } from "../lab/gamedir.ts";
+import { knowledgeFile, labRoot, REPO } from "../lab/gamedir.ts";
 import { Harness, luaString } from "./harness.ts";
 import type { Session } from "./fp.ts";
 import { modelDisplayName } from "./model-name.ts";
@@ -270,7 +270,7 @@ const oursFor = (_a: Agent) => oursBrief({ resume: !!values.save, multi: agents.
 const ZH = loadZhNames(path.join(labRoot(), "prototypes"));
 const zh = (n: string) => ZH.get(n) ?? n;
 // 要点被动推送 (src/play/hints.ts): 监工点名 / 开班扫描按情况从 knowledge/brief-points.md 挑要点附在后面, 要蓝图候选时查 ./bp list
-const POINTS = briefPoints(path.join(REPO, "knowledge", "brief-points.md"));
+const POINTS = briefPoints(knowledgeFile("brief-points.md"));
 const bpRows = (kw: string): string[] => { try { return bpListLines(kw, 3); } catch { return []; } };
 const hint = (lines: string[], n = 2, withBp = false): string => { const h = hintLine(POINTS, lines, n, withBp ? bpRows : undefined); return h ? ` ${h}` : ""; };
 // 用户不要任何 AI2 标识 ("你还是别标记了" / "说过的东西 你又没弄？？"): 开局只清掉以前加过的地图标记和头顶大字
@@ -959,9 +959,9 @@ try {
     // ① 我们核实过的要点登记进教训库 (knowledge/lessons-seed.json → 模组 lesson_add, 以第 1 个角色的身份; 已有的 lesson_verify 刷新):
     //    大脑做对应动作时回复里自动带出, 不用它自己查
     try {
-      const curated = loadSeeds(path.join(REPO, "knowledge", "lessons-seed.json"));
+      const curated = loadSeeds(knowledgeFile("lessons-seed.json"));
       // 之前各班大脑记下来的通用教训一起带上 (跨世界): 同一个存档再开已经在库里, 这里只会复核
-      const learned = learnedSeeds(LEARNED_FILE, curated, 70, path.join(REPO, "knowledge", "lessons-learned.jsonl"));
+      const learned = learnedSeeds(LEARNED_FILE, curated, 70, knowledgeFile("lessons-learned.jsonl"));
       const seeds = [...curated, ...learned];
       lessonProtect = curated;
       const h0 = new Harness(lab.rcon!, agents[0].who);
@@ -1031,15 +1031,15 @@ try {
       if (ZH.size) fs.writeFileSync(path.join(a.dir, "ref", "names.tsv"), "内部名\t官方中文名\n" + [...ZH].map(([k, v]) => `${k}\t${v}`).join("\n") + "\n");
       // 我们的老玩家经验 (knowledge/patterns/, 已核实事实 facts.md): 换成派对配置时漏了 (派对简报只给事实不给打法)
       // → 放进 ref/ 当手册主题, ./fh help pilot-<主题> 能查
-      for (const f of fs.readdirSync(path.join(REPO, "knowledge", "patterns"))) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(REPO, "knowledge", "patterns", f), path.join(a.dir, "ref", `pilot-${f}`));
-      fs.copyFileSync(path.join(REPO, "knowledge", "facts.md"), path.join(a.dir, "ref", "pilot-facts.md"));
-      fs.copyFileSync(path.join(REPO, "knowledge", "ref-index.md"), path.join(a.dir, "ref", "index.md")); // 按情况查 (./fh help index)
+      for (const f of fs.readdirSync(knowledgeFile("patterns"))) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(knowledgeFile("patterns"), f), path.join(a.dir, "ref", `pilot-${f}`));
+      fs.copyFileSync(knowledgeFile("facts.md"), path.join(a.dir, "ref", "pilot-facts.md"));
+      fs.copyFileSync(knowledgeFile("ref-index.md"), path.join(a.dir, "ref", "index.md")); // 按情况查 (./fh help index)
       fs.copyFileSync(path.join(REPO, "docs", "research", "players", "game-tips.md"), path.join(a.dir, "ref", "pilot-game-tips.md")); // 游戏自带提示与技巧 81 条的转述 (之前只在仓库文档里, 模型看不到)
       // 全部检索资料也放进 ref/research/ (58 万字, 之前模型一个字都看不到): ./know 查到后能看全文, 不进手册主题免得占 ./fh help 列表
       fs.mkdirSync(path.join(a.dir, "ref", "research"), { recursive: true });
       for (const f of fs.readdirSync(path.join(REPO, "docs", "research", "players"))) if (f.endsWith(".md")) fs.copyFileSync(path.join(REPO, "docs", "research", "players", f), path.join(a.dir, "ref", "research", f));
       // 要点也追加到它真会查的派对主题末尾 (18 班里它查 building / analysis / moving-items, 不查 pilot-*; 2026-11-04 #251)
-      const points = briefPoints(path.join(REPO, "knowledge", "brief-points.md"));
+      const points = briefPoints(knowledgeFile("brief-points.md"));
       if (points) for (const t of ["building.md", "analysis.md", "moving-items.md"]) { const f = path.join(a.dir, "ref", t); if (fs.existsSync(f)) fs.appendFileSync(f, `\n\n${points}\n`); }
       fs.writeFileSync(path.join(a.dir, "calc"), calcScript(sessionPath)); // 带会话: ./calc 自动和游戏里的 Factory Planner 对一遍 (src/calc/fp-live.ts)
       // PowerShell 包装 (Grok Build 在 Windows 上用 PowerShell 跑命令, ./calc ./bp 会落到同名 .ps1): 参数在 PowerShell 里是完整的,
@@ -1063,8 +1063,8 @@ try {
     fs.writeFileSync(path.join(a.dir, "calc"), calcScript());
     fs.writeFileSync(path.join(a.dir, "bp"), `#!/bin/sh\nFP_SESSION='${fwd(sessionPath)}' exec '${fwd(process.execPath)}' '${fwd(path.join(REPO, "src", "play", "bp.ts"))}' "$@"\n`); // bp build 要连游戏
     fs.mkdirSync(path.join(a.dir, "ref", "patterns"), { recursive: true });
-    fs.copyFileSync(path.join(REPO, "knowledge", "facts.md"), path.join(a.dir, "ref", "facts.md"));
-    for (const f of fs.readdirSync(path.join(REPO, "knowledge", "patterns"))) if (f.endsWith(".md")) fs.copyFileSync(path.join(REPO, "knowledge", "patterns", f), path.join(a.dir, "ref", "patterns", f));
+    fs.copyFileSync(knowledgeFile("facts.md"), path.join(a.dir, "ref", "facts.md"));
+    for (const f of fs.readdirSync(knowledgeFile("patterns"))) if (f.endsWith(".md")) fs.copyFileSync(path.join(knowledgeFile("patterns"), f), path.join(a.dir, "ref", "patterns", f));
     // 官方中文名单 (第七轮: 聊天里说"地下管""军事瓶", 官方是"地下管道""军备科技包（灰瓶）"): 游戏导出的 zh-CN, 内部名 → 官方名
     if (ZH.size) fs.writeFileSync(path.join(a.dir, "ref", "names.tsv"), "内部名\t官方中文名\n" + [...ZH].map(([k, v]) => `${k}\t${v}`).join("\n") + "\n");
   }

@@ -1,5 +1,6 @@
 // 联机主循环的纯逻辑 (库, 不直接运行; src/play/online.ts 用): 服务器地址从哪读、简报里联机这一节、知识放进 ref/。
 import fs from "node:fs";
+import { knowledgeFile } from "../lab/gamedir.ts";
 import path from "node:path";
 
 export type ServerConn = { address: string; password?: string; rcon?: { address: string; password: string } };
@@ -147,9 +148,10 @@ ${o.readOnly ? "- **现在只读**: 所有动作都会被拒。这一班只看�
 
 /** 我们的知识放进角色目录的 ref/ (./fh help pilot-主题、./know 的全文): run.ts 和 online.ts 共用 */
 export function copyPilotRefs(repo: string, refDir: string) {
-  for (const f of fs.readdirSync(path.join(repo, "knowledge", "patterns"))) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(repo, "knowledge", "patterns", f), path.join(refDir, `pilot-${f}`));
-  fs.copyFileSync(path.join(repo, "knowledge", "facts.md"), path.join(refDir, "pilot-facts.md"));
-  fs.copyFileSync(path.join(repo, "knowledge", "ref-index.md"), path.join(refDir, "index.md"));
+  void repo; // 第二版从 <仓库>/knowledge 拷; 新项目在 training/ (src/lab/gamedir.ts knowledgeFile)
+  for (const f of fs.readdirSync(knowledgeFile("patterns"))) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(knowledgeFile("patterns"), f), path.join(refDir, `pilot-${f}`));
+  fs.copyFileSync(knowledgeFile("facts.md"), path.join(refDir, "pilot-facts.md"));
+  fs.copyFileSync(knowledgeFile("ref-index.md"), path.join(refDir, "index.md"));
   fs.copyFileSync(path.join(repo, "docs", "research", "players", "game-tips.md"), path.join(refDir, "pilot-game-tips.md"));
   fs.mkdirSync(path.join(refDir, "research"), { recursive: true });
   for (const f of fs.readdirSync(path.join(repo, "docs", "research", "players"))) if (f.endsWith(".md")) fs.copyFileSync(path.join(repo, "docs", "research", "players", f), path.join(refDir, "research", f));
