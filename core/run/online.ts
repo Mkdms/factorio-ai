@@ -10,6 +10,7 @@
 // --backend auto|memory|rcon (默认 auto): 没填 RCON 走外挂; 填了 RCON 的自动: 先用干净客户端试进, 进得去 = 服务器没装模组, 走外挂, 一条 Lua 都不跑 (RCON 上跑了这张图就不能拿成就); 进不去就带上我们的模组再试, 进得去才走 RCON。
 // --steam-pid 进程号: 不开新客户端, 挂到已经连着的 Steam 客户端 (操控用户的账号, 用户要拿成就: 只有玩家操作这条路; 用户自己在玩时不许用)。
 // --own-world: 用户自己的新图, 没有协助模式。--lua: 只读时也注入客户端做只读查询 (流体、红绿线、物流网、别的玩家)。
+// 同一个世界连续跑: 沙盘班收工存 <记录目录>/end.zip; 下一班 --save 那个 end.zip --notes 上一班的角色目录 (笔记接着传)。
 // 还没搬进来的 (旧项目有): ./calc ./bp ./plan、换班不关游戏、看门狗、多角色 (docs/brains.md 的顺序)。
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -53,7 +54,7 @@ const { values } = parseArgs({ options: {
   minutes: { type: "string", default: "5" }, "own-world": { type: "boolean", default: false },
   name: { type: "string" }, "steam-pid": { type: "string" },
   keys: { type: "string" }, backend: { type: "string" }, reveal: { type: "boolean", default: false }, lua: { type: "boolean", default: false },
-  "run-id": { type: "string" }, "goal-file": { type: "string" },
+  "run-id": { type: "string" }, "goal-file": { type: "string" }, notes: { type: "string" },
 } });
 const toServer = values.server;
 if (values.lab === toServer) { console.error("要 --lab (本机沙盘试) 或 --server (联机服务器), 二选一"); process.exit(2); }
@@ -98,6 +99,12 @@ const brainRoot = process.env.BRAIN_DIR ?? path.join(os.homedir(), "factorio-ai-
 const dir = path.join(brainRoot, `online-${runId}`, "a");
 fs.mkdirSync(runDir, { recursive: true });
 fs.mkdirSync(dir, { recursive: true });
+// --notes 上一班的角色目录 (或 notes.md 文件): 笔记一班班往下传; 这班的角色目录已有 notes.md 就不覆盖
+if (values.notes) {
+  const src = fs.existsSync(values.notes) && fs.statSync(values.notes).isDirectory() ? path.join(values.notes, "notes.md") : values.notes;
+  if (!fs.existsSync(src)) { console.error(`--notes 找不到 ${src}`); process.exit(2); }
+  if (!fs.existsSync(path.join(dir, "notes.md"))) fs.copyFileSync(src, path.join(dir, "notes.md"));
+}
 const stopFile = path.join(runDir, "STOP");
 const pipe = `\\\\.\\pipe\\factorio-ai-online-${process.pid}`;
 
@@ -400,7 +407,8 @@ try {
     // 一轮一个命令行进程, 会话号接力 (第 1 轮新建, 之后 --resume); 停了就连子进程一起杀 (模型正在跑的 ./fh 也要停)
     const GOAL = values["goal-file"] && !readOnly ? `\n\n用户这一班给你的任务:\n${fs.readFileSync(values["goal-file"], "utf8").trim()}` : "";
     const FIRST = `先读 CLAUDE.md 最前面"先读这一节", 再读 notes.md。${scanNote}然后 ./fh call status 和 ./fh call observe 看清楚世界、队友在做什么、缺什么; ${readOnly ? "现在只读, 动作和聊天都发不出去, 不要试; 把看到的写进 notes.md。" : values["own-world"] || !toServer ? "然后先跑 ./plan automation-science-pack 30 看整条红瓶线要几台、放哪 (加 --build 一条命令放整块; 手放也行), 再动手。" : "在聊天里用一句话打招呼说你是谁、打算帮什么 (./fh call say), 然后动手 (整条线用 ./plan 物品 每分钟 --build, 手放也行)。"}${GOAL}`;
-    const NEXT = `继续。先看 ./fh call status 里有没有新消息和报警; 真人的话先回。把学到的写进 notes.md。${GOAL}`;
+    // 第一版的 "继续。先看 status 有没有新消息; 真人的话先回" 被当成"汇报一下": Sonnet 2026-11-08 那班 17 轮里 12 轮不到 1 分钟就收 (查状态、补一次煤、写小结), 每轮重起进程重读上下文
+    const NEXT = `接着干, 一直干到截止 (deadline.txt), 这一轮不用汇报、不用等任何人回话。顺手看一眼 ./fh call status 的消息和报警, 真人的话回一句就继续建。目标是机器做出科技包: 整条线用 ./plan 物品 每分钟 --build (料不够它会说差什么)。全程简体中文, 一两个词的小结也是。学到的写进 notes.md。${GOAL}`;
     let sessionId = randomUUID();
     const watch = setInterval(() => { if (child && stopped()) killBrain(child); }, 2000);
     log(`大脑 ${brain} ${model} (强度 ${values.effort}, 压缩点 ${at}); 停: 放 STOP 文件, 模型做完会在角色目录放 DONE`);
@@ -439,6 +447,12 @@ try {
     fs.writeFileSync(path.join(runDir, "probe-stats.json"), JSON.stringify({ broker: broker.stats, probe: await broker.probeStats().catch((e: Error) => ({ error: e.message })), lessons: delivery?.stats() ?? null }, null, 1));
   } else log(`收工: ${why}; RCON 发了 ${rconPipe?.stats.sent ?? 0} 条, 拒了 ${rconPipe?.stats.refused ?? 0} 条`);
   fs.writeFileSync(path.join(runDir, "end.json"), JSON.stringify({ why, endedAt: new Date().toISOString(), minutes: Math.round((Date.now() - t0) / 6000) / 10 }, null, 1));
+  // 同一个世界连续跑 (用户的硬要求): 收工前存一次档 (/server-save 是服务器命令, 不是 Lua, 和 /version 探针一样不碰成就标记), 复制成 end.zip; 下一班 --save 它 --notes 这班的角色目录接着玩。
+  // 之前每班都从空手开新图, 30 分钟永远停在烧煤阶段 (2026-11-08 三班都是), 比不出工具有没有用
+  if (values.lab && !readOnly) {
+    try { const f = await lab.saveNow(); fs.copyFileSync(f, path.join(runDir, "end.zip")); log(`存档: ${path.join(runDir, "end.zip")}; 下一班接着玩: --save 它 --notes ${dir}`); }
+    catch (e) { log(`收工存档没成: ${(e as Error).message.slice(0, 160)}`); }
+  }
 } catch (e) {
   console.error("出错", server ? scrubText(String((e as Error).stack ?? e), secretsOf(server)) : e);
   code = 2;

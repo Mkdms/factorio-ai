@@ -6,7 +6,8 @@
 npm run run:online -- --lab [--save 存档.zip] --minutes 5       沙盘: 开一张新图 (或存档), 不叫模型, 等到点 / STOP; 这段时间可以在角色目录里跑 ./fh
 npm run run:online -- --server --read-only --minutes 5          连 data/accounts/keys.json 的 server, 只读 (上真服要用户在场)
 ```
-选项: `--name 角色名` (= 模型名规范写法), `--steam-pid 进程号` (挂到用户的 Steam 客户端; 用户自己在玩时不许用), `--own-world`, `--backend auto|memory|rcon`, `--reveal`, `--lua`, `--goal-file`, `--run-id`。大脑: `--brain none|claude|claude-api|deepseek|relay|codex|grok|gemini --model 模型 --effort low|medium|high --compact-at token数` (`core/brains/driver.ts`; 密钥在 `data/accounts/keys.json`; codex / gemini / 中转站的 Responses 模型没有命令白名单钩子, `--server` 直接拒; docs/brains.md)。
+同一个世界连续跑: 沙盘班收工存 `data/play/online/<runId>/end.zip` (2026-11-08 起; `/server-save` 是服务器命令不是 Lua), 下一班 `--save 那个 end.zip --notes 上一班的角色目录` (笔记接着传)。
+选项: `--name 角色名` (= 模型名规范写法), `--notes 上一班角色目录或 notes.md`, `--steam-pid 进程号` (挂到用户的 Steam 客户端; 用户自己在玩时不许用), `--own-world`, `--backend auto|memory|rcon`, `--reveal`, `--lua`, `--goal-file`, `--run-id`。大脑: `--brain none|claude|claude-api|deepseek|relay|codex|grok|gemini --model 模型 --effort low|medium|high --compact-at token数` (`core/brains/driver.ts`; 密钥在 `data/accounts/keys.json`; codex / gemini / 中转站的 Responses 模型没有命令白名单钩子, `--server` 直接拒; docs/brains.md)。
 
 ## 一班的流程
 1. 客户端: 开独立版连服务器 (沙盘 / 别人的), 看客户端日志等它进世界 (`online-lib.ts clientPhase`; 连不上报原因, 密码错和模组不一样客户端日志都只有 "refused"); 联机 `--backend auto` 时先用干净客户端试进, 进得去 = 服务器没装模组 → 走外挂, 一条 Lua 都不跑。
