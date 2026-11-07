@@ -145,12 +145,12 @@ fn env_file_var(repo: &std::path::Path, key: &str) -> Option<String> {
     })
 }
 
-/// 本机数据目录: 和 src/lab/gamedir.ts labRoot 同一条规则 (环境变量 LAB_DATA_DIR → 仓库 .env 的 LAB_DATA_DIR → <仓库>/lab-data)
+/// 本机数据目录: 和 game/sandbox/paths.ts dataRoot 同一条规则 (环境变量 DATA_DIR → 仓库 .env 的 DATA_DIR → <仓库>/data; 第二版是 LAB_DATA_DIR / lab-data)
 fn lab_root(repo: &std::path::Path) -> PathBuf {
-    std::env::var_os("LAB_DATA_DIR")
+    std::env::var_os("DATA_DIR")
         .map(PathBuf::from)
-        .or_else(|| env_file_var(repo, "LAB_DATA_DIR").map(PathBuf::from))
-        .unwrap_or_else(|| repo.join("lab-data"))
+        .or_else(|| env_file_var(repo, "DATA_DIR").map(PathBuf::from))
+        .unwrap_or_else(|| repo.join("data"))
 }
 
 /// 控制接口连不上时的停班 (backlog #294):

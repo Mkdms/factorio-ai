@@ -49,6 +49,7 @@ import { pointsMd } from "./training.ts";
 import { writeSummary } from "../records/summary.ts";
 import { groupWorld, readGroup } from "../../src/play/groups.ts";
 import { writeWorld } from "../../src/play/worlds.ts";
+import { writeCurrentRun } from "../../src/play/shift-recover.ts";
 
 const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
@@ -349,7 +350,9 @@ try {
     fs.writeFileSync(path.join(dir, ".context-hooks"), "");
   }
   log(`角色目录 ${dir}; 记录 ${runDir}; 停: 放 STOP 文件`);
-  fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify({ runId, name, dir, server: toServer, backend: choice?.backend ?? "memory", why: choice?.why ?? "沙盘试外挂", prefer, reveal, readOnly, brain, model, effort: values.effort, compactAt: at, steam: !!values["steam-pid"], startedAt: new Date().toISOString() }, null, 1));
+  fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify({ runId, name, dir, server: toServer, backend: choice?.backend ?? "memory", why: choice?.why ?? "沙盘试外挂", prefer, reveal, readOnly, brain, model, effort: values.effort, compactAt: at, steam: !!values["steam-pid"], group: values.group ?? null, startedAt: new Date().toISOString() }, null, 1));
+  // 界面的"停班"和外壳按 play/current-run.json 找在跑的那一班 (src/play/control.ts currentRun / app 的 stop_run); 群开的班记一下
+  if (group) writeCurrentRun(path.join(dataRoot(), "play"), { runId, runDir, brainDir: dir, instanceDir: lab.dir, startedAt: new Date().toISOString() });
 
   // 开班扫描: 现状写成 world-scan.md (Lua 跑在游戏外的假接口上, 服务器上一条都不跑); 第一轮提示词让模型先读
   let scanNote = "";
