@@ -224,9 +224,9 @@ try {
       clientPid = p.pid!;
       const problem = await waitInGame();
       if (problem !== null) throw new Error(`进不去沙盘: ${problem}`);
-      // 沙盘不在乎成就: 一条 Lua 退出开场动画、给点料 (沙盘模组不在, 直接发控制台命令)
-      await lab.rcon!.exec(`/silent-command local p = game.connected_players[1] if p.controller_type == defines.controllers.cutscene then pcall(p.exit_cutscene) end local inv = p.character and p.character.get_main_inventory() if inv then for _, st in pairs({{"stone-furnace", 6}, {"coal", 60}, {"iron-plate", 80}, {"wooden-chest", 4}, {"transport-belt", 30}}) do inv.insert{name = st[1], count = st[2]} end end`, { retry: true });
-      await lab.dumpDefines();
+      // 沙盘是联机服务器的替身: 一条控制台命令都不发 (发了这张图就不算成就, 和真服一样)。开场动画按游戏提示的键跳过 (下面), 起始物资就是游戏给的。
+      // defines.json 由沙盘测试 / 演示导出过 (在原型目录); 没有的话 dumpDefines 会经 RCON 读, 那是控制台命令 → 这里先查, 缺了就报怎么补
+      if (!fs.existsSync(path.join(lab.prototypesDir(), "defines.json"))) throw new Error(`缺 ${path.join(lab.prototypesDir(), "defines.json")}: 先跑一次 npm run test:sandbox 或 npm run sandbox:demo 导出 (这里不经控制台读)`);
     }
   }
   const deadline = Date.now() + Number(values.minutes) * 60_000;
@@ -242,6 +242,16 @@ try {
     for (let i = 0; i < 90; i++) { const s = await target.status().catch(() => null); if (s?.state === "in_game") break; if (i === 89) throw new Error(`挂上了但 3 分钟没等到进世界: ${JSON.stringify(s?.raw ?? null).slice(0, 300)}`); await sleep(2000); }
     await target.prepare();
     if (!readOnly) { const stopGuard = startDragGuard(clientPid, log); process.on("exit", stopGuard); }
+    // 新图的坠机过场 (freeplay 场景, 12.5 秒) 不用控制台: 游戏自己提示"按确认消息键跳过", 按一下; 没跳也等它自己结束
+    if (!readOnly) {
+      const cutscene = target.defines?.controllers?.cutscene;
+      for (let i = 0; i < 40; i++) {
+        const p = await readPlayer(target.call);
+        if (p.hasCharacter && (cutscene === undefined || Number(p.controllerType) !== Number(cutscene))) { if (i) log(`开场动画结束 (${(i * 0.5).toFixed(1)} 秒)`); break; }
+        if (i === 0) await target.pressKey(target.controls?.key("confirm-message") ?? "TAB").catch(() => undefined);
+        await sleep(500);
+      }
+    }
     const me = await readPlayer(target.call);
     name = me.name || name;
     if (!me.hasCharacter) log("这个玩家没有身体 (观战 / 死了?): 动作会失败");

@@ -35,4 +35,4 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。
 
-沙盘这一班 `game.console_command_used` 是 true: 进世界后用 RCON 发了一条退出开场动画 + 给起始物资的命令 (沙盘不在乎成就); 联机不发。
+沙盘这条路一条控制台命令都不发 (2026-11-08 起; 之前开班用 RCON 发过一条退出开场动画 + 给料的命令, 用户看到成就页"因为使用了控制台指令"后改掉): 坠机过场按游戏提示的"确认消息"键跳过 (没跳也 12.5 秒自己结束), 起始物资就是游戏给的; `defines.json` 要先由沙盘测试 / 演示导出好, 缺了报错不经控制台读。`console_command_used` 读的是 false (沙盘测试核)。

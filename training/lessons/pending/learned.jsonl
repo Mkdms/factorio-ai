@@ -193,3 +193,11 @@
 {"rule":"iron-plate 永远缺: 每次搓之前先看 held, 场上的铁全在西边 90+ 格。","keys":{"item":"iron-plate"},"who":"e","run":"2026-11-05T04-39-42"}
 {"rule":"别带着东西走进虫巢 30 格内; 小虫一群就能把轻甲+手枪的人咬死。","keys":{"item":"pistol"},"who":"claude-opus-5-5","run":"2026-11-07T07-09-39"}
 {"rule":"跳步推进: 在已装弹炮塔射程内放下一座, 放下立刻 transfer 装弹, 再往前。","keys":{"action":"transfer"},"who":"claude-opus-5-5","run":"2026-11-07T07-09-39"}
+{"rule":"工具: build 报\"placement blocked\"时先看 nearest name=... 和 inspect, 可能是别人的建筑占格, 换个位置。","keys":{"action":"build"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"燃烧矿机 2x2 中心取整数坐标; 朝东放时出料点约 x+1.7, 朝北约 y-1.7。炉子放在出料点那一格。","keys":{"item":"stone-furnace"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"煤是开局瓶颈: 风钻燃料和石炉燃料都要人填。先保证煤箱有人收, 再加机器。","keys":{"item":"stone-furnace"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"矿采空 (no_minable_resources) 就挪: mine 收回, 再放到 nearest 查到有矿的格。","keys":{"action":"mine"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"transfer 方向: to_player 取 (成品/箱子), to_entity 给 (燃料/矿机)。给燃料只能放一种, 槽里有煤时别塞木头。","keys":{"action":"transfer","item":"electric-mining-drill"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"craft 手搓会吃掉中间的石炉: 做 3 台风钻要 15 石, 先看 inventory 再排。","keys":{"action":"craft","recipe":"stone-furnace"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"情况: 矿点采空 (no_minable_resources) 还在跑 → 做法: 用 nearest 找新矿, mine 收回挪走 → 为什么: 采空的钻机只占位不出货。","keys":{"action":"mine"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}
+{"rule":"情况: 没树 (nearest tree 空) 还想接电 → 做法: 先探路找树再做电件 → 为什么: 小电线杆只能用木头做。","keys":{"item":"small-electric-pole"},"who":"claude-haiku-5-5","run":"2026-11-07T15-53-30"}

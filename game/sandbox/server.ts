@@ -346,10 +346,11 @@ export class SandboxServer {
       if (!exited) proc.kill();
       throw e;
     }
-    // 每张图第一次用 Lua 命令时, 游戏会提示"会禁用成就, 请再输一次", 第一条命令不执行 (2.1.24 实测)
+    // 每张图第一次用 Lua 命令时, 游戏会提示"会禁用成就, 请再输一次", 第一条命令不执行 (2.1.24 实测)。
+    // 干净的服务器 (联机替身) 一条 Lua 都不发 (发了这张图就不算成就; 2026-11-08 查出这里是开班路上最后一条): 用 /version 探 RCON 通不通
     for (let i = 0; ; i++) {
-      const out = await this.rcon.exec(`/silent-command rcon.print("${READY}")`, { retry: true });
-      if (out.trim() === READY) break;
+      const out = this.opts.clean ? await this.rcon.exec("/version", { retry: true }) : await this.rcon.exec(`/silent-command rcon.print("${READY}")`, { retry: true });
+      if (this.opts.clean ? /\d+\.\d+\.\d+/.test(out) : out.trim() === READY) break;
       if (i >= 3) throw new Error(`RCON 预热失败: ${out.slice(0, 200)}`);
     }
     let ping: { mod?: string; clean?: boolean } = { clean: true };

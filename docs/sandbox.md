@@ -23,7 +23,7 @@ npm run sandbox:demo     # 演示: 新图 → 放一条小产线 → 加速跑 1
 | `game/mod/factorio-ai/` | 沙盘模组: 一个 remote 接口 `factorio-ai.rpc` (RCON 和 UDP 都走它), 方法: ping / exec / time / prepare_area / place_blueprint / inspect / score / power_area / power_fix / unpowered / audit / snapshot / power_networks / feed_setup / feed_stats / say / viewer / save; 实验用的摆放函数 `lab.place` / `lab.slots` / `lab.connections` (位置从碰撞盒算, 不手敲坐标) |
 
 ## 两条通道和成就
-- RCON 发的是控制台命令 (`/silent-command`): 这张图从此不算 Steam 成就。沙盘不在乎。
+- RCON 发的是控制台命令 (`/silent-command`): 这张图从此不算 Steam 成就。带模组的沙盘不在乎; **干净模式 (`clean: true`, 联机替身) 一条 Lua 都不发** (起服务器探 RCON 用 `/version`; 开班那条路也不发, 见 docs/run.md), `game.console_command_used` 要是 false (沙盘测试核)。
 - UDP 通道不经控制台; 但装了模组的图成就"独立另行记录", 同不同步 Steam 没测完 (docs/decisions.md)。
 
 ## 规矩 (旧项目踩过的坑, 测试守着)

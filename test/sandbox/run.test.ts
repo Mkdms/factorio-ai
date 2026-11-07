@@ -66,31 +66,36 @@ test("开班扫描写出来了 (Lua 跑在游戏外)", async () => {
 test("角色目录的 ./fh (sh 版) 经管道: 读走外面, 动作走玩家操作", async () => {
   await waitFor("不叫模型", () => /不叫模型: 等到点/.test(out), 60_000);
   const sh = async (...argv: string[]) => { const { stdout } = await run(bashExe(), [path.join(roleDir, "fh"), ...argv, "--format", "json"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true }); return JSON.parse(stdout) as { ok?: boolean; result?: Record<string, any>; error?: { message?: string } }; };
+  // 起始物资就是游戏给的 (freeplay: 热能采矿机 1、石炉 1、手枪和弹药), 没经控制台加料
   const inv = await sh("call", "inventory");
   assert.ok(inv.ok, JSON.stringify(inv).slice(0, 300));
-  assert.match(String(inv.result?.inventory ?? ""), /stone-furnace/);
+  assert.match(String(inv.result?.inventory ?? ""), /stone-furnace\*1|stone-furnace 1/, String(inv.result?.inventory));
+  assert.doesNotMatch(String(inv.result?.inventory ?? ""), /wooden-chest/, "没有控制台给的料");
+  assert.match(out, /console_command_used\)[^\n]*"value":false/, "这张图不能用过控制台命令");
   const st = await sh("call", "status");
   assert.ok(st.ok, JSON.stringify(st).slice(0, 300));
-  const built = await sh("call", "build", "--args", JSON.stringify({ item: "wooden-chest", position: { x: 0, y: 0 }, walk: true }), "--wait");
+  const built = await sh("call", "build", "--args", JSON.stringify({ item: "stone-furnace", position: { x: 0, y: 0 }, walk: true }), "--wait");
   console.log(`  build: ${JSON.stringify(built.result ?? built.error).slice(0, 200)}`);
   assert.ok(built.ok, JSON.stringify(built).slice(0, 400));
   assert.ok(Array.isArray(built.result?.lessons) && built.result.lessons.length >= 1, `放东西的回复要带出教训: ${JSON.stringify(built.result).slice(0, 300)}`);
-  // 不是给程序读的回复 (没 --format): 放机器后面附相关经验; 查配方后面附经验
-  const { stdout: furnace } = await run(bashExe(), [path.join(roleDir, "fh"), "call", "build", "--args", JSON.stringify({ item: "stone-furnace", position: { x: 4, y: 0 }, walk: true }), "--wait"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true });
-  assert.match(furnace, /lessons/, "紧凑格式里也有 lessons 行");
-  assert.match(furnace, /相关经验 \(工具附的; \.\/know 石炉 看更多\)/, furnace.slice(-600));
+  // 不是给程序读的回复 (没 --format): 报错后面附相关经验和查法 (热能采矿机不能放在没矿的格子, 这里故意放不下)
+  const drill = await run(bashExe(), [path.join(roleDir, "fh"), "call", "build", "--args", JSON.stringify({ item: "burner-mining-drill", position: { x: 4, y: 0 }, walk: true }), "--wait"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true }).catch((e: { stdout?: string }) => e);
+  const drillOut = String(drill.stdout ?? "");
+  assert.match(drillOut, /error: action_failed: placement blocked/, drillOut.slice(-600));
+  assert.match(drillOut, /相关教训: /, "失败的动作也带教训");
+  assert.match(drillOut, /查法: \.\/know build burner-mining-drill; 参数: \.\/fh help build/, drillOut.slice(-600));
   assert.ok(!fs.existsSync(path.join(roleDir, ".fh-hints.err")), fs.existsSync(path.join(roleDir, ".fh-hints.err")) ? fs.readFileSync(path.join(roleDir, ".fh-hints.err"), "utf8") : "");
   const again = await sh("call", "inventory");
-  assert.match(String(again.result?.inventory ?? ""), /wooden-chest\*3|wooden-chest 3/);
+  assert.doesNotMatch(String(again.result?.inventory ?? ""), /stone-furnace/, "石炉放下去了");
   const journal = fs.readFileSync(path.join(roleDir, "journal.jsonl"), "utf8").trim().split("\n");
   assert.ok(journal.length >= 4, `journal ${journal.length} 行`);
 });
 
 test("角色目录的 fh.ps1 (PowerShell 版) 同样能用, JSON 参数不拆坏", async () => {
-  const { stdout } = await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(roleDir, "fh.ps1"), "call", "observe", "--args", '{"radius": 8}', "--format", "json"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true });
+  const { stdout } = await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(roleDir, "fh.ps1"), "call", "observe", "--args", '{"radius": 16}', "--format", "json"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true });
   const r = JSON.parse(stdout) as { ok?: boolean; result?: Record<string, any> };
   assert.ok(r.ok, stdout.slice(0, 300));
-  assert.ok(JSON.stringify(r.result).includes("wooden-chest"), JSON.stringify(r.result).slice(0, 300));
+  assert.ok(JSON.stringify(r.result).includes("stone-furnace"), JSON.stringify(r.result).slice(0, 300));
 });
 
 test("角色目录的 ./know 和 ./fh help: 查积累 (sh 和 ps1), 手册大的先回目录、按段看", async () => {
