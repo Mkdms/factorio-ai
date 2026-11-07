@@ -228,6 +228,32 @@ test("refuel 补到 4 个; feed 喂 3 个进组装机", () => check(async () => 
   return { pass: !!r.ok && a0?.fuel === 4 && !!r2.ok && m1 >= m0 + 2, seen: `新炉燃料 ${a0?.fuel}; 机器原料 ${m0} → ${m1} (开工会用掉); ${seenOf(r).slice(0, 120)}; ${seenOf(r2).slice(0, 120)}` };
 }));
 
+test("相邻两台在烧的炉子: 煤进指定的那台不进旁边的, 按背包少的算成功; 箱子里一组不够的分几组取 (真跑 11-08 的 7 条取放失败)", () => check(async () => {
+  const a = { x: furnace.x + 8.5, y: furnace.y + 0.5 }, b = { x: a.x + 2, y: a.y };
+  const rb = await act("build", { builds: [{ item: "stone-furnace", position: a }, { item: "stone-furnace", position: b }], walk: true }, "--wait");
+  if (!rb.ok) return { pass: false, seen: `放两台炉子没成: ${seenOf(rb)}` };
+  // 各放 1 个煤和矿让它烧起来: 那 1 个煤进了燃烧器, 燃料格又是空的 (真跑里失败的都是在烧的机器)
+  const lit = await truth<{ found: number; where: string }>(`local a = ... local s = game.surfaces[1] local n, where = 0, {} for _, p in pairs(a) do local e = s.find_entity("stone-furnace", p) if e then n = n + 1 e.get_fuel_inventory().insert{name = "coal", count = 1} e.get_inventory(defines.inventory.crafter_input).insert{name = "iron-ore", count = 20} end end
+    for _, e in pairs(s.find_entities_filtered{name = "stone-furnace", area = {{a[1].x - 4, a[1].y - 4}, {a[2].x + 4, a[2].y + 4}}}) do where[#where + 1] = e.position.x .. "," .. e.position.y end
+    return {found = n, where = table.concat(where, " ")}`, [a, b]);
+  if (lit.found < 2) return { pass: false, seen: `两台炉子只找到 ${lit.found} 台 (要在 ${a.x},${a.y} 和 ${b.x},${b.y}; 附近的: ${lit.where}); build 回复 ${seenOf(rb).slice(0, 300)}` };
+  await sleep(4000);
+  const c0 = await myCount("coal");
+  const r1 = await act("transfer", { position: a, direction: "to_entity", item: "coal", count: 2 });
+  const r2 = await act("transfer", { position: b, direction: "to_entity", item: "coal", count: 4 });
+  const fa = await entityAt("stone-furnace", a), fb = await entityAt("stone-furnace", b);
+  const c1 = await myCount("coal");
+  // 箱子里 2 组石头 (50 + 30), 一次取 60: 要分两组取
+  const box = { x: a.x + 0.5, y: a.y + 3.5 }; // 木箱 1x1, 中心在 .5
+  const rc = await act("build", { item: "wooden-chest", position: box, walk: true });
+  if (!rc.ok) return { pass: false, seen: `放箱子没成: ${seenOf(rc)}` };
+  await truth(`local a = ... local e = game.surfaces[1].find_entity("wooden-chest", a) e.get_inventory(defines.inventory.chest).insert{name = "stone", count = 80} return true`, box);
+  const s0 = await myCount("stone");
+  const r3 = await act("transfer", { position: box, direction: "to_player", item: "stone", count: 60 });
+  const s1 = await myCount("stone");
+  return { pass: !!r1.ok && !!r2.ok && (fa?.fuel ?? 0) >= 1 && (fb?.fuel ?? 0) >= 3 && c0 - c1 === 6 && !!r3.ok && s1 - s0 === 60, seen: `a 燃料 ${fa?.fuel} b 燃料 ${fb?.fuel} 背包煤 ${c0}→${c1}; 石头 ${s0}→${s1}; ${seenOf(r1).slice(0, 140)}; ${seenOf(r2).slice(0, 140)}; ${seenOf(r3).slice(0, 140)}` };
+}));
+
 let others: Pos, otherIns: Pos;
 test("协助模式: 不拆别人的, 不转别人的, 不快速替换别人的", () => check(async () => {
   others = P(0, 19); otherIns = P(4, 19);

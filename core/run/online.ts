@@ -287,7 +287,7 @@ try {
     holdItem: (i) => t.holdItem(i), placeHeld: (at) => t.placeHeld(at), clearCursor: () => t.clearCursor(), ensureBody: () => t.ensureBody(), setRecipe: (at, r) => t.setRecipe(at, r),
     insertExact: (at, i, n, inv) => t.insertExactDirect(at, i, n, inv), takeExact: (at, i, n, inv) => t.takeExactDirect(at, i, n, inv), itemCount: (at, inv, i) => t.entityItemCount(at, inv, i),
     stacks: () => t.inventorySlots(), chatSend: (x) => t.chatSend(x), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
-    assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed }, lessons: delivery?.pick,
+    assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed }, me: name, lessons: delivery?.pick,
   });
   if (useRcon) {
     const conn = rcon!;

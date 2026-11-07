@@ -136,6 +136,8 @@ export type ActionDeps = {
   /** 别人的服务器 = 协助模式 (I:\fn 总规则): 不拆不改别人的建筑和设置, 共享的材料每样不超过库存一半。me = 这个客户端的玩家名 */
   /** allowed: 用户点过头的位置 (别人的建筑也能动); 只有用户能给, 模型自己开不了 */
   assist?: { me: string; allowed?: (at: Pos) => boolean };
+  /** 自己在游戏里的名字 (不是协助模式时也要: 挡路的建筑是不是自己放的) */
+  me?: string;
 };
 
 /** 协助模式: 这件东西动不动得 (纯函数): 树、石头、矿谁都能挖; 建筑只动自己放的 (last_user 是自己) */
@@ -266,10 +268,23 @@ export class PlayerActions {
       if (c.ok && d?.objects?.[0]?.value === d?.player?.index) return null;
     }
     if (e.position && this.d.assist.allowed?.(e.position)) return null; // 用户点过头的
+    return assistVerdict({ ...e, last_user: await this.lastUserName(e) }, this.d.assist.me);
+  }
+
+  /** 谁放的 (last_user 的名字; 读不到 / 没有 = 空串) */
+  private async lastUserName(e: { position?: Pos; name?: unknown }): Promise<string> {
     const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "entities", position: e.position, name: e.name }, path: [{ property: "last_user" }] }, fields: ["name"], limit: 4 });
     const o = (r.data as { objects?: { availability?: string; attributes?: { name?: unknown } }[] } | undefined)?.objects?.[0];
-    const who = o?.availability === "nil" || !r.ok ? "" : typeof o?.attributes?.name === "string" ? o.attributes.name : "";
-    return assistVerdict({ ...e, last_user: who }, this.d.assist.me);
+    return o?.availability === "nil" || !r.ok ? "" : typeof o?.attributes?.name === "string" ? o.attributes.name : "";
+  }
+
+  /** 挡路的建筑是谁放的: 自己的就说"你自己放的" (2026-11-08 真跑: 模型把自己的采矿机当成别人的, 绕着走) */
+  private async ownerTag(e: { position?: Pos; name?: unknown }): Promise<string> {
+    try {
+      const who = await this.lastUserName(e);
+      const me = this.d.assist?.me ?? this.d.me;
+      return who ? (me && who === me ? ", 你自己放的" : `, ${who} 放的`) : "";
+    } catch { return ""; }
   }
 
   private invIndex(name: string): number {
@@ -498,7 +513,8 @@ export class PlayerActions {
         if (!consumed) {
           const box = { left_top: { x: at.x - 0.4, y: at.y - 0.4 }, right_bottom: { x: at.x + 0.4, y: at.y + 0.4 } };
           const here = (await readArea(this.d.call, box, ["name", "type", "position"], 16)).entities as Record<string, any>[];
-          const names = here.filter((x) => !NOT_ENTITIES.has(String(x.type)) && x.type !== "resource").map((x) => `${x.name} (${x.position.x},${x.position.y})`);
+          const blockers = here.filter((x) => !NOT_ENTITIES.has(String(x.type)) && x.type !== "resource");
+          const names = await Promise.all(blockers.map(async (x) => `${x.name} (${x.position.x},${x.position.y}${await this.ownerTag(x)})`));
           throw fail(`placement blocked by ${names.join(", ") || "别的东西 (水、悬崖、够不着?)"}${out.error ? ` (${out.error.slice(0, 160)})` : ""}`);
         }
         const e = await this.entityAt(at, item);
@@ -599,8 +615,11 @@ export class PlayerActions {
           const remaining = await this.d.itemCount(e.position, inv, item);
           if (remaining <= 0) break;
           const n = Math.min(left, remaining, 200);
-          await this.d.takeExact(e.position, item, n, inv);
-          left -= n;
+          // 一组不够 n 个时取最大的那一组 (石头一组 50, 要 60 就分两次), 按实际取到的算
+          const t = (await this.d.takeExact(e.position, item, n, inv)) as { taken?: number } | undefined;
+          const taken = typeof t?.taken === "number" ? t.taken : n;
+          if (taken <= 0) break;
+          left -= taken;
         }
         break;
       }

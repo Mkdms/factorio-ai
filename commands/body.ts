@@ -245,20 +245,24 @@ export class Body extends ClientTarget {
     return typeof n === "number" && n > 0 ? { item_number: n } : {};
   }
 
-  /** 规矩 c: 对实体的 slot 格 (0 起) 右键放 want 个 (那格现在 cur 个), 发完读回, 不够再补 (最多 rounds 轮); 返回最后读到的个数 */
-  async #splitUntil(at: Pos, inv: number, slot: number, cur: number, want: number, id: { item: number; quality: number }, numbered = false, rounds = 4) {
-    let sent = 0, r = 0;
-    for (; r < rounds && cur < want; r++) {
-      for (const s of splitPlan(cur, want - cur, id.item, id.quality)) {
+  /**
+   * 规矩 c: 对实体的 slot 格 (0 起) 右键, 直到手上少了 need 个 (那格现在 cur 个, 手上 handStart 个)。看手不看格子: 在烧的机器把煤直接吃进燃烧器, 格子数不涨,
+   * 原来按格子数补右键会一直补 (2026-11-08 真跑 5 条 "放了 4 轮还不对", 一次发了 32 次右键, 多塞的煤全进了燃烧器); 煤离开手就是进去了。最多 rounds 轮; 返回手上少的数
+   */
+  async #splitUntil(at: Pos, inv: number, slot: number, cur: number, need: number, id: { item: number; quality: number }, numbered: boolean, handStart: number, rounds = 4) {
+    let sent = 0, r = 0, given = 0;
+    for (; r < rounds && given < need; r++) {
+      for (const s of splitPlan(cur, need - given, id.item, id.quality)) {
         const a = await this.#act("cursor_split", { count: s.count, target: { source: "entity_inventory", inventory: inv, slot, ...(numbered ? await this.#splitIds(at, inv, slot, cur, s) : s.item !== undefined ? { item: s.item, quality: s.quality } : {}) } });
         sent += a.sent ?? s.count;
       }
-      // 等落地 (最多 90 tick): 到数就走; 没到数再等 SETTLE_TICKS 让迟到的都落完, 再按读回补差额
-      const w = await this.#untilSlot(at, inv, slot, (n) => n >= want);
+      // 等落地 (最多 90 tick): 手上少够了就走; 没够再等 SETTLE_TICKS 让迟到的都落完, 再按手上的差额补
+      const w = await this.#untilPeek("cursor_split", (p) => handStart - inHandOf(p) >= need);
       if (!w.ok) await this.waitTicks(SETTLE_TICKS);
-      cur = w.ok ? w.n : (await this.#entitySlot(at, inv, slot + 1))?.count ?? 0;
+      given = handStart - inHandOf(w.ok ? w.p : await this.#peek("cursor_split"));
+      cur = (await this.#entitySlot(at, inv, slot + 1))?.count ?? 0;
     }
-    return { cur, sent, rounds: r };
+    return { given, cur, sent, rounds: r };
   }
 
   /**
@@ -359,30 +363,43 @@ export class Body extends ClientTarget {
     // 目标格: 先找空格, 没有再找同种物品的格 (满了放不进去由读回发现)
     let found = await this.#findEntitySlot(at, inv, (s) => !s);
     if (found.slot < 0) found = await this.#findEntitySlot(at, inv, (s) => !!s && s.name === item);
-    if (found.slot < 0) throw new Error(`实体物品栏 ${inv} 里没有空格或同种物品的格子`);
+    if (found.slot < 0) {
+      const first = await this.#entitySlot(at, inv, 1).catch(() => null);
+      throw new Error(`实体物品栏 ${inv} 里没有空格也没有 ${item} 的格子: 第 1 格是 ${first ? `${first.name}×${first.count}` : "空"}${inv === (this.defines?.inventory?.fuel ?? 1) && first && first.name !== item ? " (燃料格一次只能放一种燃料, 等烧完或先取出来)" : ""}`);
+    }
     const { slot } = found;
     const existing = found.stack?.count ?? 0;
     return this.#input(async () => {
       const trace: unknown[] = [];
-      let r = { cur: existing, sent: 0, rounds: 0 };
+      let r = { given: 0, cur: existing, sent: 0, rounds: 0 };
       try {
         trace.push(await this.#openGui(at));
         const own = await this.#ownItemNumber(source, mine + 1);
         await this.#act("cursor_transfer", { target: { source: "player_inventory", inventory: source, slot: mine, ...id, ...own } });
         const held = await this.#untilPeek("cursor_transfer", (p) => !!p.cursor?.startsWith(`${item}×`)); trace.push({ ...held.p, ticks: held.ticks });
         if (!held.ok) throw new Error(`没拿到手 (背包第 ${mine + 1} 格 ${item}, 等了 ${held.ticks} tick): ${JSON.stringify(held.p)}`);
-        r = await this.#splitUntil(at, inv, slot, existing, existing + count, id, own.item_number !== undefined);
+        r = await this.#splitUntil(at, inv, slot, existing, count, id, own.item_number !== undefined, inHandOf(held.p));
       } finally { trace.push(await this.#closeGui()); }
-      if (r.cur !== existing + count) throw new Error(`放了 ${r.rounds} 轮还不对: 那格 ${r.cur} 个 (要 ${existing + count}), 发了 ${r.sent} 次右键`);
-      return { direct: true, playerSlot: mine, entitySlot: slot, sent: r.sent, rounds: r.rounds, trace };
+      if (r.given < count) throw new Error(`放了 ${r.rounds} 轮还不对: 手上只少了 ${r.given} 个 (要 ${count}), 那格 ${r.cur} 个, 发了 ${r.sent} 次右键`);
+      return { direct: true, playerSlot: mine, entitySlot: slot, given: r.given, entitySlotNow: r.cur, sent: r.sent, rounds: r.rounds, trace };
     });
   }
 
   /** 直接发动作的"取正好 count 个": 找到实体里那一组 → 拿到手上 (带 ID) → 右键放回 (组里数 − count) 个 (读回不够就补) → 清手 (正好 count 个进背包) → 关窗口 */
   async takeExactDirect(at: Pos, item: string, count: number, inv = this.defines?.inventory?.chest ?? 1) {
     const id = this.#idOf(item);
-    const { slot, stack } = await this.#findEntitySlot(at, inv, (s) => !!s && s.name === item && s.count >= count);
-    if (slot < 0 || !stack) throw new Error(`实体物品栏 ${inv} 里没有一组 ≥ ${count} 个的 ${item}`);
+    let { slot, stack } = await this.#findEntitySlot(at, inv, (s) => !!s && s.name === item && s.count >= count);
+    if (slot < 0 || !stack) {
+      // 没有一组够数的 (一组最多一叠, 石头 50): 取最大的那一组, 调用方按实际取到的再来 (2026-11-08 真跑: 箱子里 80 块石头要 60 报"没有一组 ≥ 60")
+      let best = -1, bestStack: { name: string; count: number; number?: number } | null = null;
+      for (let k = 1; k <= 48; k++) {
+        let s: { name: string; count: number; number?: number } | null;
+        try { s = await this.#entitySlot(at, inv, k); } catch (e) { if (k === 1) throw e; break; }
+        if (s && s.name === item && s.count > (bestStack?.count ?? 0)) { best = k - 1; bestStack = s; }
+      }
+      if (best < 0 || !bestStack) throw new Error(`实体物品栏 ${inv} 里没有 ${item}`);
+      slot = best; stack = bestStack; count = Math.min(count, bestStack.count);
+    }
     return this.#input(async () => {
       const trace: unknown[] = [];
       let r = { inHand: 0, sent: 0, rounds: 0 }, had = stack.count;
@@ -398,7 +415,7 @@ export class Body extends ClientTarget {
       if (r.inHand < count) throw new Error(`放回 ${r.rounds} 轮还不对: 手上 ${r.inHand} 个 (要 ${count}), 发了 ${r.sent} 次右键`);
       // 手上多的放不回去: 那格被机械臂又装满了 (2026-11-06 注入客户端的程序 存档副本, 取 1 个煤, 箱子一直在进煤)。多拿几个不算错, 回复的 moved 按背包实际算
       if (r.inHand > count) console.error(`  [直接动作] 要 ${count} 个, 手上多 ${r.inHand - count} 个放不回去 (那格满了), 进了背包`);
-      return { direct: true, entitySlot: slot, had, putBack: had - r.inHand, extra: r.inHand - count, sent: r.sent, rounds: r.rounds, trace };
+      return { direct: true, entitySlot: slot, had, putBack: had - r.inHand, extra: r.inHand - count, taken: r.inHand, sent: r.sent, rounds: r.rounds, trace };
     });
   }
 
