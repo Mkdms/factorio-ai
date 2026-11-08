@@ -4,5 +4,5 @@ import path from "node:path";
 import { labRoot, REPO } from "../lab/gamedir.ts";
 
 export const BP_DATA = path.join(labRoot(), "training-private", "blueprints");
-/** 数据集条目的 dir 是第二版相对仓库根写的 ("lab-data/datasets/..."): 换成新项目的本机数据目录 */
-export const datasetDir = (dir: string): string => (dir.startsWith("lab-data/datasets/") ? path.join(BP_DATA, "datasets", dir.slice("lab-data/datasets/".length)) : dir.startsWith("lab-data/") ? path.join(labRoot(), dir.slice("lab-data/".length)) : path.join(REPO, dir));
+/** 数据集条目的 dir 是第二版相对仓库根写的 ("lab-data/datasets/..." 本机, "knowledge/blueprints/..." 公开区): 换成新项目的位置 (本机数据目录 / training/blueprints/verified) */
+export const datasetDir = (dir: string): string => (dir.startsWith("knowledge/blueprints/") ? path.join(REPO, "training", "blueprints", "verified", dir.slice("knowledge/blueprints/".length)) : dir.startsWith("lab-data/datasets/") ? path.join(BP_DATA, "datasets", dir.slice("lab-data/datasets/".length)) : dir.startsWith("lab-data/") ? path.join(labRoot(), dir.slice("lab-data/".length)) : path.join(REPO, dir));

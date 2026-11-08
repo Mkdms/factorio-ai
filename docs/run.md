@@ -103,6 +103,11 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 - `npm run bp` 被换成模型用的 ./bp, 代码里写的 `npm run bp -- inspect / check / render / link` 跑错程序 → 指回开发用的 `src/blueprint/cli.ts`, 模型那个叫 `play:bp`。
 - 界面冒烟脚本还设 LAB_DATA_DIR (新项目认 DATA_DIR): 冒烟会在真数据里建群、关窗口时给真在跑的班写 STOP → 改用 DATA_DIR。
 - PowerShell 版 `./calc` 丢了和游戏里 Factory Planner 对照的会话参数 → 恢复; 放行规则认回 `./fp` (装模组路 fp 配置) 和 `./fp sleep`; 只读连接联机服务器按群取 keys.json 的服务器 (原来一律连默认 server); `.env.example` 补 BRAIN_DIR / FBE / 备份命令; 装模组路角色分工那句英文改中文。
+**第四轮 (同晚; 盘点为什么全空白、工具为什么不调用)**:
+- **为什么会全空白**: 知识没丢, 训练集那块搬家时 knowledge/ 和 docs/research/players/ 都搬进了 training/, 但第二版代码是"整目录照原名搬", 里面写死的旧路径没改; 读不到文件时这些代码不报错、当成空的。之前扫写死路径只认 `path.join(labRoot()|REPO, …)` 一种写法, 拼在局部变量上的 (coverage.ts 的 root) 漏了 → 改成按字面量宽扫 ("knowledge" / "lab-data" / docs 下搬走的文档名 …), 又修 4 处: 蓝图生成器 (gen_common.py) 还认 LAB_DATA_DIR 和 lab-data (找不到原型数据和官方中文名; ./plan 用的块就是它生成的) → DATA_DIR 和 data/; `export-public.ts` 还往 knowledge/ 写、而且整份覆盖教训 (会冲掉不装模组路直接写进训练集的教训) → 写 training/blueprints/verified, 教训只追加没有的; `./bp` 本机没有蓝图库时的公开备用路径少了 verified 一层, 公开索引里的旧目录名 knowledge/blueprints/ 也对不上 (别人克隆后用不了公开蓝图) → 对上。
+- **班末基地俯视图每班都出图失败** (11-08 起 8 班全是 "page.waitForFunction: Timeout"; 第二版时 47 次成功): 蓝图编辑器整目录从 `I:\fn\tools\fbe` 搬到 data/tools/fbe, 它 node_modules 里指回自己子包的 3 个目录链接 (@fbe/editor、@fbe/website、fbeworkeyman) 还指旧位置 (已删), 网页起不来; 每班出图时还留下两个不响应的编辑器服务占着 8080 / 8081 → 链接重建到新位置, 残留服务关掉; 实测出一张 16 座石炉冶炼列 10.3 秒。data/ 下全部目录链接扫过, 断的只有这 3 个; 客户端 / 沙盘配置里没有旧绝对路径。
+- **模型为什么不用工具** (./calc ./bp ./plan 连续班 0 次): 简报写着"还没接上" (不装模组路, 第一轮修)、./plan 说"库里没有块" (块没搬到读的位置, 17:4x 修)、放机器那一刻递命令的提示丢了 (第一轮恢复)、./know 不给能跑的命令 (第三轮恢复)、装模组路简报少了自己写工具那几节 (第二轮恢复)、钩子死了组合命令被拒 (第一轮修)。都修了, 没实跑核。
+- **监工调的外部工具**: 只剩派对的两个没有就失败 / 跳过: 每班"上一班实测" (handover.py) 和换班前的上游检查 (party:check); 本机其实留着一份派对仓库 (第二版用的同一个提交, 在旧项目全新克隆的 vendor 下), 用不用它等用户定。
 **还差 (没做)**:
 - 每班笔记顶部的"上一班实测" (站着的比例、白干的动作、失败前三; 超长笔记归档) 靠派对的 handover.py, 没有派对仓库每班静默失败 → 要用自己的代码重写 (两条路共用)。
 - `--keep-map` (只读连联机服务器时留一份地图, 刷新全图布局) 没搬; 带模组试连别人服务器时多带了沙盘模组 (联机服务器都不装模组, 影响低); 第二版基础版 harness 被对到派对版, ./fp 配置是否完全兼容没核。

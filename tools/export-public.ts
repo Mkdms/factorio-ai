@@ -7,34 +7,37 @@ import fs from "node:fs";
 import path from "node:path";
 import { labRoot, REPO } from "../src/lab/gamedir.ts";
 import { isGeneralLesson, readLearned, validateSeed } from "../src/play/lessons.ts";
+import { BP_DATA, datasetDir } from "../src/play/bp-data.ts";
 
-const OUT = path.join(REPO, "knowledge", "blueprints");
+// 新项目的位置 (第二版是 <仓库>/knowledge/blueprints 和 lab-data/generated、lab-data/datasets; 搬家后这里没跟着改):
+// 公开区 training/blueprints/verified (整个由这里生成), 本机蓝图库 data/training-private/blueprints
+const OUT = path.join(REPO, "training", "blueprints", "verified");
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, "generated"), { recursive: true });
 fs.mkdirSync(path.join(OUT, "community"), { recursive: true });
 
 // 自己生成的积木和它们的实测
 let gen = 0;
-for (const f of fs.readdirSync(path.join(labRoot(), "generated"))) {
+for (const f of fs.readdirSync(path.join(BP_DATA, "generated"))) {
   if (!/\.(txt|feed\.json)$/.test(f)) continue;
-  fs.copyFileSync(path.join(labRoot(), "generated", f), path.join(OUT, "generated", f));
+  fs.copyFileSync(path.join(BP_DATA, "generated", f), path.join(OUT, "generated", f));
   gen++;
 }
 
 // 数据集: 只要 CC0; 不要出图路径和收录时间这些本机的东西
-const rows = fs.readFileSync(path.join(labRoot(), "datasets", "index.jsonl"), "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l) as Record<string, unknown>);
+const rows = fs.readFileSync(path.join(BP_DATA, "datasets", "index.jsonl"), "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l) as Record<string, unknown>);
 const cc0 = rows.filter((r) => r.license === "CC0-1.0");
 const files = new Set<string>();
 const out = cc0.map((r) => {
-  const src = path.join(labRoot(), String(r.dir).replace(/^lab-data[\\/]/, ""), String(r.file));
+  const src = path.join(datasetDir(String(r.dir)), String(r.file));
   const dst = path.join(OUT, "community", String(r.file));
   if (!files.has(String(r.file))) { fs.copyFileSync(src, dst); files.add(String(r.file)); }
   const { render: _render, ingested: _ingested, ...keep } = r;
   void _render; void _ingested;
-  return JSON.stringify({ ...keep, dir: "knowledge/blueprints/community" });
+  return JSON.stringify({ ...keep, dir: "knowledge/blueprints/community" }); // bp-data.ts datasetDir 把它对到 training/blueprints/verified/community
 });
 fs.writeFileSync(path.join(OUT, "index.jsonl"), `${out.join("\n")}\n`);
-fs.copyFileSync(path.join(labRoot(), "datasets", "community", "brians-blueprints", "LICENSE"), path.join(OUT, "community", "LICENSE"));
+fs.copyFileSync(path.join(BP_DATA, "datasets", "community", "brians-blueprints", "LICENSE"), path.join(OUT, "community", "LICENSE"));
 fs.writeFileSync(path.join(OUT, "README.md"), "# 蓝图库\n\n`./bp list` 用的蓝图, 本机没有积累时用这里的。由 `tools/export-public.ts` 导出, 不要手改。\n\n- `generated/`: 自己的生成器 (`tools/generators/`) 产的积木和喂料实测。\n- `community/`: [Brian's Blueprints](https://github.com/bcwhite-code/brians-blueprints) by bcwhite-code, CC0 1.0 (见 `community/LICENSE`), 迁移到 Factorio 2.1 的版本。\n- `index.jsonl`: 每张的出处、许可、大小、建筑数和沙盘实测。\n");
 
 // 大脑记的通用教训
@@ -52,9 +55,14 @@ for (const x of readLearned(path.join(labRoot(), "play", "lessons-learned.jsonl"
   try { validateSeed({ rule: x.rule, keys: x.keys, impact: 1 }); } catch { dropped++; continue; }
   learned.push(JSON.stringify({ rule: x.rule, keys: x.keys }));
 }
-fs.writeFileSync(path.join(REPO, "knowledge", "lessons-learned.jsonl"), `${learned.join("\n")}\n`);
+// 并进训练集待核区 (不装模组那条路班末直接往这份里写, 不能整份覆盖): 只加还没有的
+const PENDING = path.join(REPO, "training", "lessons", "pending", "learned.jsonl");
+const have = new Set(readLearned(PENDING).map((x) => x.rule));
+const add = learned.filter((l) => !have.has((JSON.parse(l) as { rule: string }).rule));
+if (add.length) fs.appendFileSync(PENDING, `${add.join("\n")}\n`);
+console.log(`教训并进 training/lessons/pending/learned.jsonl: 新加 ${add.length} 条`);
 
 const size = (d: string): number => fs.readdirSync(d, { withFileTypes: true }).reduce((s, e) => s + (e.isDirectory() ? size(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
 console.log(`蓝图: 生成的 ${gen} 个文件; CC0 ${cc0.length} 条 / ${files.size} 个文件; 没导 ${rows.length - cc0.length} 条 (没有公开许可)`);
 console.log(`教训: 去重后 ${seen.size} 条, 导 ${learned.length}, 筛掉 ${dropped}`);
-console.log(`knowledge/blueprints 共 ${(size(OUT) / 1e6).toFixed(1)} MB`);
+console.log(`training/blueprints/verified 共 ${(size(OUT) / 1e6).toFixed(1)} MB`);

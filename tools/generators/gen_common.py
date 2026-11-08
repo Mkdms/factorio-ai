@@ -43,20 +43,21 @@ _ZH = None
 
 
 def _lab_root():
-    """本机数据目录: 环境变量 LAB_DATA_DIR → 仓库 .env 的 LAB_DATA_DIR → <仓库>/lab-data (和 src/lab/gamedir.ts labRoot 同一条规则)"""
+    """本机数据目录: 环境变量 DATA_DIR → 仓库 .env 的 DATA_DIR → <仓库>/data (和 game/sandbox/paths.ts dataRoot 同一条规则;
+    第二版叫 LAB_DATA_DIR 和 lab-data, 搬家后这里没跟着改, 找不到原型数据和官方中文名)"""
     repo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-    v = os.environ.get("LAB_DATA_DIR")
+    v = os.environ.get("DATA_DIR")
     if not v:
         try:
             with open(os.path.join(repo, ".env"), encoding="utf-8") as f:
                 for line in f:
                     k, sep, val = line.strip().partition("=")
-                    if sep and k.strip() == "LAB_DATA_DIR":
+                    if sep and k.strip() == "DATA_DIR":
                         v = val.strip().strip('"').strip("'")
                         break
         except OSError:
             pass
-    return os.path.abspath(v or os.path.join(repo, "lab-data"))
+    return os.path.abspath(v or os.path.join(repo, "data"))
 
 
 def zh(name):

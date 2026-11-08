@@ -19,9 +19,9 @@ export const machineCount = (counts: Record<string, number>) => Object.entries(c
 export type Entry = { no: number; source: string; label: string; w: number; h: number; entities: number; counts: Record<string, number>; io: string; get: () => Record<string, unknown> };
 // 本机数据走 labRoot() (LAB_DATA_DIR): 写死仓库/lab-data 时, 在共用数据的工作树里找不到蓝图库 (2026-11-03 play:check "没有编号 1")
 // 本机没有就用仓库带的 (tools/export-public.ts 导的: 自己生成的、CC0 的)
-const GEN = fs.existsSync(path.join(BP_DATA, "generated")) ? path.join(BP_DATA, "generated") : path.join(REPO, "training", "blueprints", "generated");
+const GEN = fs.existsSync(path.join(BP_DATA, "generated")) ? path.join(BP_DATA, "generated") : path.join(REPO, "training", "blueprints", "verified", "generated"); // 公开区 (export-public 导的); 原来少写了 verified 这一层
 // 数据集索引直接读 (src/dataset/ingest.ts 是脚本, import 会跑它的命令行)
-const loadDataset = () => { const local = path.join(BP_DATA, "datasets", "index.jsonl"); const f = fs.existsSync(local) ? local : path.join(REPO, "training", "blueprints", "index.jsonl"); return fs.existsSync(f) ? fs.readFileSync(f, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l)) : []; };
+const loadDataset = () => { const local = path.join(BP_DATA, "datasets", "index.jsonl"); const f = fs.existsSync(local) ? local : path.join(REPO, "training", "blueprints", "verified", "index.jsonl"); return fs.existsSync(f) ? fs.readFileSync(f, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l)) : []; };
 const readText = (f: string) => fs.readFileSync(f, "utf8").trim();
 const readObj = (f: string): Record<string, unknown> => (f.endsWith(".json") ? JSON.parse(readText(f)) : decodeBlueprint(readText(f)));
 
