@@ -24,6 +24,7 @@
     "brains:probe": "node --env-file-if-exists=.env core/brains/probe.ts",
     "play:control": "node --env-file-if-exists=.env src/play/control.ts",
     "play:run": "node --env-file-if-exists=.env src/play/run.ts",
+    "play:mk": "node --env-file-if-exists=.env src/play/mk-world.ts",
     "calc": "node --env-file-if-exists=.env src/calc/cli.ts",
     "bp": "node --env-file-if-exists=.env src/play/bp.ts"
   }

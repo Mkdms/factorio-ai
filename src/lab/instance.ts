@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { SandboxServer, type ServerOptions } from "../../game/sandbox/server.ts";
+export { freeTcpPort, freeUdpPort } from "../../game/sandbox/server.ts";
 import { MOD_ROOT } from "../../game/sandbox/paths.ts";
 export { builtinMods, dataRoot as labRoot, findFactorioDir } from "../../game/sandbox/paths.ts";
 

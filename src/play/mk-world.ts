@@ -107,7 +107,7 @@ try {
   // ---------- 挂上去: 只走玩家操作 ----------
   const keys = path.join(serverDir, "keys.json");
   fs.writeFileSync(keys, JSON.stringify({ server: { address, password } }));
-  const args = ["--env-file-if-exists=.env", path.join(REPO, "src", "play", "online.ts"), "--server", "--own-world", "--run-id", runId, "--keys", keys, "--steam-pid", String(client.pid), "--brain", values.brain!, "--effort", values.effort!, "--minutes", values.minutes!, ...(values.model ? ["--model", values.model] : []), ...(values["goal-file"] ? ["--goal-file", values["goal-file"]] : []), ...(values["read-only"] ? ["--read-only"] : [])];
+  const args = ["--env-file-if-exists=.env", path.join(REPO, "core", "run", "online.ts"), "--server", "--own-world", "--run-id", runId, "--keys", keys, "--steam-pid", String(client.pid), "--brain", values.brain!, "--effort", values.effort!, "--minutes", values.minutes!, ...(values.model ? ["--model", values.model] : []), ...(values["goal-file"] ? ["--goal-file", values["goal-file"]] : []), ...(values["read-only"] ? ["--read-only"] : [])];
   code = await new Promise<number>((resolve) => {
     const c = spawn(process.execPath, args, { cwd: REPO, stdio: "inherit" });
     c.on("close", (x) => resolve(x ?? 1));
