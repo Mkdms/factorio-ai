@@ -180,9 +180,14 @@ export function latestRunOfGroup(playDir: string, id: string): { runId: string; 
     let brainDir: string | null = null;
     let s: { brainDir?: unknown; lineup?: { brain?: unknown }[] } | null = null;
     try { s = JSON.parse(fs.readFileSync(path.join(dir, "summary.json"), "utf8")); } catch { /* 没写完 */ }
+    // 不装模组那条路 (core/run/online.ts) 开班就写 run.json (dir = 角色目录, brain): summary.json 没写成 (总结那步出错) 时笔记目录和是不是验证班从这里补, 不然下一班接存档却丢了笔记
+    let r: { dir?: unknown; brain?: unknown } | null = null;
+    try { r = JSON.parse(fs.readFileSync(path.join(dir, "run.json"), "utf8")); } catch { /* 装模组那条路没有 */ }
     // 不叫大脑的验证班接着存档跑也归这个世界, 但不进接力 (2026-11-05 查出: 开虫子验证班丢了 28% 建筑, 真班点开班会接它的存档和空笔记)
     if (Array.isArray(s?.lineup) && s.lineup.length && s.lineup.every((l) => l?.brain === "none")) continue;
+    if (!s && r?.brain === "none") continue;
     if (typeof s?.brainDir === "string" && fs.existsSync(s.brainDir)) brainDir = s.brainDir;
+    else if (typeof r?.dir === "string" && fs.existsSync(r.dir)) brainDir = r.dir;
     return { runId, endZip, brainDir };
   }
   return null;

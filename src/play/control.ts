@@ -552,7 +552,10 @@ const server = http.createServer(async (req, res) => {
       let target = runDir;
       try { const cur = JSON.parse(fs.readFileSync(path.join(PLAY, "current-run.json"), "utf8")) as { runDir?: string }; if (cur.runDir && fs.existsSync(cur.runDir) && !runStatus(cur.runDir).ended) target = cur.runDir; } catch { /* 没有就按原来的 */ }
       fs.writeFileSync(path.join(target, "STOP"), "控制接口\n");
-      return send(200, { stopping: true, run: path.basename(target) });
+      // 不装模组路的接力 (core/run/relay.ts) 活着: 两班之间 / 下一班还在起 (还没写 current-run.json) 时点的停班, 上面那个 STOP 落在收工了的一班里没人看 → 再写 RELAY_STOP, 接力等新一班的记录目录出来就把 STOP 放进去, 之后不再开下一班
+      let relay = false;
+      try { const rl = JSON.parse(fs.readFileSync(path.join(PLAY, "relay.json"), "utf8")) as { pid?: number }; if (rl.pid && pidAlive(rl.pid)) { fs.writeFileSync(path.join(PLAY, "RELAY_STOP"), "控制接口\n"); relay = true; } } catch { /* 没有接力 */ }
+      return send(200, { stopping: true, run: path.basename(target), relay });
     }
     send(404, { error: "没有这个接口" });
   } catch (e) { send(500, { error: (e as Error).message.slice(0, 300) }); }

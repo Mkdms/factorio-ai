@@ -57,6 +57,13 @@ test("接力跳过 --brain none 的验证班, 真班照接; 没有 summary 的�
     assert.equal(args[args.indexOf("--notes") + 1], notes);
     addRun("2026-11-05T12-00-00", null);
     assert.equal(latestRunOfGroup(play, g.id)?.runId, "2026-11-05T12-00-00", "没写完 summary 的 (硬杀) 不知道是不是验证班, 还算");
+    // 不装模组那条路开班就写 run.json: summary 没写成时笔记目录从它补; run.json 说是 none 的验证班照样跳过
+    addRun("2026-11-05T13-00-00", null);
+    fs.writeFileSync(path.join(play, "runs", "2026-11-05T13-00-00", "run.json"), JSON.stringify({ dir: notes, brain: "claude" }));
+    assert.deepEqual([latestRunOfGroup(play, g.id)?.runId, latestRunOfGroup(play, g.id)?.brainDir], ["2026-11-05T13-00-00", notes], "summary 没写成, 笔记目录从 run.json 补");
+    addRun("2026-11-05T14-00-00", null);
+    fs.writeFileSync(path.join(play, "runs", "2026-11-05T14-00-00", "run.json"), JSON.stringify({ dir: notes, brain: "none" }));
+    assert.equal(latestRunOfGroup(play, g.id)?.runId, "2026-11-05T13-00-00", "run.json 说是验证班的跳过");
     fs.rmSync(notes, { recursive: true, force: true });
   } finally { fs.rmSync(play, { recursive: true, force: true }); }
 });

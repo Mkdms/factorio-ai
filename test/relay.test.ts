@@ -11,27 +11,32 @@ const RELAY = path.join(import.meta.dirname, "..", "core", "run", "relay.ts");
 
 /** 假的一班: 按 plan.json 里第 n 班的写法收工 (why: 写进 end.json; crash: 不写 end.json 退出码 1) */
 const FAKE = `import fs from "node:fs"; import path from "node:path";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const play = path.join(process.env.DATA_DIR, "play");
 const plan = JSON.parse(fs.readFileSync(path.join(play, "plan.json"), "utf8"));
 const n = fs.readdirSync(path.join(play, "runs")).length;
+const step = plan[n] ?? { why: "STOP" };
+// 停班点在这一班还在起的时候 (控制接口写了 RELAY_STOP, 这一班还没写 current-run.json)
+if (step.stopWhileStarting) { fs.writeFileSync(path.join(play, "RELAY_STOP"), ""); await sleep(150); }
 const runDir = path.join(play, "runs", "2026-11-08T00-00-0" + n); fs.mkdirSync(runDir, { recursive: true });
 fs.writeFileSync(path.join(play, "current-run.json"), JSON.stringify({ runId: path.basename(runDir), runDir, startedAt: new Date().toISOString() }));
 fs.appendFileSync(path.join(play, "args.txt"), process.argv.slice(2).join(" ") + "\\n");
-const step = plan[n] ?? { why: "STOP" };
 if (step.stopAfter) fs.writeFileSync(path.join(play, "STOP_AFTER"), "");
 if (step.crash) process.exit(1);
-fs.writeFileSync(path.join(runDir, "end.json"), JSON.stringify({ why: step.why }));
+let why = step.why;
+if (step.stopWhileStarting) { await sleep(300); if (fs.existsSync(path.join(runDir, "STOP"))) why = "STOP"; else why = "到点 (没收到 STOP)"; }
+fs.writeFileSync(path.join(runDir, "end.json"), JSON.stringify({ why }));
 `;
 
-function setup(plan: object[]) {
+function setup(plan: object[], seat: object = { brain: "claude", model: "opus" }) {
   const data = fs.mkdtempSync(path.join(os.tmpdir(), "relay-"));
   const play = path.join(data, "play");
   fs.mkdirSync(path.join(play, "runs"), { recursive: true });
-  const g = createGroup(play, { name: "测试", kind: "new", seats: [{ brain: "none" }] });
+  const g = createGroup(play, { name: "测试", kind: "new", seats: [seat] });
   fs.writeFileSync(path.join(play, "plan.json"), JSON.stringify(plan));
   const fake = path.join(data, "fake-shift.mjs");
   fs.writeFileSync(fake, FAKE);
-  const r = spawnSync(process.execPath, [RELAY, "--group", g.id], { env: { ...process.env, DATA_DIR: data, RELAY_CHILD: fake, RELAY_RETRY_MS: "10" }, encoding: "utf8", timeout: 60_000 });
+  const r = spawnSync(process.execPath, [RELAY, "--group", g.id], { env: { ...process.env, DATA_DIR: data, RELAY_CHILD: fake, RELAY_RETRY_MS: "10", RELAY_POLL_MS: "30" }, encoding: "utf8", timeout: 60_000 });
   const shifts = fs.readFileSync(path.join(play, "args.txt"), "utf8").trim().split("\n");
   return { r, shifts, play };
 }
@@ -63,4 +68,21 @@ test("STOP_AFTER: 跑完这一班就停, 标记用完删掉", () => {
 test("第二班起接上一班: 参数里带 --group (onlineStartArgs 每班重新算)", () => {
   const { shifts } = setup([{ why: "到点" }, { why: "STOP" }]);
   assert.ok(shifts.every((s) => s.includes("--group") && s.includes("--lab")));
+});
+
+test("停班点在下一班还在起的时候 (RELAY_STOP): 等它的记录目录出来就放 STOP, 那一班就绪即收工, 不再开下一班; 标记收走", () => {
+  const { r, shifts, play } = setup([{ why: "到点" }, { why: "到点", stopWhileStarting: true }, { why: "到点" }]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(shifts.length, 2);
+  assert.ok(fs.existsSync(path.join(play, "runs", "2026-11-08T00-00-01", "STOP")), "STOP 放进了正在起的那一班");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(play, "runs", "2026-11-08T00-00-01", "end.json"), "utf8")).why, "STOP");
+  assert.match(r.stdout, /停班 \(点在这一班起来之前\)/);
+  assert.equal(fs.existsSync(path.join(play, "RELAY_STOP")), false);
+});
+
+test("第 1 席是 none (验证班): 只跑一班就停, 不会一张张开新图", () => {
+  const { r, shifts } = setup([{ why: "到点" }, { why: "到点" }, { why: "STOP" }], { brain: "none" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(shifts.length, 1);
+  assert.match(r.stdout, /验证班/);
 });
