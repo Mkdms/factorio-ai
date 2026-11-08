@@ -63,7 +63,8 @@ if (fs.existsSync(path.join(dir, ".context-hooks"))) {
     state.nudged = false;
     save();
     log({ source: payload.source });
-    // 工具附过的配比、图、经验压缩后就没了, 下次相关的时候要重新给: 第 ② 步 deliver.ts 接上时在这里清"给过"的记录
+    // 工具附过的配比、图、经验压缩后就没了, 下次相关的时候要重新给: 清 ./fh 提示的"给过"记录 (两条路的 .fh-hints.json 键一样: pic: / q:; 手放计数留着)
+    try { (await import("../../../commands/hints.ts")).forgetShown(path.join(dir, ".fh-hints.json")); } catch { /* 附带的 */ }
     process.stdout.write(recoveryBrief(dir, "你的上下文刚被压缩过。"));
   } else if (event === "post-tool") {
     if (!state.hooksSeen) { state.hooksSeen = new Date().toISOString(); save(); } // 证明钩子加载了 (复盘时看)

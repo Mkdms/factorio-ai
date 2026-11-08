@@ -130,10 +130,10 @@ export function setBackend(playDir: string, id: string, backend: unknown): Group
   return writeGroup(playDir, v === "auto" ? rest : { ...rest, backend: v });
 }
 
-/** 只读连一次联机服务器的 play:online 参数 (界面"只读连接"; 不叫模型) */
+/** 只读连一次联机服务器的参数 (界面"只读连接"; 不叫模型)。起的是 core/run/online.ts (第二版 src/play/online.ts 搬家后改名, 界面还在起旧路径): 要写明 --server, 群的路线 / 读没探过的区块照群设置带上 */
 export function connectArgs(g: Group): string[] {
   if (g.kind !== "server") throw new Error("只有联机服务器的群能只读连接");
-  return ["--group", g.id, "--read-only", "--minutes", "5"];
+  return ["--server", "--group", g.id, "--read-only", "--minutes", "5", ...(g.backend ? ["--backend", g.backend] : []), ...(g.revealUncharted ? ["--reveal"] : [])];
 }
 
 /** 改联机服务器的"读没探过的区块" (默认关); 别的类型的群没这个选项 */

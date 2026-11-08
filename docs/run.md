@@ -68,6 +68,30 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 - [ ] 电路: wire circuit_set circuit_gate signal_watch → 玩家操作 (2.0 红绿线是快捷栏工具, 不是物品; 组合器设置要界面) —— 同上
 - [ ] 太空: platform_* launch silo_stage load_silo pods shipment flight_watch min_payload → 玩家操作 (发射井 / 平台枢纽的界面) —— 同上, 到太空时代前做完
 
+## 第二版 → 新项目逐项对照 (2026-11-08 晚; 用脚本比, 不靠记忆)
+基准: 第二版第三次重构前最后一个完整提交 d006640 (历史包 factorio-pilot-final-2026-11-08.bundle)。
+
+**1. 本机数据** (data/v2 每个文件 → 代码读的位置 data/…, 按大小比): 蓝图块 17、班次记录 86 班 (553 个文件)、gamedata 251、renders、search 都在。代码会读但缺的三样, 已不覆盖地复制: `play/online/` 第二版 100 局 (含"我的账号"那几局, 界面"我的账号"那栏读这里)、`play/groups/` 旧群、`play/mk-current.json` (runDir 改成新位置)。没代码读、留在 data/v2 当存档的: io-probe、io-suite、scratch、shots、team、calc-crosscheck、play 根下 check-*.jsonl / requests.jsonl / last-run.void*。keys.json 只差 relay_formats (站点协议缓存), lineup.json 是后来重选的。全图布局 + 联机世界副本在 `data/training-private/blueprints/friend/world/` (./bp study 读这里)。第二版各班角色目录 (笔记、journal) 都在仓库外的角色目录根里 (有 28 个 summary 里记的是旧路径, 内容在)。界面接口只列 7 个世界 18 班: 其余是第二版界面里当时点的"收起 / 删了对话记录" (第二版就有 86 / 81 个标记), 不是搬丢; 统计页算进 58 班。
+**2. 代码文件** (第二版 803 个文件按内容找): 原样或搬了位置 630、同名改过 87、找不到 86 (1.2 万行): 第二版不装模组路的旧 io 23 个和它的测试 (已由 game/ commands/ 重写)、src/play 的 online / online-brain / online-scan / context-hook / fh-hints / read-guard / output-cap / ref-sections (搬进 core/ commands/ 改了名)、测试 46 个。
+**3. 搬家后静默断掉的 (路径没跟着改, 已修, 装模组那条路)**:
+- Claude Code 钩子 6 个全指向不存在的 `src/play/context-hook.ts` (连续班 summary 里 hooksSeen 为空): 放行循环 / 管道 (连续班 9 条组合命令被 dontAsk 拒)、拦串联 sleep、读文件禁区、收件箱、快满提醒、压缩前后存笔记都没生效 → 转接到 `core/brains/hooks/hook.ts`; 实测: 串联 sleep 拒 (退出码 2)、`./fh help collect | head -20` 放行、读 game/ 下的模组源码被拦。
+- Console 密钥大脑 (claude-api) 的跑器 `src/play/agent-sdk-runner.ts` 没了 → 转接 `core/brains/agent-sdk-runner.ts`。
+- `./fh` 包装被换成不装模组路的 commands/fh.ts, 丢了第二版的: 贴蓝图先干跑、只有树石挡路就 forced (lab #85); 放机器时经 RCON 查好能放的坐标、数还缺几台、"手放第 N 台"的事实、几种摆法 (第二版专门对付手搬的) → `src/play/fh-shim.ts` + `fh-hints.ts` 恢复第二版原文 (只去掉 FH_BACKEND=io 分支), output-cap / ref-sections 转接; 压缩后清"给过"的记录 (两条路共用 hook.ts)。
+- 开班扫描判断"有没有全图布局"看旧位置 `data/friend-world`, "./bp study --map"提示一直不出 → 对到 friend/world; `play:world-export` 输出也改到那里。
+- 沙盘实验核实的事实写 `<仓库>/knowledge/facts.*` (不存在) → `training/knowledge/verified/facts.*` (`knowledgeFile`)。
+- 界面"只读连接联机服务器"起的是不存在的 `src/play/online.ts` → `core/run/online.ts --server …` (`groups.ts connectArgs`, 带群的路线和读没探过的区块); 排练脚本 rehearse-server 同改。没实跑 (上真服要用户在场)。
+**4. 在代码里但一班里到不了的 (装模组路)**: 群开的连续班一班 10 分钟, 而配比提醒 (开班 15 / 35 分)、不扩产点名 (20 分)、产量播报 (30 分一次)、工具诉求 (90 分)、催闲 (闲满 10 分) 都按本班算 → 配比提醒 / 不扩产点名 / 工具诉求按**世界累计时间** (`worlds.ts worldPlayedMs`: 同一世界之前各班 summary 的 realMinutes 相加), 播报间隔按班长缩 (10 分钟班 5 分钟一次), 催闲门槛按班长四成 (10 分钟班 4 分钟)。
+**5. 英文**: 英文提醒两条路都在 (不装模组路原来没有), 改成按句判断 (中英混在一段里的英文句也算)、5 分钟 2 段就提醒、隔 3 分钟、提醒后不清零 (原来一班 5/21 句英文只提醒 1 次); 两条路的角色目录 `.claude/settings.json` 加 Claude Code 的 `language` 设置 (进系统提示)。
+**6. 不装模组路补的**: 开班把上一班复盘"先修这几条"放到笔记最前、拿上一班整班平均产量给监工播报和复盘比 (每班硬指标); 两条路教训互通 (不装模组路也读 `data/play/lessons-learned.jsonl`), 挑 70 条时几份文件从最新的轮流取 (原来本机那份 456 条排前, 训练集待核区的一条都轮不到)。
+**7. 常驻命令 78 格失败**: 不是退回, 第二版就有: 模组规矩是队列里的取放补料步骤自动加 `walk: true`, 常驻命令不加, 不写时目标超过 64 格整步拒 (`autowalk.lua TOUR_RANGE`、`scheduler.lua`)。→ 教训进待核区 (做 order_set 时带出, 两条路都核过载入), 手册 waits-queues 那句更正, 装模组路简报补第二版那三句 (`--wait`、去想事情前先挂常驻命令、动作会暂停队列要 queue resume) 和这条。
+**8. 测试**: 第二版测试搬回 30 个 (装模组路用的体检、要点、教训、放行、摘要、复盘、产量、研究、扫描、上下文、真人聊天、经验检索、提示 …; 路径改到新项目), 和新项目重复的 lab-unit 不搬, 测第二版旧 io 的不搬。全量单元 642: 过 630、失败 0、跳过 12。
+**9. 备份**: 角色目录 (笔记) 原来在家目录两处, 不在备份里 → 本机 `.env` 设 `BRAIN_DIR` 到备份脚本备的那个目录 (仓库外), 已有的 21 个复制过去; 补回 `PILOT_BACKUP_CMD` (装模组路班末备份)。
+**还差 (没做)**:
+- 不装模组路没有 (第二版这条路也没有, 装模组路有): 看门狗 / 掉线重连 / 换班不关游戏、扩产提案、手搬统计、带子和布局检查、真人的话没回就催、研究队列空了自动排、每 90 分钟问工具诉求、截止后写总结、队列步骤自动加 walk。
+- 放机器时查坐标 / 缺几台 / 手放第 N 台只在装模组路 (经 RCON); 不装模组路的 commands/hints.ts 要经代理查, 还没做。
+- 装模组路: 截止前 10 / 3 分钟提醒没有 (不装模组路有); "上一班实测" (派对 handover.py) 没有派对仓库, 每班报没写成; 角色分工那句仍是英文 (run.ts 角色说明)。
+- 这些改动都没在沙盘真跑一班核 (要开窗口 / 花额度, 先问用户)。
+
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。
 

@@ -32,6 +32,8 @@ export function brainSettings(at: number, hook: (event: string, ...extra: string
     // 派对 tools/clean-profile.py: Bash 默认 / 最长超时 20 分钟 (默认 2 分钟, ./fh sleep 和长 --wait 会被挪到后台); 关自动记忆和 git 说明
     autoMemoryEnabled: false,
     includeGitInstructions: false,
+    // Claude Code 的语言设置 (写进系统提示 "Always respond in …"): 每轮提示词和英文提醒之外再加一层, 做事间隙的旁白最容易冒英文
+    language: "简体中文 (Simplified Chinese)",
     env: { BASH_DEFAULT_TIMEOUT_MS: "1200000", BASH_MAX_TIMEOUT_MS: "1200000", ...(pct ? { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: pct } : {}) },
     hooks: {
       PreCompact: [{ hooks: [cmd("pre-compact")] }],

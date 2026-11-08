@@ -14,6 +14,7 @@ export const labRel = dataRel;
 export function knowledgeFile(name: string): string {
   const map: Record<string, string[]> = {
     "facts.md": ["knowledge", "verified", "facts.md"],
+    "facts.json": ["knowledge", "verified", "facts.json"],
     "brief-points.md": ["knowledge", "verified", "points.md"],
     "ref-index.md": ["manuals", "ref", "index.md"],
     "lessons-seed.json": ["lessons", "verified", "seed.json"],

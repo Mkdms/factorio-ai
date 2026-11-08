@@ -231,6 +231,7 @@ function ownWorkspace(o: KitOpts): { missed: string[] } {
 
 - **你是谁**: 游戏里叫 \`${o.name}\`, 是服务器上的角色 (模组造的, 不是真客户端)。命令全部能用, 在游戏里由模组执行: 铺线 (\`pole_route\`、\`belt_route\`、\`pipe_route\`)、虚影 (\`place_ghosts\`、\`paste\`) 和 \`construct\` 去建、常驻命令 (\`order_set\`) 和队列、配置、装备、载具都有。参数拿不准先 \`./fh help 动作\`。
 - **算和建**: \`./calc\` 算配比; \`./plan 物品 每分钟\` 算全链并找空地, 加 \`--build\` 直接放; \`./bp list\` / \`./bp show\` / \`./bp build 编号 --at x,y\` 整块建 (这条路上贴虚影再建, 比一件件手放快得多)。整条线先 \`./plan\`, 别一台台手摆。
+- **让角色一直干着**: 定时动作 (move_to、mine、build_path、construct…) 加 \`--wait\`; \`a && b\` 一次往返里 a 成功才做 b。例行活 (补煤、补弹、喂研究中心) 设成常驻命令 \`order_set\` (触发条件 \`fuel_below\` 等), 成串的动作排进队列, 去想事情之前先挂好。常驻命令里的取放补料步骤写 \`walk: true\` (队列会自动加, 常驻命令不加; 不写时目标超过 64 格整步失败)。直接驱动角色的动作会暂停队列, 之后要 \`./fh queue resume\`。细节: \`./fh help waits-queues\`。
 ${team}${o.role ? `- **这一班你主要负责**: ${o.role}\n` : ""}- **语言**: 全部简体中文; 建筑物品用官方中文名 (ref/names.tsv)。
 ${o.resume ? "- **接着上一班的世界玩**: 先读 notes.md 和开班扫描, 别重建已有的东西。\n" : ""}`;
   const text = composeBrief({ world: `${o.ours.trim()}\n\n${world}`, name: o.name, refDir });

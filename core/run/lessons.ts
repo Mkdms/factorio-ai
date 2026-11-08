@@ -74,10 +74,18 @@ export function appendLearned(file: string, rows: Learned[]): number {
   return fresh.length;
 }
 /** 开班带上: 最新记的优先, 和种子文字相同的不要, 最多 max 条; 键非法的跳过; 标 unverified, impact 低于核实过的种子 */
+/** 几份列表各自从最新 (末尾) 往前, 轮流取: 一份记得多的 (装模组那条路本机 456 条) 不会把别的份 (训练集待核区、不装模组那条路记的) 全挤出名额 */
+export function newestRoundRobin<T>(lists: T[][]): T[] {
+  const rev = lists.map((l) => [...l].reverse());
+  const out: T[] = [];
+  for (let i = 0; rev.some((l) => i < l.length); i++) for (const l of rev) if (i < l.length) out.push(l[i]);
+  return out;
+}
+
 export function learnedSeeds(files: string[], seeds: Seed[], max = 70): Seed[] {
   const have = new Set(seeds.map((s) => norm(s.rule)));
   const out: Seed[] = [];
-  for (const x of files.flatMap((f) => readLearned(f)).reverse()) {
+  for (const x of newestRoundRobin(files.map((f) => readLearned(f)))) {
     if (out.length >= max) break;
     if (have.has(norm(x.rule)) || !isGeneralLesson(x.rule)) continue;
     try { const s = validateSeed({ rule: x.rule, keys: x.keys, impact: 1, source: `模型笔记 ${x.who ?? ""} ${x.run ?? ""}, 没核实` }); have.add(norm(s.rule)); out.push({ ...s, unverified: true }); } catch { /* 不合格的不带 */ }

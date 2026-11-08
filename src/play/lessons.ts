@@ -5,6 +5,7 @@
 //   ③ 班末把各角色 notes.md 的 "## Lessons" 合并进教训库 (推断 action / item / recipe 键; 一班班往下传)。
 // 规则文字按字节 ≤160 (board.lua fits 用 #text), 中文约 53 字; 名字键要是游戏内部名 (模组按原型表校验)。
 import fs from "node:fs";
+import { newestRoundRobin } from "../../core/run/lessons.ts";
 
 export type LessonKeys = { action?: string; entity?: string; item?: string; recipe?: string };
 /** unverified: 往届大脑笔记带来的, 没核实过: 不刷"已核实", 库满时不挤别的 */
@@ -250,7 +251,8 @@ export function appendLearned(file: string, rows: Learned[]): number {
 export function learnedSeeds(file: string, seeds: Seed[], max = 70, /** 仓库里带的 (knowledge/lessons-learned.jsonl, 本机没积累时靠它), 排在本机新记的后面 */ shared?: string): Seed[] {
   const have = new Set(seeds.map((s) => norm(s.rule)));
   const out: Seed[] = [];
-  for (const x of [...(shared ? readLearned(shared) : []), ...readLearned(file)].reverse()) {
+  // 2026-11-08: 原来本机的排前、仓库带的排后 (本机没积累时才用), 本机记满 70 条后训练集待核区 (不装模组那条路记的、新补的) 一条都轮不到; 改成两份从最新的轮流取
+  for (const x of newestRoundRobin([readLearned(file), shared ? readLearned(shared) : []])) {
     if (out.length >= max) break;
     if (have.has(norm(x.rule)) || !isGeneralLesson(x.rule)) continue;
     try { const s = validateSeed({ rule: x.rule, keys: x.keys, impact: 1, source: `大脑笔记 ${x.who ?? ""} ${x.run ?? ""}, 没核实` }); have.add(norm(s.rule)); out.push({ ...s, unverified: true }); } catch { /* 不合格的不带 */ }

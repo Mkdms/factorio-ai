@@ -7,20 +7,29 @@ export function isEnglish(text: string): boolean {
   return han < 2 && latin >= 8;
 }
 
-/** 每个角色的英文计数: 记一句话, 返回要不要提醒 (window 内 ≥ n 句英文, 且离上次提醒 ≥ gap) */
+/** 一段话里有没有整句英文: 按行和句末标点切开逐句看 (2026-11-08 装模组连续班: "先补煤。Now the refuel tour (…)." 这种中英混在一段里的, 整段看算中文, 一直漏) */
+export function hasEnglishSentence(text: string): boolean {
+  const noCode = text.replace(/`[^`]*`/g, " ");
+  return noCode.split(/\r?\n|(?<=[.!?。！？])\s*/).some((s) => s.trim() && isEnglish(s));
+}
+
+/**
+ * 每个角色的英文计数: 记一段话, 返回要不要提醒 (window 内 ≥ n 段带英文句, 且离上次提醒 ≥ gap)。
+ * 2026-11-08 起 3 句 / 5 分钟 → 2 段 / 5 分钟、隔 3 分钟, 提醒后不清零: 原来提醒一次就清零, 同一班后面又说英文也不再提醒 (一班 5/21 句英文只提醒了 1 次)。
+ */
 export class EnglishWatch {
   total = 0; english = 0;
   private recent: number[] = [];
   private lastNudge = -Infinity;
   private n: number; private windowMs: number; private gapMs: number;
-  constructor(n = 3, windowMs = 300_000, gapMs = 300_000) { this.n = n; this.windowMs = windowMs; this.gapMs = gapMs; }
+  constructor(n = 2, windowMs = 300_000, gapMs = 180_000) { this.n = n; this.windowMs = windowMs; this.gapMs = gapMs; }
   note(text: string, now = Date.now()): boolean {
     this.total++;
-    if (!isEnglish(text)) return false;
+    if (!hasEnglishSentence(text)) return false;
     this.english++;
     this.recent = [...this.recent.filter((t) => now - t < this.windowMs), now];
     if (this.recent.length < this.n || now - this.lastNudge < this.gapMs) return false;
-    this.lastNudge = now; this.recent = [];
+    this.lastNudge = now;
     return true;
   }
 }

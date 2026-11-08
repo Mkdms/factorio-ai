@@ -11,7 +11,7 @@
 //      "echo a#; rm -rf ." (shlex 把词中间的 # 也当注释, 吞掉了后半句)、"./fh call status |& rm -rf ." (不认识的 |& 被当成参数)、
 //      "for f in /etc/x; do echo hi > $f; done" (for 的词表不查, 变量当重定向目标)。
 //      我们: 词首 # 不放行、不认识的符号不放行、for 词表和参数一样查、重定向目标不许带变量。
-//   2. 白名单 = ./fh ./calc ./bp ./plan ./know + python (沙盘里放开, 没有沙箱, 联机前要重新看) + 只读小工具。去掉 sleep (等事件用 ./fh sleep 秒数 --until 条件)、
+//   2. 白名单 = ./fh ./fp (装模组那条路 run.ts 的 fp 配置) ./calc ./bp ./plan ./know + python (沙盘里放开, 没有沙箱, 联机前要重新看) + 只读小工具。去掉 sleep (等事件用 ./fh sleep 秒数 --until 条件)、
 //      rg (--pre 能跑别的程序)。会写文件或挂住的选项不放行: sort -o / --compress-program、uniq 的第二个文件 (输出文件)、tail -f、date -s、printf -v。
 //   3. 多认一种: cd 到自己的工作目录 (大脑常写 cd "<自己目录>" && …)。
 //   4. Windows 路径: 盘符 (C:/、C:\) 和 \ 开头的也算绝对路径。
@@ -112,7 +112,7 @@ export function parseShell(command: string): Shell | null {
 }
 
 /** 白名单程序: 我们的命令行 + 只读小工具 */
-export const PROGRAMS = new Set(["./fh", "./calc", "./bp", "./plan", "./know", "python", "python3", "grep", "head", "tail", "wc", "sort", "uniq", "cut", "tr", "cat", "echo", "printf", "jq", "ls", "date", "true", "false", "test", "["]);
+export const PROGRAMS = new Set(["./fh", "./fp", "./calc", "./bp", "./plan", "./know", "python", "python3", "grep", "head", "tail", "wc", "sort", "uniq", "cut", "tr", "cat", "echo", "printf", "jq", "ls", "date", "true", "false", "test", "["]);
 
 // 参数: 单个 \ 开头多半是 grep 正则 (\[、\{、\b), 只把 \\ (UNC) 当路径; 重定向目标另外不许任何 \ 开头
 const isAbs = (t: string) => (t.startsWith("/") && t !== "/dev/null") || t.startsWith("~") || t.startsWith("\\\\") || /^[A-Za-z]:/.test(t);

@@ -216,3 +216,4 @@
 {"rule":"抽水泵: nearest_water 给的水格旁很多位置 placement blocked, 换到别的岸线(离水2~3格处)试才成功; 放上后 inspect 看出水口, 用…","keys":{"item":"pipe"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
 {"rule":"热能采矿机+石炉全靠手补煤, 每 ~4 分钟一轮, 极耗时; 下次尽早上电力采矿机或煤带","keys":{"item":"burner-mining-drill"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
 {"rule":"工具: transfer 放科技包常报\"少了0个\"但常已放入, 以 status 为准","keys":{"action":"transfer","item":"science"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
+{"rule":"常驻命令里补煤/取放步骤写 walk:true: 队列会自动加, 常驻命令不加, 不写时目标超 64 格整步失败","keys":{"action":"order_set"},"who":"监工 (模组 autowalk.lua + 实跑报错)","run":"2026-11-08T09-37-46"}

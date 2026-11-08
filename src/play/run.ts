@@ -22,7 +22,7 @@ import { formatCompact } from "./format.ts";
 import { reviewBase } from "./review.ts";
 import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "./context.ts";
 import { parseRateLimit, probeQuota, readPlanUsage, describeQuota, maxUtilization, type Quota } from "./quota.ts";
-import { worldForNewRun, writeWorld, setHidden } from "./worlds.ts";
+import { worldForNewRun, writeWorld, setHidden, worldPlayedMs } from "./worlds.ts";
 import { ClaudeStream, STREAM_ARGS } from "./claude-stream.ts";
 import { EnglishWatch } from "./lang.ts";
 import { labLine, ratesFrom, ratesLine } from "./science.ts";
@@ -117,7 +117,14 @@ if (GROUP) { const problem = groupStartProblem(GROUP, values.save, latestRunOfGr
 const PEACEFUL = GROUP?.peaceful !== false && !values.enemies;
 /** 有虫子的世界开班先留的和平 (src/play/peace.ts): 世界设成有虫子, 这段时间还开着和平 */
 const PEACE = makePeace(PEACEFUL ? 0 : Number(values["peace-minutes"] ?? GROUP?.peacefulMinutes ?? 0));
-{ const { world, backfill } = GROUP ? { world: groupWorld(GROUP), backfill: null } : worldForNewRun(runId, values.save); writeWorld(runDir, world); if (backfill) writeWorld(backfill, world); }
+const WORLD = (() => { const { world, backfill } = GROUP ? { world: groupWorld(GROUP), backfill: null } : worldForNewRun(runId, values.save); writeWorld(runDir, world); if (backfill) writeWorld(backfill, world); return world; })();
+/** 世界里已经玩了多久 (之前各班 + 这一班): 群开的连续班一班 10 分钟, "开班 N 分钟"的门槛 (配比提醒、不扩产点名、工具诉求) 按它算 (worlds.ts worldPlayedMs) */
+const PRIOR_MS = worldPlayedMs(path.join(labRoot(), "play"), WORLD.id, runId);
+const worldMs = () => PRIOR_MS + Date.now() - t0;
+/** 产量播报 / 不扩产点名的间隔 (30 秒一个采样): 60 = 30 分钟; 一班不到 1 小时按班长缩 (10 分钟一班 → 5 分钟一次), 不然一班里一次都到不了 */
+const BROADCAST_EVERY = Math.min(60, Math.max(10, Math.round(Number(values.minutes))));
+/** 闲多久催 (采样数): 派对是站 10 分钟; 一班不到 25 分钟按班长的四成算 (10 分钟一班 → 4 分钟), 至少 3 分钟 */
+const IDLE_LIMIT = Math.min(20, Math.max(6, Math.round(Number(values.minutes) * 2 * 0.4)));
 /** 中转站 (relay): 站点 / 令牌在账号页填进 keys.json; relay_model (若有) 当 relay 没指定模型时的默认 */
 const RELAY = relayConfig(readKeys(defaultKeysFile()));
 // 界面账号页存的"下一班阵容": 命令行没给 --brains / --brain / --agents 时按它; 给了命令行优先
@@ -426,7 +433,7 @@ let rosterAt = 0;
 /** 全队工具的长期存放处: 跨班、跨世界留着 (在 lab-data/play 下, 跟着备份走) */
 const TEAM_TOOLS_KEEP = path.join(labRoot(), "play", "team-tools-keep");
 /** 上次问工具诉求的时间、上次体检报过的问题种类 */
-let lastToolPoll = Date.now(), healthCats = new Set<string>();
+let lastToolPoll = PRIOR_MS /* 世界累计毫秒 (上次问工具诉求时) */, healthCats = new Set<string>();
 const loops: Promise<void>[] = [];
 /** 看门狗 (M6, src/play/watchdog.ts): 服务器进程没了或 RCON 答不上 45 秒 → 用最新完整自动存档重启 (端口不变), 5 分钟内不重复, 一班最多 10 次; 每次记 recovery.jsonl, 停机占比进 summary */
 const watch = newWatchState();
@@ -787,7 +794,7 @@ function onBrainLine(a: Agent, m: any) {
       log(`  大脑${tag(a)}说: ${b.text.trim().replace(/\s+/g, " ").slice(0, 160)}`);
       // 说英文 (用户: 全程中文; 第十三轮接续第 1 班头 10 分钟 9 句 8 句英文): 5 分钟内 3 句就私信提醒一次, 只给事实
       if (a.lang.note(b.text)) {
-        void tellAgent(a, `监工: 你最近 5 分钟有 3 句话是英文 (例: "${b.text.trim().replace(/\s+/g, " ").slice(0, 60)}")。用户看不懂英文: 你说的每一句话, 包括做事前后的一两句, 都用简体中文。`).catch(() => undefined);
+        void tellAgent(a, `监工: 你最近 5 分钟说的话里又有英文句子 (例: "${b.text.trim().replace(/\s+/g, " ").slice(0, 60)}")。用户看不懂英文: 你说的每一句话, 包括做事前后的一两句, 都用简体中文。`).catch(() => undefined);
         log(`监工: ${tag(a) || "角色"} 说英文, 提醒 (本班英文 ${a.lang.english}/${a.lang.total} 句)`);
       }
     }
@@ -1273,7 +1280,7 @@ ${out.slice(0, 600)}`);
           // 2026-11-05 照派对 (tools/idle_nudge.py:875-876): 站 10 分钟才提醒, 同一角色隔 20 分钟; 他们研究 15 条提醒里 5 条没进上下文、1 条只改变行为 2 分钟 (docs/studies/2026-10-13-agent-minds.md)。
           // 只有还站在出生点的 3 分钟就说 (服务器角色出生在 (0,0) 附近, 基地在别处; )
           const atSpawn = !!a.prev && Math.hypot(a.prev.x, a.prev.y) < 12;
-          if (a.idle >= (atSpawn ? 6 : 20) && Date.now() - t0 > 180_000 && Date.now() - a.lastNudge > 20 * 60_000) {
+          if (a.idle >= (atSpawn ? 6 : IDLE_LIMIT) && Date.now() - t0 > 180_000 && Date.now() - a.lastNudge > 20 * 60_000) {
             a.lastNudge = Date.now(); nudges++;
             const msg = `你的角色已经闲了约 ${Math.round(a.idle / 2)} 分钟 (没走、没手搓、背包没变)。思考时角色站着不动: 先把能一口气执行的步骤排进计划队列再想下一步。${atSpawn ? " 你还站在出生点 (0,0) 附近, 基地不在这里: 先 ./fh call map 看基地在哪, 走过去再动手; 光看读数不建东西没有产出。" : ""}${hint(["闲了"], 1)}`;
             if (running(a)) { await tellAgent(a, msg); log(`监工: ${tag(a) || "角色"} 闲了 ${Math.round(a.idle / 2)} 分钟, 写进收件箱`); }
@@ -1291,10 +1298,11 @@ ${out.slice(0, 600)}`);
         // 没算过配比 (2026-11-04 #251: 18 班里 ./calc 只有 14 次): 开班 15 分钟和 35 分钟各提醒一次 (写进收件箱, 不打断); ./calc 每次调用往角色目录的 .calc.log 记一行
         for (const a of agents) {
           const calls = (() => { try { return fs.readFileSync(path.join(a.dir, ".calc.log"), "utf8").split(/\r?\n/).filter(Boolean).length; } catch { return 0; } })();
-          const due = calcReminderDue((Date.now() - t0) / 60_000, calls, calcReminded.get(a.id) ?? 0);
+          // 按世界累计的分钟算 (群开的连续班一班 10 分钟, 按本班算 15 / 35 分钟永远到不了); 开班头 3 分钟不说 (刚读完简报)
+          const due = Date.now() - t0 >= 3 * 60_000 ? calcReminderDue(worldMs() / 60_000, calls, calcReminded.get(a.id) ?? 0) : 0;
           if (due) {
             calcReminded.set(a.id, due);
-            const msg = `开班 ${due} 分钟了, 你还没用 ./calc 算过配比。建线 / 扩产前先算要几台机器、吃多少料 (例: ./calc '{"targets":{"automation-science-pack":30}}'), 不算就铺是最常见的浪费; 要点在 AGENTS.md "开工前必记的要点"。`;
+            const msg = `这个世界已经玩了 ${Math.round(worldMs() / 60_000)} 分钟, 这一班你还没用 ./calc 算过配比。建线 / 扩产前先算要几台机器、吃多少料 (例: ./calc '{"targets":{"automation-science-pack":30}}'), 不算就铺是最常见的浪费; 要点在 AGENTS.md "开工前必记的要点"。`;
             if (running(a)) { await tellAgent(a, msg); log(`监工: ${tag(a) || "角色"} ${due} 分钟没算过配比, 写进收件箱`); }
             else { a.nudge = (a.nudge ?? "") + msg; log(`监工: ${tag(a) || "角色"} ${due} 分钟没算过配比, 下一轮提醒`); }
           }
@@ -1365,14 +1373,15 @@ ${out.slice(0, 600)}`);
         // 11-03 起: 每 10 分钟只发产量一句 (每班硬指标); 按负责人发的工厂摘要 (src/play/digest.ts, 搬自派对 factory_digest.py) 照派对每班自动发一次
         // (他们在截止前 2 小时, 一班好几个小时; 我们一班 60 分钟 → 班中), 只发和上一次摘要 (含上一班的) 比有变化的、归你管的, 加你这一班重复最多的手搬。
         // 产量播报: 每 10 分钟 → 每 30 分钟 (2026-11-05 降频)
-        const belts = KIT === "party" && (samples.length % 60 === 0 || (!digestSent && Date.now() - t0 >= (deadline - t0) / 2)) ? Number(await lab.exec(`local f = game.forces.player return game.surfaces[1].count_entities_filtered{force = f, type = {"transport-belt", "underground-belt", "splitter"}}`).catch(() => -1)) : -1;
+        const belts = KIT === "party" && (samples.length % BROADCAST_EVERY === 0 || (!digestSent && Date.now() - t0 >= (deadline - t0) / 2)) ? Number(await lab.exec(`local f = game.forces.player return game.surfaces[1].count_entities_filtered{force = f, type = {"transport-belt", "underground-belt", "splitter"}}`).catch(() => -1)) : -1;
         // 工具诉求 (派对每 90 分钟问一次: how/operations.md, 633 条诉求修出大半个 harness; 我们之前一条没收过): 大脑回 operator, 班末捞进 tool-requests.md
-        if (KIT === "party" && Date.now() - lastToolPoll >= 90 * 60_000) {
-          lastToolPoll = Date.now();
+        // 按世界累计时间: 每跨过一个 90 分钟问一次 (连续班一班 10 分钟, 按本班算永远到不了)
+        if (KIT === "party" && Math.floor(worldMs() / (90 * 60_000)) > Math.floor(lastToolPoll / (90 * 60_000))) {
+          lastToolPoll = worldMs();
           for (const a of agents) await tellAgent(a, TOOL_POLL);
           log("监工: 问了一次工具诉求");
         }
-        if (KIT === "party" && samples.length % 60 === 0) {
+        if (KIT === "party" && samples.length % BROADCAST_EVERY === 0) {
           // 扩产量化 (第 3 班两人 50 分钟只建了 44 次, 查询占 82%): 播报这一班新增了几台生产机器
           const m0 = samples[0]?.machines ?? 0, mNow = s.machines ?? 0;
           const ago = samples.find((x) => x.t >= Date.now() - 20 * 60_000);
@@ -1382,7 +1391,7 @@ ${out.slice(0, 600)}`);
           // 不扩产就点名: 开班 20 分钟后, 近 20 分钟没新增一台生产机器, 而产量比上一班低或研究中心一半以上停着 → 两人各扩自己那块, 至少隔 20 分钟
           const nowR = { red: perMin("redTotal"), green: perMin("greenTotal"), blue: perMin("blueTotal") };
           const behind = s.labsWorking * 2 < s.labs || (prevRates ? (["red", "green", "blue"] as const).some((k) => prevRates[k] !== null && nowR[k] < prevRates[k]!) : false);
-          if (Date.now() - t0 > 20 * 60_000 && grew20 <= 0 && behind && Date.now() - lastGrowNudge > 20 * 60_000) {
+          if (worldMs() > 20 * 60_000 && Date.now() - t0 > 3 * 60_000 && grew20 <= 0 && behind && Date.now() - lastGrowNudge > 20 * 60_000) {
             lastGrowNudge = Date.now(); growNudges++;
             for (const a of agents) await tellAgent(a, `监工点名 (近 20 分钟没新增一台生产机器, 产量没达标): 先扩产再做别的。${a === agents[0] ? "你管冶炼和采矿: 按 ./calc 算出的板子量补炉子 (电炉) 和采矿机" : "你管科技包线: ./calc 按每分钟 30 个倒推最缺那种瓶 (现在看蓝瓶、红瓶) 还差几台组装机, 建上"}; 有建设机器人就整块贴蓝图让机器人建, 别手搓中间件、别连着查状态。${hint(a === agents[0] ? ["没扩产", "加炉子"] : ["没扩产", "加组装机"], 2, true)}`);
             log("监工点名: 近 20 分钟没扩产");
@@ -1575,7 +1584,7 @@ ${out.slice(0, 600)}`);
     const now = { red: raw.rates.red, green: raw.rates.green, blue: raw.rates.blue };
     const p = propose(gdCalc, ex, now, null, health, zh);
     // 相关要点 + 蓝图候选按扫描点出的问题挑 (src/play/hints.ts), 写进 world-scan.md 的"相关要点"一节
-    const sc = composeScan({ raw, existing: ex, health, rung: p.rung, deltas: p.deltas, reached: p.reached, seats: agents.length, zh, peaceMinutes: minutesLeft(peaceLeftMs(PEACE, Date.now())), hintsFor: (ls) => hintsForLines(POINTS, ls, { bp: bpRows, max: 5 }), hasWorldMap: fs.existsSync(path.join(labRoot(), "friend-world", "index.json")) });
+    const sc = composeScan({ raw, existing: ex, health, rung: p.rung, deltas: p.deltas, reached: p.reached, seats: agents.length, zh, peaceMinutes: minutesLeft(peaceLeftMs(PEACE, Date.now())), hintsFor: (ls) => hintsForLines(POINTS, ls, { bp: bpRows, max: 5 }), hasWorldMap: fs.existsSync(path.join(labRoot(), "training-private", "blueprints", "friend", "world", "index.json") /* 和 bp-study.ts worldFile 同一处; 第二版 lab-data/friend-world, 搬家后这里没跟着改, 扫描的"./bp study --map"提示一直不出 */) });
     // 接下来要建的东西, 真实基地怎么摆 (每个模型第一轮都读这份, 这班 6 个读了 7 次)
     let layouts = "";
     try {

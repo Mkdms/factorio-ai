@@ -74,3 +74,22 @@ export function applyWorldName<T extends { id: string; name: string }>(playDir: 
   const n = worldNames(playDir)[w.id];
   return n ? { ...w, name: n, renamed: true } : { ...w, renamed: false };
 }
+
+/**
+ * 这个世界之前各班一共跑了多久 (毫秒; 各班 summary.json 的 realMinutes 相加, 不算 exceptRunId, 没收工的班不算)。
+ * 群开的连续班一班只有 10 分钟 (2026-11-08), 监工里"开班 15 / 20 / 35 分钟"这类门槛按本班算一次都到不了: 按世界累计算。
+ */
+export function worldPlayedMs(playDir: string, worldId: string, exceptRunId?: string): number {
+  const root = path.join(playDir, "runs");
+  let dirs: string[] = [];
+  try { dirs = fs.readdirSync(root); } catch { return 0; }
+  let ms = 0;
+  for (const d of dirs) {
+    if (d === exceptRunId || readWorld(path.join(root, d))?.id !== worldId) continue;
+    try {
+      const s = JSON.parse(fs.readFileSync(path.join(root, d, "summary.json"), "utf8")) as { realMinutes?: unknown };
+      if (typeof s.realMinutes === "number" && s.realMinutes > 0) ms += s.realMinutes * 60_000;
+    } catch { /* 没收工的班不算 */ }
+  }
+  return ms;
+}

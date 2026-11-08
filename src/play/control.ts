@@ -337,7 +337,7 @@ const server = http.createServer(async (req, res) => {
       if (onlineClientAlive()) return send(400, { error: "已经有一个联机客户端连着, 等它断开再连" });
       const logFile = path.join(PLAY, "groups", `${g.id}-connect-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.log`);
       const fd = fs.openSync(logFile, "a");
-      const c = spawn(process.execPath, ["--env-file-if-exists=" + path.join(REPO, ".env"), path.join(REPO, "src", "play", "online.ts"), ...args], { cwd: REPO, detached: true, stdio: ["ignore", fd, fd], windowsHide: true, env: { ...process.env } });
+      const c = spawn(process.execPath, ["--env-file-if-exists=" + path.join(REPO, ".env"), path.join(REPO, "core", "run", "online.ts"), ...args], { cwd: REPO, detached: true, stdio: ["ignore", fd, fd], windowsHide: true, env: { ...process.env } });
       c.unref();
       return send(200, { started: true, group: g.id, log: logFile });
     }

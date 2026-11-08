@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { LabInstance } from "../lab/instance.ts";
-import { REPO } from "../lab/gamedir.ts";
+import { REPO, knowledgeFile } from "../lab/gamedir.ts";
 import { zhNames } from "../lab/names.ts";
 import type { Experiment, ExpContext, Outcome } from "./types.ts";
 import { loadRules, type Rules } from "../blueprint/rules.ts";
@@ -71,8 +71,9 @@ export interface FactRecord {
   experiment: string;
 }
 
-const FACTS_JSON = path.join(REPO, "knowledge", "facts.json");
-const FACTS_MD = path.join(REPO, "knowledge", "facts.md");
+// 核实过的事实写训练集正式区 (第二版 <仓库>/knowledge/facts.*; 搬家后这里没跟着改, 沙盘实验的结论写不进去)
+const FACTS_JSON = knowledgeFile("facts.json");
+const FACTS_MD = knowledgeFile("facts.md");
 const VERDICT_ZH = { verified: "✅ 已核实", refuted: "❌ 被推翻", inconclusive: "❔ 没测出结论" } as const;
 
 export function loadFacts(): Record<string, FactRecord> {

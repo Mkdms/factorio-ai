@@ -50,6 +50,9 @@ import { writeSummary } from "../records/summary.ts";
 import { groupWorld, readGroup } from "../../src/play/groups.ts";
 import { writeWorld } from "../../src/play/worlds.ts";
 import { writeCurrentRun } from "../../src/play/shift-recover.ts";
+import { EnglishWatch } from "../../src/play/lang.ts";
+import { reviewNotes } from "../../src/play/review-shift.ts";
+import { ratesFrom, type Rates, type RateRow } from "./science.ts";
 
 const { values } = parseArgs({ options: {
   lab: { type: "boolean", default: false }, server: { type: "boolean", default: false }, save: { type: "string" }, "read-only": { type: "boolean", default: false },
@@ -92,6 +95,8 @@ if (brain !== "none") {
 }
 let child: ChildProcess | null = null;
 let supervisor: Supervisor | null = null;
+/** 上一班整班平均每分钟产量 (接存档时从上一班 monitor.jsonl 算) */
+let prevRates: Rates | null = null;
 let supTimer: NodeJS.Timeout | null = null, chatTimer: NodeJS.Timeout | null = null;
 /** 真人说紧急, 打断了这一轮: 下一轮马上开, 不等 */
 let urgentNow = false;
@@ -147,12 +152,22 @@ const JOIN_TIMEOUT_MS = 10 * 60_000;
 /** 连接这一步最多等多久: 服务器没开时客户端会一直停在这里不报错 */
 const CONNECT_TIMEOUT_MS = 90_000;
 
+/** 说英文的计数和提醒 (src/play/lang.ts, 和装模组那条路同一套; 2026-11-08 补: 这条路原来只记日志): 递话在监工起来后接上 */
+const english = new EnglishWatch();
+let englishTell: ((text: string) => Promise<unknown>) | null = null;
+
 /** 大脑输出的一行 (Claude 形状): 命令和说的话进日志; 一轮的结果不是 success 也记 */
 function logBrainEvent(ev: unknown): void {
   const m = ev as { type?: string; subtype?: string; is_error?: boolean; result?: unknown; message?: { content?: { type?: string; name?: string; input?: { command?: unknown }; text?: string }[] } };
   if (m.type === "assistant") for (const b of m.message?.content ?? []) {
     if (b.type === "tool_use" && b.name === "Bash") log(`  大脑: ${String(b.input?.command ?? "").slice(0, 140)}`);
-    else if (b.type === "text" && b.text?.trim()) log(`  大脑说: ${b.text.trim().replace(/\s+/g, " ").slice(0, 160)}`);
+    else if (b.type === "text" && b.text?.trim()) {
+      log(`  大脑说: ${b.text.trim().replace(/\s+/g, " ").slice(0, 160)}`);
+      if (english.note(b.text) && englishTell) {
+        void englishTell(`监工: 你最近 5 分钟说的话里又有英文句子 (例: "${b.text.trim().replace(/\s+/g, " ").slice(0, 60)}")。用户看不懂英文: 你说的每一句话, 包括做事前后的一两句, 都用简体中文。`).catch(() => undefined);
+        log(`监工: 说英文, 提醒 (本班带英文 ${english.english}/${english.total} 段)`);
+      }
+    }
   }
   if (m.type === "result" && (m.is_error || m.subtype !== "success")) log(`  这一轮结束: ${m.subtype} ${String(m.result ?? "").slice(0, 200)}`);
 }
@@ -347,6 +362,21 @@ try {
   const goal = values["goal-file"] && !readOnly ? fs.readFileSync(values["goal-file"], "utf8") : undefined;
   const ws = setupWorkspace({ dir, name, pipe, deadline, protoDir, brief: (refDir) => composeBrief({ world, name, refDir, goal }) + (driver ? COMPACT_INSTRUCTIONS : "") });
   log(`手册目录 ref/ ${ws.refFiles} 个文件; ./know 查积累`);
+  // 接着上一班的存档 (--save <上一班记录目录>/end.zip): 上一班复盘的"先修这几条"放到笔记最前面, 上一班整班平均产量给监工播报和班末复盘比
+  // (每班硬指标: 科技包每分钟产量比上一班高; 装模组那条路 run.ts 一直这么做, 这条路 2026-11-08 补上)
+  if (values.save) {
+    const prevRun = path.dirname(values.save);
+    try {
+      const rv = JSON.parse(fs.readFileSync(path.join(prevRun, "review.json"), "utf8")) as { fixes?: string[] };
+      const head = reviewNotes(rv.fixes ?? [], path.basename(prevRun));
+      const nf = path.join(dir, "notes.md");
+      if (head && !fs.readFileSync(nf, "utf8").includes(head.split("\n")[0])) { fs.writeFileSync(nf, head + fs.readFileSync(nf, "utf8")); log(`上一班复盘 ${rv.fixes!.length} 条放进笔记最前面`); }
+    } catch { /* 上一班没有复盘 */ }
+    try {
+      prevRates = ratesFrom(fs.readFileSync(path.join(prevRun, "monitor.jsonl"), "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l) as RateRow), 3);
+      if (prevRates) log(`上一班平均每分钟: 红瓶 ${prevRates.red?.toFixed(1) ?? "—"}、绿瓶 ${prevRates.green?.toFixed(1) ?? "—"}、蓝瓶 ${prevRates.blue?.toFixed(1) ?? "—"}`);
+    } catch { /* 上一班没有采样 */ }
+  }
   // 大脑会话的设置 (只在角色目录生效): 压缩点、钩子 (命令放行、读文件禁区、压缩前后、收件箱); .context-hooks 标记让钩子只在这里起作用
   const at = Number(values["compact-at"] ?? compactAt(model));
   if (driver) {
@@ -383,8 +413,9 @@ try {
   if (broker && !readOnly && t) {
     const b = broker, tt = t;
     const tell = (text: string, from?: string) => tellModel(b, { to: name, dir, runDir, text, from });
+    englishTell = (text) => tell(text);
     const idle = { ...(process.env.FA_IDLE_MS ? { idleMs: Number(process.env.FA_IDLE_MS), spawnIdleMs: Number(process.env.FA_IDLE_MS) } : {}), ...(process.env.FA_GRACE_MS ? { graceMs: Number(process.env.FA_GRACE_MS) } : {}) };
-    supervisor = new Supervisor({ evalLua: (c) => b.evalLua(c), player: async () => { const p = await readPlayer(tt.call); return { x: p.position.x, y: p.position.y, hasCharacter: p.hasCharacter }; }, tell, journal: path.join(dir, "journal.jsonl"), runDir, t0: Date.now(), deadline, zh, log, points: pointsMd(), idle });
+    supervisor = new Supervisor({ ...(prevRates ? { prevRates } : {}), evalLua: (c) => b.evalLua(c), player: async () => { const p = await readPlayer(tt.call); return { x: p.position.x, y: p.position.y, hasCharacter: p.hasCharacter }; }, tell, journal: path.join(dir, "journal.jsonl"), runDir, t0: Date.now(), deadline, zh, log, points: pointsMd(), idle });
     supTimer = setInterval(() => void supervisor!.tick(), 30_000);
     // 真人的话: 自己客户端的聊天 + 管理员写在记录目录的 tell.txt; 进模型下一条回复, 说紧急才打断这一轮
     const bridge = new HumanChatBridge(tt, { self: name, aiNames: () => [] });
@@ -459,11 +490,11 @@ try {
   // 班末总结和复盘 (core/records/summary.ts): summary.json + review.md
   if (supervisor || driver) {
     try {
-      const r = writeSummary({ runDir, dir, runId, brain, model, minutes: Number(values.minutes), why, supervisor: supervisor?.stats ?? {}, lessons: delivery ? { ...delivery.stats(), collected } : null, zh });
+      const r = writeSummary({ runDir, dir, runId, brain, model, minutes: Number(values.minutes), why, supervisor: supervisor?.stats ?? {}, lessons: delivery ? { ...delivery.stats(), collected } : null, prevRates, zh });
       log(`复盘: ${r.lines.slice(0, 2).join(" | ")}; 下一班先修 ${r.fixes.length} 条 (review.md)`);
     } catch (e) { log(`总结没写成: ${(e as Error).message.slice(0, 160)}`); }
     // 群的接力 (src/play/groups.ts latestRunOfGroup) 从 summary.json 读上一班的大脑目录和名单 (全是 none 的验证班不进接力): 补上这两个字段
-    try { const f = path.join(runDir, "summary.json"); const s = JSON.parse(fs.readFileSync(f, "utf8")) as Record<string, unknown>; fs.writeFileSync(f, JSON.stringify({ ...s, brainDir: dir, lineup: [{ brain, model }] }, null, 1)); } catch { /* 总结没写成 */ }
+    try { const f = path.join(runDir, "summary.json"); const s = JSON.parse(fs.readFileSync(f, "utf8")) as Record<string, unknown>; fs.writeFileSync(f, JSON.stringify({ ...s, brainDir: dir, lineup: [{ brain, model }], english: `${english.english}/${english.total} 段带英文` }, null, 1)); } catch { /* 总结没写成 */ }
   }
   if (broker) {
     log(`收工: ${why}; 走哪条路 ${JSON.stringify(Object.fromEntries(Object.entries(broker.stats.byAction).map(([k, v]) => [k, `${v.route}×${v.n} ${Math.round(v.ms / Math.max(v.n, 1))} 毫秒`])))}${delivery ? `; 教训带出 ${delivery.stats().shown} 次 (${delivery.stats().distinct} 条)` : ""}`);

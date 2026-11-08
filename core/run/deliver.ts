@@ -5,12 +5,16 @@ import path from "node:path";
 import { appendLearned, inferKeys, learnedSeeds, loadSeeds, lessonPicker, mergePlan, nameIndex, parseNotesLessons, readLearned, KNOWN_ACTIONS, type Seed } from "./lessons.ts";
 import { hintsForLines } from "./hints.ts";
 import { learnedFile, pointsMd, trainingRoots } from "./training.ts";
+import { dataRoot } from "../../game/sandbox/paths.ts";
 
-/** 开班: 核实过的种子 (每个根的 lessons/verified/seed.json) + 模型各班自己记的 (lessons/pending/learned.jsonl, 最多 70 条) */
-export function loadLessons(roots = trainingRoots()): { seeds: Seed[]; curated: number; learned: number } {
+/** 装模组那条路 (src/play/run.ts LEARNED_FILE) 班末收的教训: 两条路的教训要互通 (它那边已经读训练集待核区这份) */
+export const modsLearnedFile = (): string => path.join(dataRoot(), "play", "lessons-learned.jsonl");
+
+/** 开班: 核实过的种子 (每个根的 lessons/verified/seed.json) + 模型各班自己记的 (lessons/pending/learned.jsonl + 装模组那条路收的, 最多 70 条) */
+export function loadLessons(roots = trainingRoots(), extra: string[] = [modsLearnedFile()]): { seeds: Seed[]; curated: number; learned: number } {
   const curated: Seed[] = [];
   for (const r of roots) { const f = path.join(r, "lessons", "verified", "seed.json"); if (fs.existsSync(f)) curated.push(...loadSeeds(f)); }
-  const learned = learnedSeeds(roots.map((r) => path.join(r, "lessons", "pending", "learned.jsonl")).filter((f) => fs.existsSync(f)), curated);
+  const learned = learnedSeeds([...roots.map((r) => path.join(r, "lessons", "pending", "learned.jsonl")), ...extra].filter((f) => fs.existsSync(f)), curated);
   return { seeds: [...curated, ...learned], curated: curated.length, learned: learned.length };
 }
 

@@ -189,7 +189,9 @@
   entries fails (`reason: place_ghosts: 3 entries failed (37 placed); first: ...`) and its `on_fail` applies. A transfer step
   that moves fewer than asked (a full target) succeeds short; `min_moved: N` fails it below N moved. A transfer,
   collect, feed, rearm or refuel step with a position and no `walk` runs with `walk: true`: it walks into reach from
-  any distance, with move_to's enemy checks (`walk: false` keeps it from walking; standing orders keep `max_walk`). `guards` (up to 8
+  any distance, with move_to's enemy checks (`walk: false` keeps it from walking). Standing orders do not get this:
+  write `walk: true` in their transfer / collect / feed / rearm / refuel steps, or a target past 64 tiles is refused
+  (`... 78.1 tiles is past the 64 a call walks by default`); `max_walk` only decides when the order starts. `guards` (up to 8
   `{when, goto | steps, scope?}`) are checked every 10 ticks while the lane is not paused. `scope: "plan"` (the default)
   retires a guard in the tick the lane has no step left (none running or pending, no repeating plan; a lane paused
   keeps them until `queue_resume`): a `guards_retired` history row and a team block line name it; a plan guard on a

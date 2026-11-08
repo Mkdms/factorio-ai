@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 上真服只读之前的彩排 (2026-11-06): 本机起一个和朋友服务器配置一样的服务器 (只有游戏自带的模组、有密码、不开正版验证、没有 RCON), 用 play:online --server --read-only 连它。
+// 上真服只读之前的彩排 (2026-11-06): 本机起一个和联机服务器配置一样的服务器 (只有游戏自带的模组、有密码、不开正版验证、没有 RCON), 用 play:online --server --read-only 连它。
 //   npm run io:rehearse -- [--save 存档.zip] [--only 名字,名字]   名字: 自动没模组 选RCON没模组 选RCON没填 选外挂有模组 自动有模组 RCON只读 RCON动手 群选项 只读加Lua 界面连接 错密码 进世界 掉线 连不上 动手
 // 只碰本机; 不叫大脑、不花额度。服务器地址和密码是这里现编的, 写在临时文件里 ("界面连接"走真的控制接口, 往 keys.json 加这个临时群一条, 跑完删)。
 // 查: 走哪条路的选项 (src/io/backend.ts) 每种组合; 错密码报得出原因; 干净客户端 (不带我们的模组) 进得去; 只读时客户端没被注入; ./fh 读得到、动作被拒; 服务器断了发现得了; 日志和记录里没有地址和密码。
@@ -36,7 +36,7 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), "rehearse-"));
 const password = `rehearse-${crypto.randomBytes(8).toString("hex")}`;
 const clientDir = path.join(labRoot(), "clients", "online-a");
 
-// ---------- 服务器: 配置照朋友的 ----------
+// ---------- 服务器: 配置照联机服务器的 ----------
 const serverDir = path.join(labRoot(), "clients", "rehearse-server");
 const gameDir = findFactorioDir();
 let server: ChildProcess | null = null;
@@ -76,7 +76,7 @@ function online(keys: Conn, minutes: number, args: string[] = ["--read-only"], r
   const f = path.join(work, "keys.json");
   fs.writeFileSync(f, JSON.stringify(rawKeys ?? { server: keys }));
   let text = "";
-  const proc = spawn(process.execPath, ["--env-file-if-exists=.env", path.join(REPO, "src", "play", "online.ts"), "--server", ...args, "--keys", f, "--minutes", String(minutes)], { cwd: REPO, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  const proc = spawn(process.execPath, ["--env-file-if-exists=.env", path.join(REPO, "core", "run", "online.ts"), "--server", ...args, "--keys", f, "--minutes", String(minutes)], { cwd: REPO, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
   const add = (d: Buffer) => { const s = d.toString("utf8"); text += s; for (const line of s.split(/\r?\n/)) if (line.trim()) console.log(`    | ${line.slice(0, 400)}`); };
   proc.stdout!.on("data", add);
   proc.stderr!.on("data", add);
@@ -367,7 +367,7 @@ try {
     if (server && (server as ChildProcess).exitCode === null) { (server as ChildProcess).kill(); await sleep(1500); }
     fs.rmSync(LOCK, { force: true });
     let text = "";
-    const proc = spawn(process.execPath, ["--env-file-if-exists=.env", path.join(REPO, "src", "play", "online.ts"), "--lab", "--minutes", "5"], { cwd: REPO, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    const proc = spawn(process.execPath, ["--env-file-if-exists=.env", path.join(REPO, "core", "run", "online.ts"), "--lab", "--minutes", "5"], { cwd: REPO, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     const add = (d: Buffer) => { const s = d.toString("utf8"); text += s; for (const line of s.split(/\r?\n/)) if (line.trim()) console.log(`    | ${line.slice(0, 300)}`); };
     proc.stdout!.on("data", add);
     proc.stderr!.on("data", add);

@@ -12,7 +12,7 @@ import type { BpEntity } from "../blueprint/inspect.ts";
 import { machineKey, placeAll } from "./layout-study.ts";
 
 const { values } = parseArgs({ options: { save: { type: "string" }, out: { type: "string" } } });
-const out = values.out ?? path.join(labRoot(), "friend-world");
+const out = values.out ?? path.join(labRoot(), "training-private", "blueprints", "friend", "world"); // ./bp study 读这里 (bp-study.ts worldFile); 第二版 lab-data/friend-world
 const save = values.save ?? path.join(out, "map.zip");
 if (!fs.existsSync(save)) { console.error(`没有存档 ${save}: 先 npm run play:online -- --server --read-only --keep-map`); process.exit(2); }
 const LOCK = path.join(labRoot(), "GAME_LOCK");

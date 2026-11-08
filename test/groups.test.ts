@@ -8,7 +8,7 @@ import { connectArgs, createGroup, groupWorld, latestRunOfGroup, readGroup, read
 
 test("读没探过的区块: 只有联机服务器的群有, 默认关, 能开能关", () => {
   const play = fs.mkdtempSync(path.join(os.tmpdir(), "groups-reveal-"));
-  const s = createGroup(play, { name: "朋友的", kind: "server", server: { address: "1.2.3.4:34197" } });
+  const s = createGroup(play, { name: "联机", kind: "server", server: { address: "1.2.3.4:34197" } });
   assert.ok(!fs.readFileSync(path.join(play, "groups", `${s.id}.json`), "utf8").includes("1.2.3.4"), "地址不写进群文件 (群文件进备份)");
   assert.equal(s.backend, undefined, "走哪条路默认自动, 不写");
   assert.equal(setBackend(play, s.id, "rcon").backend, "rcon");
@@ -18,7 +18,7 @@ test("读没探过的区块: 只有联机服务器的群有, 默认关, 能开�
   assert.equal(setBackend(play, s.id, "乱写").backend, undefined);
   assert.equal(createGroup(play, { name: "建的时候选", kind: "server", server: { address: "x:1" }, backend: "memory" }).backend, "memory");
   assert.equal(createGroup(play, { name: "本机存的", kind: "server", savedServer: true }).kind, "server", "地址空着用本机已存的");
-  assert.deepEqual(connectArgs(s), ["--group", s.id, "--read-only", "--minutes", "5"]);
+  assert.deepEqual(connectArgs(s), ["--server", "--group", s.id, "--read-only", "--minutes", "5"]);
   const local = createGroup(play, { name: "新图也选", kind: "new", backend: "memory" });
   assert.equal(local.backend, undefined, "本地的班没有这个选项");
   assert.throws(() => setBackend(play, local.id, "rcon"), /只给联机服务器/);
@@ -73,7 +73,7 @@ test("新建 / 读 / 改成员 / 校验; 群就是世界; 开班参数接群自�
   const gs = createGroup(play, { name: "接存档", kind: "save", save: path.join(run, "end.zip") });
   assert.deepEqual(startArgs(play, gs).slice(-4), ["--save", path.join(run, "end.zip"), "--notes", brain], "是我们某一班的 end.zip 就连笔记一起接");
   // 联机的群只能建
-  const sv = createGroup(play, { name: "朋友的服务器", kind: "server", server: { address: "1.2.3.4:34197" } });
+  const sv = createGroup(play, { name: "联机服务器", kind: "server", server: { address: "1.2.3.4:34197" } });
   assert.equal(groupWorld(sv).kind, "server");
   assert.throws(() => startArgs(play, sv), /还开不了班/);
   assert.equal(readGroups(play).length, 3);
