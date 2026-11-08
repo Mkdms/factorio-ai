@@ -99,6 +99,6 @@ test("我的账号的群: 只留第 1 席; 有目标; 不走班次; 别的群不
   assert.equal(setGroupGoal(play, g.id, "新目标").goal, "新目标");
   assert.throws(() => startArgs(play, g), /不走班次/);
   const other = createGroup(play, { name: "别的", kind: "new" });
-  assert.throws(() => setGroupGoal(play, other.id, "x"), /只有"我的账号"/);
+  assert.throws(() => setGroupGoal(play, other.id, "x"), /先在"我 · 管理员"那一行选一个模型/, "0533826 起'我的账号'不再是对话类型, 文案跟着改了");
   assert.equal(readGroup(play, createGroup(play, { name: "带目标的新图", kind: "new", goal: "x" }).id)?.goal, undefined, "别的类型不存目标");
 });
