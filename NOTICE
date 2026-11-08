@@ -20,6 +20,12 @@ training/manuals/ref/
   moving-items, space-age, team, waits-queues, index.md, topics.tsv) are copied from factorio-ai-party agent/ref (commit
   a9a5556a, 2026-11-04; MIT License, see training/manuals/ref/LICENSE), unchanged except stream-people.md left out.
 
+core/records/handover.ts
+  Ports the "carry" part of factorio-ai-party tools/handover.py (same repository and licence as below; commit a9a5556):
+  measured facts from the previous shift's journal at the top of the next shift's notes, notes capped by section with
+  the full text archived. Changes: TypeScript, Chinese output and Chinese section names, the longest-gap line also for
+  short shifts, our harness's source for the read / talk action sets.
+
 core/brains/hooks/
   permit.ts ports the Bash permit rules of factorio-ai-party tools/permit.py and the examples of tools/test_permit.py
   (test/permit.test.ts); context.ts and hook.ts port the Claude Code parts of tools/context.py, agent/compact.md and

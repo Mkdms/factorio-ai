@@ -23,6 +23,7 @@ import { reviewBase } from "./review.ts";
 import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "./context.ts";
 import { parseRateLimit, probeQuota, readPlanUsage, describeQuota, maxUtilization, type Quota } from "./quota.ts";
 import { worldForNewRun, writeWorld, setHidden, worldPlayedMs } from "./worlds.ts";
+import { carryNotes } from "../../core/records/handover.ts";
 import { ClaudeStream, STREAM_ARGS } from "./claude-stream.ts";
 import { EnglishWatch } from "./lang.ts";
 import { labLine, ratesFrom, ratesLine } from "./science.ts";
@@ -1035,9 +1036,9 @@ try {
       const prevJournal = a.joined ? "" : prevDir ? path.join(prevDir, agents.length > 1 ? a.id : "", "journal.jsonl") : "";
       fs.writeFileSync(path.join(a.dir, "notes.md"), prevNotes && fs.existsSync(prevNotes) ? fs.readFileSync(prevNotes, "utf8") : PARTY_NOTES);
       if (prevNotes && fs.existsSync(prevNotes) && prevJournal && fs.existsSync(prevJournal)) {
-        // 派对 tools/handover.py carry: 笔记顶部加 "## Last shift, measured" (上一班实测: 站着的比例、白干的动作、失败前三、Now 几班没变),
-        // 超 16KB 按标题裁, 全文进 notes-archive.md (他们 docs: 惯例比理由活得久, 因为没人测量)
-        try { execFileSync("python", ["-I", "-X", "utf8", path.join(PARTY_REPO, "tools", "handover.py"), "carry", prevNotes, prevJournal, path.join(a.dir, "notes.md"), runId, typeof a.who === "string" ? a.who : playerName], { stdio: "pipe" }); }
+        // 笔记顶部加 "## 上一班实测" (站着的比例、白干的动作、失败前三、现在在做几班没变), 超 16000 字按标题裁, 全文进 notes-archive.md;
+        // 照派对 tools/handover.py carry 改写成我们自己的 (core/records/handover.ts): 重构后不下载派对仓库, 原来每班调它都静默失败
+        try { if (carryNotes(prevNotes, prevJournal, path.join(a.dir, "notes.md"), runId, typeof a.who === "string" ? a.who : playerName)) log(`${tag(a) || "角色"} 上一班笔记超长, 截过, 全文进 notes-archive.md`); }
         catch (e) { log(`上一班实测没写成, 笔记原样带上: ${(e as Error).message.slice(0, 160)}`); }
       }
       // 上一班的自动复盘 (src/play/review-shift.ts, 上一班班末写的 review.json): "先修这几条"放在笔记最前面

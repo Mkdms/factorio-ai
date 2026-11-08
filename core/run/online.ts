@@ -53,6 +53,7 @@ import { writeCurrentRun } from "../../src/play/shift-recover.ts";
 import { EnglishWatch } from "../../src/play/lang.ts";
 import { reviewNotes } from "../../src/play/review-shift.ts";
 import { USER_RULES } from "../../src/play/ours-brief.ts";
+import { carryNotes } from "../records/handover.ts";
 import { copyTools, ensureGamedata, setupFullTools } from "../../src/play/partykit.ts";
 import { defaultDumpPath } from "../../src/blueprint/rules.ts";
 import { ratesFrom, type Rates, type RateRow } from "./science.ts";
@@ -121,7 +122,16 @@ if (group) writeWorld(runDir, groupWorld(group));
 if (values.notes) {
   const src = fs.existsSync(values.notes) && fs.statSync(values.notes).isDirectory() ? path.join(values.notes, "notes.md") : values.notes;
   if (!fs.existsSync(src)) { console.error(`--notes 找不到 ${src}`); process.exit(2); }
-  if (!fs.existsSync(path.join(dir, "notes.md"))) fs.copyFileSync(src, path.join(dir, "notes.md"));
+  if (!fs.existsSync(path.join(dir, "notes.md"))) {
+    // 上一班的 journal 在旁边就加"上一班实测" (core/records/handover.ts, 和装模组那条路同一份; 第二版这条路没有), 超长的笔记截过、全文进 notes-archive.md
+    const prevJournal = path.join(path.dirname(src), "journal.jsonl");
+    let carried = false;
+    if (fs.existsSync(prevJournal)) {
+      try { carryNotes(src, prevJournal, path.join(dir, "notes.md"), runId, values.name ?? "这个角色"); carried = true; }
+      catch (e) { console.log(`上一班实测没写成, 笔记原样带上: ${(e as Error).message.slice(0, 160)}`); }
+    }
+    if (!carried) fs.copyFileSync(src, path.join(dir, "notes.md"));
+  }
 }
 const stopFile = path.join(runDir, "STOP");
 const pipe = `\\\\.\\pipe\\factorio-ai-online-${process.pid}`;
