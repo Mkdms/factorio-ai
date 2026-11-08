@@ -17,7 +17,7 @@ export function nextCommands(query: string, isAction: (term: string) => boolean 
   return [...new Set(out)].slice(0, 4);
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[]): Promise<number> {
   if (process.env.FH_TRAINING && !process.env.TRAINING_DIR) process.env.TRAINING_DIR = process.env.FH_TRAINING;
   const query = argv.filter((a) => !a.startsWith("--")).join(" ").trim();
   if (!query) {

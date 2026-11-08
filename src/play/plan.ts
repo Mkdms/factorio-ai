@@ -59,12 +59,29 @@ async function main(argv: string[]): Promise<number> {
   const item = resolveItem(name, zhMap, (id) => recipeFor(gd, id) !== null);
   if (!item) { console.log(`error: 认不出 "${name}", 写内部名或官方中文名 (ref/names.tsv)`); return 1; }
   // 新项目: 只走角色目录的管道 (和 ./fh 同一条; 没有 RCON)。场上读数和找空地 = 代理里跑在游戏外假接口上的两段固定 Lua (commands/broker.ts plan_read), 模型手里没有 Lua
-  const pipe = process.env.FH_SOCKET;
-  if (!pipe) { console.log("error: 没有 FH_SOCKET (./plan 只在开班的角色目录里能用)"); return 1; }
+  const pipe = process.env.FH_SOCKET, session = process.env.FP_SESSION;
   const { Harness } = await import("./harness.ts");
-  const { PipeRcon } = await import("../io/pipe-client.ts");
-  const h = new Harness(new PipeRcon(pipe) as never, 1, undefined, { reader: "plan" }); // 只读: 不占大脑的队友消息和提醒 (2026-11-05)
-  const planRead = async (args: Record<string, unknown>): Promise<any> => { const r = await h.request("plan_read", args); if (!r.ok) throw new Error(r.error?.message ?? "plan_read 失败"); return r.result; };
+  let h: InstanceType<typeof Harness>, planRead: (args: Record<string, unknown>) => Promise<any>, close = () => {};
+  if (pipe) {
+    const { PipeRcon } = await import("../io/pipe-client.ts");
+    h = new Harness(new PipeRcon(pipe) as never, 1, undefined, { reader: "plan" }); // 只读: 不占大脑的队友消息和提醒 (2026-11-05)
+    planRead = async (args) => { const r = await h.request("plan_read", args); if (!r.ok) throw new Error(r.error?.message ?? "plan_read 失败"); return r.result; };
+  } else if (session && fs.existsSync(session)) {
+    // 装模组那条路 (run.ts --kit party, 角色目录的 ./plan 带 FP_SESSION): 经 RCON 连游戏里的模组, 场上读数和找空地那两段固定 Lua 也经 RCON 跑 (沙盘, 不算成就; 2026-11-08 补: 原来只认管道, 这条路上 ./plan 用不了)
+    const s = JSON.parse(fs.readFileSync(session, "utf8")) as { rconPort: number; password: string; bot?: string; player?: number };
+    const { RconClient } = await import("../lab/rcon.ts");
+    const { EXISTING_LUA } = await import("./expand.ts");
+    const { siteLua } = await import("./plan-lib.ts");
+    const rcon = new RconClient({ port: s.rconPort, password: s.password });
+    await rcon.connect();
+    close = () => rcon.close();
+    h = new Harness(rcon, s.bot ?? s.player ?? 1, undefined, { reader: "plan" });
+    planRead = async (args) => {
+      const a = args as { what?: string; near?: [number, number] | null; w?: number; h?: number; taken?: { x: number; y: number; w: number; h: number }[] };
+      const lua = a.what === "existing" ? EXISTING_LUA : siteLua(Array.isArray(a.near) ? [Number(a.near[0]), Number(a.near[1])] : null, Number(a.w), Number(a.h), Array.isArray(a.taken) ? a.taken : []);
+      return JSON.parse(String(await rcon.exec(`/silent-command local function main() ${lua} end rcon.print(helpers.table_to_json(main()))`)));
+    };
+  } else { console.log("error: 没有 FH_SOCKET 也没有 FP_SESSION (./plan 只在开班的角色目录里能用)"); return 1; }
   try {
     const blocks: Block[] = entries();
     const inv = await h.call("inventory", {});
@@ -125,7 +142,7 @@ async function main(argv: string[]): Promise<number> {
     // 要建线了: 给看真实基地这条线怎么摆; 只给看, 方案模型定
     try { const pic = (await import("./bp-study.ts")).studyHint(item); if (pic) console.log(`\n${pic}`); } catch { /* 附带的 */ }
     return 0;
-  } finally { /* 管道一问一连, 没有要关的 */ }
+  } finally { close(); /* 管道一问一连没有要关的; RCON 那条关掉 */ }
 }
 
 if ((import.meta as { main?: boolean }).main) process.exitCode = await main(argvFromFile(process.argv.slice(2)));

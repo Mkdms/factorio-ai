@@ -19,6 +19,8 @@ export function knowledgeFile(name: string): string {
     "lessons-seed.json": ["lessons", "verified", "seed.json"],
     "lessons-learned.jsonl": ["lessons", "pending", "learned.jsonl"],
     patterns: ["patterns", "verified"],
+    // 第二版 <仓库>/docs/research/players (检索资料, 含 game-tips.md) 在新项目是待核区的 research/
+    research: ["knowledge", "pending", "research"],
   };
   return path.join(ROOT, "training", ...(map[name] ?? [name]));
 }

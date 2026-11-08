@@ -544,7 +544,13 @@ const server = http.createServer(async (req, res) => {
       appendRosterOp(file, { at, op: "leave", agent });
       return send(200, { queued: true, agent, run: path.basename(runDir) });
     }
-    if (req.method === "POST" && u.pathname === "/api/stop") { fs.writeFileSync(path.join(runDir, "STOP"), "控制接口\n"); return send(200, { stopping: true, run: path.basename(runDir) }); }
+    if (req.method === "POST" && u.pathname === "/api/stop") {
+      // 先认开班程序写的 current-run.json (还没收工的那一班): 不叫模型的验证班在界面里收着, 按"最新一班"找会停到上一班去 (2026-11-08 核出来)
+      let target = runDir;
+      try { const cur = JSON.parse(fs.readFileSync(path.join(PLAY, "current-run.json"), "utf8")) as { runDir?: string }; if (cur.runDir && fs.existsSync(cur.runDir) && !runStatus(cur.runDir).ended) target = cur.runDir; } catch { /* 没有就按原来的 */ }
+      fs.writeFileSync(path.join(target, "STOP"), "控制接口\n");
+      return send(200, { stopping: true, run: path.basename(target) });
+    }
     send(404, { error: "没有这个接口" });
   } catch (e) { send(500, { error: (e as Error).message.slice(0, 300) }); }
 });

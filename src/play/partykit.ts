@@ -10,6 +10,8 @@ import { promisify } from "node:util";
 import { argvFilePs1 } from "./ps1-wrap.ts";
 import { bashExe } from "./shell.ts";
 import { fhCliPath } from "./fh-cli.ts";
+import { setupRef } from "../../core/run/workspace.ts";
+import { composeBrief } from "../../core/run/brief.ts";
 
 export type KitOpts = {
   partyRepo: string;
@@ -186,6 +188,8 @@ export function deadlineText(ms: number): string {
 /** 生成一个大脑工作目录: AGENTS.md / CLAUDE.md、ref/、./fh、deadline.txt; notes.md 由调用方放 (接班带上一班的) */
 export function setupPartyWorkspace(o: KitOpts): { missed: string[] } {
   fs.mkdirSync(o.dir, { recursive: true });
+  // 本机没有派对仓库 (重构后不下载别人的项目): 简报和手册用我们自己的训练集 (training/manuals, 和不装模组那条路同一份), 命令行用 commands/cli
+  if (!o.partyRepo || !fs.existsSync(path.join(o.partyRepo, "tools", "brief.py"))) return ownWorkspace(o);
   // POG_SPACE_AGE=1: 派对公开局开着, 太空时代的说明 (agent/spaceage.md) 放在 ref/space-age.md 开头; 我们一直漏了 (2026-11-05 对源码时发现)
   const env = { ...process.env, PYTHONUTF8: "1", POG_SPACE_AGE: "1" };
   const brief = path.join(o.partyRepo, "tools", "brief.py");
@@ -205,6 +209,40 @@ export function setupPartyWorkspace(o: KitOpts): { missed: string[] } {
   fs.writeFileSync(path.join(o.dir, "AGENTS.md"), text);
   fs.writeFileSync(path.join(o.dir, "CLAUDE.md"), text); // Claude Code 读 CLAUDE.md (派对用软链, Windows 上复制)
   fs.rmSync(path.join(o.dir, "ref", "stream-people.md"), { force: true });
+  writeFh(o, missed);
+  // describe.json: 一行一个动作 (派对 launch-agent.sh 开班前写好, 简报里叫大脑 grep 它)
+  // 联机: 代理和这里在同一个进程, 同步等子进程会把代理堵死 (仓库 CLAUDE.md 工具坑), 由调用方异步跑 writeDescribeJson
+  if (!o.socket) try {
+    // 用 Git Bash 跑 (src/play/shell.ts): PowerShell 里起班时 PATH 上没有 sh, 以前这步会静默失败
+    // FH_MAX_OUTPUT=0: 这条是我们自己要整段 JSON 的, 不走给大脑的 ./fh 输出封顶 (2026-11-05 真跑: 封顶在 7200 字处插了省略说明, JSON 解析失败, 4 个角色都没有 describe.json)
+    const raw = execFileSync(bashExe(), [path.join(o.dir, "fh"), "call", "describe", "--format", "json"], { cwd: o.dir, env: { ...env, FH_MAX_OUTPUT: "0" }, encoding: "utf8", timeout: 60_000 });
+    const lines = execFileSync("python", ["-I", "-X", "utf8", path.join(o.partyRepo, "tools", "describe-lines.py")], { input: raw, env, encoding: "utf8" });
+    fs.writeFileSync(path.join(o.dir, "describe.json"), lines);
+  } catch { missed.push("describe.json"); }
+  return { missed };
+}
+
+/** 没有派对仓库时的角色目录: 简报 = 训练集的模板 (manuals/brief.md) + 装模组这条路的说明 + 我们的规矩 (o.ours); 手册 = 训练集 manuals/ref + 思路 + 事实 (和不装模组那条路同一份) */
+function ownWorkspace(o: KitOpts): { missed: string[] } {
+  const refDir = path.join(o.dir, "ref");
+  setupRef(refDir);
+  const team = o.team ? `- **全队**: ${o.team}${o.teammate ? `; 队友 \`${o.teammate.name}\` 的笔记在 ${o.teammate.notes}` : ""}\n` : "";
+  const world = `## 先读这一节 (本机沙盘, 服务器装了我们的模组)
+
+- **你是谁**: 游戏里叫 \`${o.name}\`, 是服务器上的角色 (模组造的, 不是真客户端)。命令全部能用, 在游戏里由模组执行: 铺线 (\`pole_route\`、\`belt_route\`、\`pipe_route\`)、虚影 (\`place_ghosts\`、\`paste\`) 和 \`construct\` 去建、常驻命令 (\`order_set\`) 和队列、配置、装备、载具都有。参数拿不准先 \`./fh help 动作\`。
+- **算和建**: \`./calc\` 算配比; \`./plan 物品 每分钟\` 算全链并找空地, 加 \`--build\` 直接放; \`./bp list\` / \`./bp show\` / \`./bp build 编号 --at x,y\` 整块建 (这条路上贴虚影再建, 比一件件手放快得多)。整条线先 \`./plan\`, 别一台台手摆。
+${team}${o.role ? `- **这一班你主要负责**: ${o.role}\n` : ""}- **语言**: 全部简体中文; 建筑物品用官方中文名 (ref/names.tsv)。
+${o.resume ? "- **接着上一班的世界玩**: 先读 notes.md 和开班扫描, 别重建已有的东西。\n" : ""}`;
+  const text = composeBrief({ world: `${o.ours.trim()}\n\n${world}`, name: o.name, refDir });
+  fs.writeFileSync(path.join(o.dir, "AGENTS.md"), text);
+  fs.writeFileSync(path.join(o.dir, "CLAUDE.md"), text);
+  const missed: string[] = ["describe.json (没有派对仓库; ./fh help 动作 照样查得到)"];
+  writeFh(o, missed);
+  return { missed };
+}
+
+/** deadline.txt 和 ./fh (sh + ps1): 派对整套和我们自己的角色目录共用 */
+function writeFh(o: KitOpts, missed: string[]): void {
   fs.writeFileSync(path.join(o.dir, "deadline.txt"), deadlineText(o.deadline) + "\n");
   const who = typeof o.who === "string" ? `--bot '${o.who}'` : `--player ${o.who}`;
   // 派对命令行的 --bot 名字校验放开 (src/play/fh-cli.ts; 2026-11-05 真跑: 模型名当角色名被客户端拦, 服务器角色一条命令都发不出)
@@ -226,16 +264,6 @@ export function setupPartyWorkspace(o: KitOpts): { missed: string[] } {
     [...(typeof o.who === "string" ? ["--bot", o.who] : ["--player", String(o.who)]), ...timeoutArgs, "--journal", path.join(o.dir, "journal.jsonl")],
     { ...link, FH_REF_DIR: path.join(o.dir, "ref"), FH_DEADLINE_FILE: path.join(o.dir, "deadline.txt"), PYTHONUTF8: "1",
       FH_CLI: cli.cli, FH_PROTO: o.protoRoot }));
-  // describe.json: 一行一个动作 (派对 launch-agent.sh 开班前写好, 简报里叫大脑 grep 它)
-  // 联机: 代理和这里在同一个进程, 同步等子进程会把代理堵死 (仓库 CLAUDE.md 工具坑), 由调用方异步跑 writeDescribeJson
-  if (!o.socket) try {
-    // 用 Git Bash 跑 (src/play/shell.ts): PowerShell 里起班时 PATH 上没有 sh, 以前这步会静默失败
-    // FH_MAX_OUTPUT=0: 这条是我们自己要整段 JSON 的, 不走给大脑的 ./fh 输出封顶 (2026-11-05 真跑: 封顶在 7200 字处插了省略说明, JSON 解析失败, 4 个角色都没有 describe.json)
-    const raw = execFileSync(bashExe(), [path.join(o.dir, "fh"), "call", "describe", "--format", "json"], { cwd: o.dir, env: { ...env, FH_MAX_OUTPUT: "0" }, encoding: "utf8", timeout: 60_000 });
-    const lines = execFileSync("python", ["-I", "-X", "utf8", path.join(o.partyRepo, "tools", "describe-lines.py")], { input: raw, env, encoding: "utf8" });
-    fs.writeFileSync(path.join(o.dir, "describe.json"), lines);
-  } catch { missed.push("describe.json"); }
-  return { missed };
 }
 
 /** 联机用的 describe.json: 和上面同一件事, 异步 (代理在同一个进程); 失败回 false, 不影响开工 */

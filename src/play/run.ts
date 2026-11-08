@@ -672,7 +672,8 @@ const KIT = values.kit === "party" ? "party" : "fp";
 const calcPs1 = (session?: string) => calcPs1Text(process.execPath, path.join(REPO, ".env"), path.join(REPO, "src", "calc", "cli.ts"), session);
 const argvFilePs1 = (script: string, fixed: string[], env: Record<string, string>) => argvFilePs1Text(process.execPath, path.join(REPO, ".env"), script, fixed, env);
 const PARTY_REPO = process.env.PARTY_REPO ?? ""; // 本机的派对仓库 (不进公开仓库)
-if (KIT === "party" && (values.mod !== "agent-harness-party" || !fs.existsSync(path.join(PARTY_REPO, "tools", "brief.py")))) throw new Error("--kit party 要 --mod agent-harness-party, 并在 .env 设 PARTY_REPO=派对仓库目录");
+// 派对仓库可有可无 (重构后不下载): 没有就用我们自己的简报、手册和命令行 (src/play/partykit.ts ownWorkspace)
+if (KIT === "party" && values.mod !== "agent-harness-party") throw new Error("--kit party 要 --mod agent-harness-party");
 // 派对简报: 别用 head / tail 截 ./fh 的输出 (会丢报错和队友消息), 所以只放行 ./fh
 // ./calc: 我们的计算器 (src/calc, 游戏导出数据 + 线性规划); 换派对配置时漏了, 派对的 ./fh 没有算配比的命令
 const ALLOW = KIT === "party" ? ["Bash(./fh *)", "Bash(./calc *)", "Bash(./bp *)", "Bash(./plan *)", "Bash(./know *)", "Bash(python *)", "Bash(python3 *)", "Read", "Edit", "Write", "Grep", "Glob", "WebSearch", "WebFetch"] : ["Bash(./fp *)", "Bash(./calc *)", "Bash(./bp *)", "Bash(grep *)", "Bash(head *)", "Bash(tail *)", "Read", "Edit", "Write", "Grep", "Glob"];
@@ -1034,10 +1035,10 @@ try {
       for (const f of fs.readdirSync(knowledgeFile("patterns"))) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(knowledgeFile("patterns"), f), path.join(a.dir, "ref", `pilot-${f}`));
       fs.copyFileSync(knowledgeFile("facts.md"), path.join(a.dir, "ref", "pilot-facts.md"));
       fs.copyFileSync(knowledgeFile("ref-index.md"), path.join(a.dir, "ref", "index.md")); // 按情况查 (./fh help index)
-      fs.copyFileSync(path.join(REPO, "docs", "research", "players", "game-tips.md"), path.join(a.dir, "ref", "pilot-game-tips.md")); // 游戏自带提示与技巧 81 条的转述 (之前只在仓库文档里, 模型看不到)
+      fs.copyFileSync(path.join(knowledgeFile("research"), "game-tips.md"), path.join(a.dir, "ref", "pilot-game-tips.md")); // 游戏自带提示与技巧 81 条的转述 (之前只在仓库文档里, 模型看不到)
       // 全部检索资料也放进 ref/research/ (58 万字, 之前模型一个字都看不到): ./know 查到后能看全文, 不进手册主题免得占 ./fh help 列表
       fs.mkdirSync(path.join(a.dir, "ref", "research"), { recursive: true });
-      for (const f of fs.readdirSync(path.join(REPO, "docs", "research", "players"))) if (f.endsWith(".md")) fs.copyFileSync(path.join(REPO, "docs", "research", "players", f), path.join(a.dir, "ref", "research", f));
+      for (const f of fs.readdirSync(knowledgeFile("research"))) if (f.endsWith(".md")) fs.copyFileSync(path.join(knowledgeFile("research"), f), path.join(a.dir, "ref", "research", f));
       // 要点也追加到它真会查的派对主题末尾 (18 班里它查 building / analysis / moving-items, 不查 pilot-*; 2026-11-04 #251)
       const points = briefPoints(knowledgeFile("brief-points.md"));
       if (points) for (const t of ["building.md", "analysis.md", "moving-items.md"]) { const f = path.join(a.dir, "ref", t); if (fs.existsSync(f)) fs.appendFileSync(f, `\n\n${points}\n`); }

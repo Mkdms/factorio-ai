@@ -18,6 +18,11 @@ export function relaxBotNameCheck(text: string): { text: string; patched: boolea
 
 /** 给 ./fh 用的命令行路径: 能打补丁就是同目录的 cli.pilot.js (内容和源文件对不上就重写), 不能就是原文件 */
 export function fhCliPath(partyRepo: string): { cli: string; patched: boolean } {
+  // 新项目自己的命令行 (commands/cli/cli.js, 角色名校验已经放开): 本机没有派对仓库时用它 (重构后派对仓库不下载)
+  if (!partyRepo || !fs.existsSync(path.join(partyRepo, "vendor", "factorio-harness", "dist", "host", "cli.js"))) {
+    const own = path.join(import.meta.dirname, "..", "..", "commands", "cli", "cli.js");
+    return { cli: own, patched: fs.readFileSync(own, "utf8").includes("[A-Za-z][A-Za-z0-9._-]{0,31}") };
+  }
   const src = path.join(partyRepo, "vendor", "factorio-harness", "dist", "host", "cli.js");
   const dst = path.join(path.dirname(src), "cli.pilot.js");
   try {
