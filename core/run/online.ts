@@ -418,6 +418,9 @@ try {
     const FIRST = `先读 CLAUDE.md 最前面"先读这一节", 再读 notes.md。${scanNote}然后 ./fh call status 和 ./fh call observe 看清楚世界、队友在做什么、缺什么; ${readOnly ? "现在只读, 动作和聊天都发不出去, 不要试; 把看到的写进 notes.md。" : values["own-world"] || !toServer ? "然后先跑 ./plan automation-science-pack 30 看整条红瓶线要几台、放哪 (加 --build 一条命令放整块; 手放也行), 再动手。" : "在聊天里用一句话打招呼说你是谁、打算帮什么 (./fh call say), 然后动手 (整条线用 ./plan 物品 每分钟 --build, 手放也行)。"}${GOAL}`;
     // 第一版的 "继续。先看 status 有没有新消息; 真人的话先回" 被当成"汇报一下": Sonnet 2026-11-08 那班 17 轮里 12 轮不到 1 分钟就收 (查状态、补一次煤、写小结), 每轮重起进程重读上下文
     const NEXT = `接着干, 一直干到截止 (deadline.txt), 这一轮不用汇报、不用等任何人回话。顺手看一眼 ./fh call status 的消息和报警, 真人的话回一句就继续建。目标是机器做出科技包: 整条线用 ./plan 物品 每分钟 --build (料不够它会说差什么)。全程简体中文, 一两个词的小结也是。学到的写进 notes.md。${GOAL}`;
+    // 上一轮不到 3 分钟就收了 (写了小结就停): 这一轮把话说死 —— 每轮重起进程要重读整段上下文, 短轮次纯浪费 (Sonnet 11-08 两班第 3 轮起都是几十秒一轮)
+    const NEXT_SHORT = (sec: number) => `上一轮你只跑了 ${sec} 秒就停了, 没必要: 不用写小结、不用等人, 停下来只会浪费时间。这一轮一直发命令建东西, 直到截止 (deadline.txt) 或者你真的做完了 (做完就放 DONE 文件); 中途不要结束回合。目标还是机器做出科技包 (./plan 物品 每分钟 --build 能一条命令放整条线)。全程简体中文。${GOAL}`;
+    const nextPrompt = ({ lastMs, n }: { lastMs: number; n: number }) => (n > 2 && lastMs < 3 * 60_000 ? NEXT_SHORT(Math.round(lastMs / 1000)) : NEXT);
     let sessionId = randomUUID();
     const watch = setInterval(() => { if (child && stopped()) killBrain(child); }, 2000);
     log(`大脑 ${brain} ${model} (强度 ${values.effort}, 压缩点 ${at}); 停: 放 STOP 文件, 模型做完会在角色目录放 DONE`);
@@ -427,7 +430,7 @@ try {
         sessionId = r.sessionId;
         return r.code;
       },
-      stopped, first: FIRST, next: NEXT, log,
+      stopped, first: FIRST, next: nextPrompt, log,
       interrupted: () => { const u = urgentNow; urgentNow = false; return u; },
     });
     clearInterval(watch);

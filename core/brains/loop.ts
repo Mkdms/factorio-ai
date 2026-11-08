@@ -5,7 +5,8 @@ export type LoopOpts = {
   turn: (n: number, prompt: string) => Promise<number>;
   stopped: () => boolean;
   first: string;
-  next: string;
+  /** 之后每轮的提示词; 给函数的话拿到上一轮跑了多久 (Sonnet 2026-11-08 两班: 第 3 轮起每轮几十秒就写小结收工, 每轮重起进程重读上下文 —— 上一轮太短就换一段更硬的话) */
+  next: string | ((info: { lastMs: number; n: number }) => string);
   log?: (s: string) => void;
   /** 两轮开始之间至少隔多久 (默认 30 秒) */
   minGapMs?: number;
@@ -20,13 +21,15 @@ export async function brainLoop(o: LoopOpts): Promise<{ rounds: number }> {
   const now = o.now ?? Date.now;
   const gap = o.minGapMs ?? 30_000;
   const log = o.log ?? (() => undefined);
-  let n = 0;
+  let n = 0, lastMs = 0;
   while (!o.stopped()) {
     n++;
     const started = now();
     log(`第 ${n} 轮开始`);
-    const code = await o.turn(n, n === 1 ? o.first : o.next);
-    log(`第 ${n} 轮结束 (退出码 ${code}, ${Math.round((now() - started) / 1000)} 秒)`);
+    const prompt = n === 1 ? o.first : typeof o.next === "function" ? o.next({ lastMs, n }) : o.next;
+    const code = await o.turn(n, prompt);
+    lastMs = now() - started;
+    log(`第 ${n} 轮结束 (退出码 ${code}, ${Math.round(lastMs / 1000)} 秒)`);
     if (o.interrupted?.()) continue;
     // 等到离这一轮开始够 gap, 每秒看一次停没停
     while (!o.stopped() && now() - started < gap) await sleep(Math.min(1000, gap - (now() - started)));

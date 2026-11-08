@@ -145,6 +145,11 @@ test("轮次循环: 第 1 轮开场、之后'继续'; 很快结束就等够间�
   const gaps: number[] = [];
   await brainLoop({ turn: async () => { n++; return 0; }, stopped: () => n >= 2, first: "a", next: "b", minGapMs: 10_000, interrupted: () => true, sleep: async (ms) => { gaps.push(ms); }, now: () => 0 });
   assert.equal(gaps.length, 0);
+  // next 给函数: 拿到上一轮跑了多久和第几轮 (上一轮太短就换更硬的话)
+  const seen: { lastMs: number; n: number }[] = [];
+  let t = 0, k = 0;
+  await brainLoop({ turn: async () => { k++; t += k === 1 ? 500_000 : 20_000; return 0; }, stopped: () => k >= 3, first: "a", next: (i) => { seen.push(i); return `b${i.n}`; }, minGapMs: 1, sleep: async () => { t += 1; }, now: () => t });
+  assert.deepEqual(seen, [{ lastMs: 500_000, n: 2 }, { lastMs: 20_000, n: 3 }]);
 });
 
 test("一句试通: 读 result 行判通不通, 正文和花费带回; is_error 算不通; 起不来算不通", async () => {
