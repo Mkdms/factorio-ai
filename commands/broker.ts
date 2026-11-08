@@ -5,6 +5,7 @@ import fs from "node:fs";
 import net from "node:net";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { EXISTING_LUA } from "../src/play/expand.ts";
+import { ORDER_CALLS, Scheduler, type Step, type StepResult } from "./orders.ts";
 import { siteLua } from "../src/play/plan-lib.ts";
 
 export type BrokerMode = "sandbox" | "server";
@@ -147,6 +148,12 @@ export class CommandBroker {
       this.server.once("error", reject);
       this.server.listen(this.opts.pipe, () => resolve());
     });
+    // 真服模式能动手时: 队列和常驻命令由代理做, 3 秒看一次 (角色空着 20 秒才跑一步)
+    if (this.opts.mode === "server" && this.opts.actions) {
+      this.scheduler = new Scheduler({ run: (s) => this.runStep(s), evalLua: (c) => this.evalLua(c), tick: () => this.tick(), lastOwnAction: () => this.lastOwn });
+      this.schedTimer = setInterval(() => { void this.scheduler?.step().catch(() => undefined); }, 3000);
+      this.schedTimer.unref?.();
+    }
   }
 
   private nextLine(timeoutMs: number): Promise<string> {
@@ -224,19 +231,51 @@ export class CommandBroker {
     const id = d.request.id;
     const known = id ? this.acting.get(id) : undefined;
     if (known) return known;
-    const p = (async () => {
+    // 一个身体同一时间只做一件事: 模型的动作和队列 / 常驻命令的步骤过同一把锁 (withBody); 模型的动作记下时间 (常驻命令要角色空着 20 秒才跑)
+    const p = this.withBody(async () => {
       const t0 = Date.now();
-      // 一个身体同一时间只做一件事: 别的命令行进程来的动作排队 (Lua 那边一次问一个, 这边同样)
-      const reply = await this.opts.actions!.run(d.request);
-      this.count(action, "act", Date.now() - t0);
-      return { ok: true, text: JSON.stringify(reply) };
-    })();
+      this.lastOwn = Date.now();
+      try {
+        const reply = await this.opts.actions!.run(d.request);
+        this.count(action, "act", Date.now() - t0);
+        return { ok: true, text: JSON.stringify(reply) };
+      } finally { this.lastOwn = Date.now(); }
+    });
     const run = this.actQueue.then(() => p, () => p);
     if (id) {
       this.acting.set(id, p);
       void run.finally(() => { const timer = setTimeout(() => this.acting.delete(id), ACT_REPLY_KEEP_MS); timer.unref?.(); });
     }
     return p;
+  }
+
+  private bodyChain: Promise<unknown> = Promise.resolve();
+  private withBody<T>(f: () => Promise<T>): Promise<T> { const p = this.bodyChain.then(f, f); this.bodyChain = p.catch(() => undefined); return p; }
+  /** 模型最后一个自己的动作 (毫秒); 队列和常驻命令跑的不算 */
+  private lastOwn = 0;
+  private scheduler: Scheduler | null = null;
+  private schedTimer: NodeJS.Timeout | null = null;
+  private stepSeq = 0;
+
+  /** 队列 / 常驻命令的请求 (这条路上由代理照手册的规则做, commands/orders.ts): 回复形状照模组 */
+  private async schedulerCall(d: Dispatch, action: string): Promise<Reply> {
+    const tick = await this.tick().catch(() => 0);
+    try {
+      const result = await this.scheduler!.call(action, (d.request.args ?? {}) as Record<string, unknown>);
+      this.count(action, "ledger", 0);
+      return { ok: true, text: JSON.stringify({ id: d.request.id, ok: true, tick, result }) };
+    } catch (e) { return { ok: true, text: JSON.stringify({ id: d.request.id, ok: false, tick, error: { code: "action_failed", message: (e as Error).message } }) }; }
+  }
+
+  /** 队列 / 常驻命令的一步: 和模型发的同一条路 (行动层过身体锁; 读和记账问游戏外的模组), 不算模型自己的动作 */
+  private async runStep(s: Step): Promise<StepResult> {
+    const req = { id: `q-${(++this.stepSeq).toString(36)}-${Date.now().toString(36)}`, action: s.action, args: s.args ?? {} };
+    const d: Dispatch = { raw: JSON.stringify(req), request: req };
+    let text: string | undefined;
+    if (this.opts.actions?.has(s.action)) text = JSON.stringify(await this.withBody(() => this.opts.actions!.run(req)));
+    else { const r = await this.answer("", d, s.action); if (!r.ok) return { ok: false, error: r.error ?? "没回" }; text = r.text; }
+    try { const j = JSON.parse(String(text)) as { ok?: boolean; error?: { message?: string } | string }; return j.ok === true ? { ok: true } : { ok: false, error: typeof j.error === "string" ? j.error : j.error?.message ?? "失败" }; }
+    catch { return { ok: false, error: String(text).slice(0, 200) }; }
   }
 
   /** 我们自己递话给模型 (真人的话; human-chat-bridge.ts tellCommands)。operator 请求只从这里进: 模组的规矩是不走 ./fh, 管道上来的 handle 会拒 */
@@ -259,6 +298,8 @@ export class CommandBroker {
       const text = (d.request.args as { text?: unknown } | undefined)?.text;
       if (typeof text === "string") this.opts.onOperator?.(text);
     }
+    // 队列和常驻命令: 这条路上游戏里没有模组替角色干, 由代理照手册的规则做 (commands/orders.ts)
+    if (this.opts.mode === "server" && d && this.scheduler && ORDER_CALLS.has(action)) return this.schedulerCall(d, action);
     // ./plan 的两段固定只读 Lua (场上已有的机器和科技、找空地) 在游戏外的假接口上跑: 模型手里仍没有自己写 Lua 的口, 只能点这两个名字
     if (this.opts.mode === "server" && d && action === "plan_read") return this.planRead(d);
     // 真服上能翻译成玩家操作的先走行动层, 不问模组: craft、say、research 这些模组的只读闸门不拦 (它们不打断队列), 在外面的假接口上跑会报怪错 (2026-11-06 核出来)
@@ -328,6 +369,7 @@ export class CommandBroker {
   }
 
   async stop(): Promise<void> {
+    if (this.schedTimer) { clearInterval(this.schedTimer); this.schedTimer = null; }
     // 还开着的连接先断: server.close 要等它们, 模型留下的 ./fh sleep 300 让收尾卡了 2 分钟 (2026-11-06 真服)
     for (const s of this.sockets) s.destroy();
     await new Promise<void>((resolve) => { if (this.server) this.server.close(() => resolve()); else resolve(); });

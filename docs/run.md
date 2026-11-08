@@ -57,7 +57,7 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 - [x] 配置和物品 (`commands/actions.ts`): recover (走到自己的尸体挖) pickup (走过去按住拾取键) deliver (走过去放) rearm (背包里最好的弹匣补炮塔) upgrade / belt_upgrade (拿下一档放在原位快速替换; 下一档取原型的 next_upgrade; belt_upgrade 按半径, 不是整条线追) use_item (拿在手上左键点) clear_cliffs (悬崖炸药) equip (背包里 Shift+点进装备格) configure (这条路上只会设 recipe 和 requests, 别的设置明说还没翻译)
 - [ ] 还差: cancel_craft (手搓队列) equipment (护甲网格) 要先在活的客户端里读一次界面树找控件名; turret_feeds 要看模组试算回的格式。最后沙盘核时对着真界面写
 - [x] 等待: walk = move_to; wait_ticks wait_until 交给游戏外的模组按读数等 (和 sleep 一样, `AGENT_CALLS`)
-- [ ] 常驻命令和队列: order_set orders order_remove orders_pause orders_resume queue_* → 闸门放行但游戏外跑不了 (要模组在游戏里替角色干活) → 游戏外的监工按单子用行动层执行
+- [x] 常驻命令和队列 (`commands/orders.ts`, 代理里 3 秒看一次): queue_submit (append / replace, on_fail abort / skip) queue_status queue_cancel queue_pause queue_resume queue_repeat (interval_ticks、times); order_set (最多 6 条 × 32 步、priority、cooldown_ticks、没有 when 的默认例行 interval_ticks、连败 3 次关掉) orders order_remove orders_pause orders_resume。照手册的规则: 角色空着 (模型最后一个自己的动作之后 20 秒) 才跑, 模型一动手跑完手上这一步就让出来 (模组是立刻停); 每一步和模型的动作过同一把身体锁。when 在游戏外按一小段只读 Lua 判断, 认 fuel_below ammo_below item_count ghosts_waiting damaged health_below health_above no_enemies (参数名照模组); 别的条件 (平台、火箭…) 单子照收、状态明说不认。没做: queue_edit (用 replace)、max_walk、guards、lane、assembler_batch。单元 `test/orders.test.ts` (含条件 Lua 在 Lua 5.2 里编译)
 - [ ] 战斗和载具: kite spider_kite retreat_guard vehicle train train_stop rail_route attach detach → 玩家操作
 - [ ] 电路: wire circuit_set circuit_gate signal_watch → 玩家操作 (拿红绿线点两头 / 界面)
 - [ ] 太空: platform_* launch silo_stage load_silo pods shipment fleet gates demolishers flight_watch min_payload → 玩家操作 (到太空时代再做, 但要列着)
