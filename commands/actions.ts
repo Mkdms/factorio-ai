@@ -138,6 +138,8 @@ export type ActionDeps = {
   assist?: { me: string; allowed?: (at: Pos) => boolean };
   /** 自己在游戏里的名字 (不是协助模式时也要: 挡路的建筑是不是自己放的) */
   me?: string;
+  /** 问模组一句读 (游戏外的假接口上跑; 放不下时找附近放得下的位置用 placements): 问不到回 null */
+  read?: (action: string, args: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
 };
 
 /** 协助模式: 这件东西动不动得 (纯函数): 树、石头、矿谁都能挖; 建筑只动自己放的 (last_user 是自己) */
@@ -515,7 +517,7 @@ export class PlayerActions {
           const here = (await readArea(this.d.call, box, ["name", "type", "position"], 16)).entities as Record<string, any>[];
           const blockers = here.filter((x) => !NOT_ENTITIES.has(String(x.type)) && x.type !== "resource");
           const names = await Promise.all(blockers.map(async (x) => `${x.name} (${x.position.x},${x.position.y}${await this.ownerTag(x)})`));
-          throw fail(`placement blocked by ${names.join(", ") || "别的东西 (水、悬崖、够不着?)"}${out.error ? ` (${out.error.slice(0, 160)})` : ""}`);
+          throw fail(`placement blocked by ${names.join(", ") || "看不到挡着的东西"}${await this.placeWhy(item, at, blockers.length > 0)}${out.error ? ` (${out.error.slice(0, 160)})` : ""}`);
         }
         const e = await this.entityAt(at, item);
         if (!e) throw fail(`${item} 放下后在 ${fmt(at)} 读不到 (物品名和实体名不一样? 被挡了?)`);
@@ -531,6 +533,39 @@ export class PlayerActions {
       }
     } finally { await this.d.clearCursor().catch(() => undefined); }
     return rows.length === 1 ? { consumed: built.length, entity: built[0] } : { consumed: built.length, built: built.length, total: rows.length, entities: built.slice(-6) };
+  }
+
+  /**
+   * 放不下时多说几句 (2026-11-08 Sonnet 第四班: 19 次放不下里 17 次是抽水机放在不是岸边的格子, 回复只说"那格是空的", 模型换个格子再试, 一直错):
+   * 那格地块、离角色多远 (够不着)、这种建筑的放置规则、附近真放得下的位置 (问模组的 placements, 按游戏规则算的; 游戏外的假接口 can_place_entity 见 game/offgame/placeable.lua)
+   */
+  private async placeWhy(item: string, at: Pos, hasBlocker: boolean): Promise<string> {
+    const parts: string[] = [];
+    try { const tile = await this.tileAt(at); if (tile) parts.push(`那格地块 ${tile}`); } catch { /* 地块读不到就不说 */ }
+    try {
+      const me = await this.me();
+      const d = Math.hypot(me.x - at.x, me.y - at.y);
+      if (d > BUILD_REACH) parts.push(`离你 ${d.toFixed(1)} 格 (够得着 ${BUILD_REACH})`);
+    } catch { /* 读不到位置就不说 */ }
+    const pump = item === "offshore-pump";
+    const radius = pump ? 12 : 6;
+    if (pump) parts.push("抽水机只能放在岸上: 脚下那格是陆地, 正面紧挨着 3 宽 2 深全是水, 朝向游戏自己定 (direction 不算数)");
+    const spots = (await this.d.read?.("placements", { name: item, near: { x: at.x, y: at.y }, radius, limit: 3 }).catch(() => null)) ?? null;
+    const list = Array.isArray(spots?.placements) ? (spots!.placements as { position?: Pos; direction?: string }[]).filter((s) => s.position) : [];
+    if (list.length) parts.push(`附近放得下的位置 (按游戏规则算的, ${radius} 格内): ${list.map((s) => `${fmt(s.position!)}${s.direction ? ` 朝 ${s.direction}` : ""}`).join("、")}`);
+    else if (spots) {
+      const note = spots.in_the_way ?? spots.note;
+      parts.push(`${radius} 格内没有放得下的位置${typeof note === "string" ? ` (${note.slice(0, 120)})` : ""}${pump ? "; 换一片水: ./fh call nearest_water" : ""}`);
+    } else if (!hasBlocker) parts.push(`找附近放得下的位置: ./fh call placements --args '{"name":"${item}","near":{"x":${at.x},"y":${at.y}}}'`);
+    return parts.length ? `; ${parts.join("; ")}` : "";
+  }
+
+  /** 那一格的地块名 (注入客户端的 world_query kind=tiles, 和 walk.ts 同一个读法; 没注入 / 读不到回 null) */
+  private async tileAt(at: Pos): Promise<string | null> {
+    const x = Math.floor(at.x), y = Math.floor(at.y);
+    const r = await this.d.call("world_query", { selection: { kind: "tiles", area: { left_top: { x, y }, right_bottom: { x: x + 1, y: y + 1 } } }, fields: ["name"], limit: 4 });
+    const o = (r.data as { objects?: { attributes?: { name?: unknown } }[] } | undefined)?.objects?.[0];
+    return r.ok && typeof o?.attributes?.name === "string" ? o.attributes.name : null;
   }
 
   /**
@@ -566,7 +601,14 @@ export class PlayerActions {
     if (cursor?.name) held[cursor.name] = (held[cursor.name] ?? 0) + (cursor.count ?? 0);
     const missing: Record<string, number> = {};
     for (const [n, c] of Object.entries(need)) if ((held[n] ?? 0) < c) missing[n] = c - (held[n] ?? 0);
-    return { dry_run: true, total: rows.length, need, missing, blocked, clear: clear.slice(0, 60), clear_count: clear.length, existing };
+    // 单件被挡 / 抽水机: 一起给附近放得下的位置 (问模组的 placements, 按游戏规则算的), 模型不用一格一格试
+    let spots: { position?: Pos; direction?: string }[] | undefined;
+    const item0 = String(rows[0]?.item ?? rows[0]?.name ?? ""), at0 = posOf(rows[0]?.position);
+    if (rows.length === 1 && at0 && (blocked.length > 0 || item0 === "offshore-pump")) {
+      const pl = (await this.d.read?.("placements", { name: item0, near: at0, radius: item0 === "offshore-pump" ? 12 : 6, limit: 3 }).catch(() => null)) ?? null;
+      if (Array.isArray(pl?.placements)) spots = (pl!.placements as { position?: Pos; direction?: string }[]).slice(0, 3).map((s) => ({ position: s.position, direction: s.direction }));
+    }
+    return { dry_run: true, total: rows.length, need, missing, blocked, clear: clear.slice(0, 60), clear_count: clear.length, existing, ...(spots ? { spots } : {}) };
   }
 
   private async transfer(a: Record<string, unknown>) {

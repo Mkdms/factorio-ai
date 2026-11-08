@@ -1260,7 +1260,37 @@ local function lua_networks_building(pos)
   end
   return out
 end
+-- 放置检查 (placeable.lua, 纯函数): 占地框里挡建造的实体、脚下的地块、原型的地块规则 (抽水机: 脚下陆地 + 正面 3x2 水); 地块没读到 = 放不下并记缺。
+-- placements / nearest_water 的抽水机位置、drill_sites 都靠它; 以前游戏外没有这个接口, 它们一律报 "can_place_entity (a nil value)" (2026-11-08 第四班: 17 次抽水机放不下)
+local placeable = load(__py_read_offgame("placeable"), "@placeable.lua", "t", _ENV)()
+local last_place_why = nil
+local function can_place(a)
+  local name = type(a.name) == "table" and a.name.name or a.name
+  local proto = prototypes.entity[name]
+  local x, y = (a.position or {}).x or (a.position or {})[1], (a.position or {}).y or (a.position or {})[2]
+  if not proto or x == nil then last_place_why = "缺原型或位置"; return false end
+  local ok, why = placeable.check{proto = proto, name = name, x = x, y = y, direction = a.direction or 0,
+    entities = function(x0, y0, x1, y1)
+      local out = {}
+      for _, e in ipairs(surface.find_entities_filtered{area = {{x0, y0}, {x1, y1}}}) do
+        local bb = e.bounding_box
+        out[#out + 1] = {name = e.name, type = e.type, x0 = bb.left_top.x, y0 = bb.left_top.y, x1 = bb.right_bottom.x, y1 = bb.right_bottom.y}
+      end
+      return out
+    end,
+    tile = function(tx, ty)
+      local c = chunk_tiles(math.floor(tx / CHUNK), math.floor(ty / CHUNK))
+      return c and tile_name_at(c, tx, ty) or nil
+    end,
+    tile_layers = tile_layers}
+  if why and why:find("没读到", 1, true) then note("读不到:地块") end
+  last_place_why = why
+  return ok
+end
+-- 上一次放置检查为什么不行 (给 placements 的 blocked 文案和调试用; 游戏里没有这个, 只在外面有)
+function __place_why() return last_place_why end
 surface = tracked_nil("LuaSurface", {name = "nauvis", index = 1, valid = true, object_name = "LuaSurface",
+  can_place_entity = can_place,
   find_entities_filtered = function(a)
     local out = {}
     local limit = a.limit
@@ -1376,6 +1406,7 @@ do
   }
   player = setmetatable({valid = true, connected = true, surface = surface, physical_surface = surface, force = force_player, object_name = "LuaPlayer", physical_controller_type = defines.controllers and defines.controllers.character or 1, controller_type = defines.controllers and defines.controllers.character or 1, cheat_mode = false, driving = false, crafting_queue = {}, crafting_queue_size = 0, walking_state = {walking = false, direction = 0}, mining_state = {mining = false}, cursor_stack = {valid = true, valid_for_read = false},
     get_main_inventory = function() local b = body() return b and b.get_main_inventory() end, get_inventory = function(id) local b = body() return b and b.get_inventory(id) end,
+    can_place_entity = can_place,
     -- 够得着: 角色到实体占地框的距离 (够得着 10 格, 2.1.24 实测); 原来一律 true, 真服上离 200 格也报 in_reach (2026-11-06)
     can_reach_entity = function(e)
       local p, c, box = pos(), e.position, e.bounding_box

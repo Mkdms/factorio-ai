@@ -308,6 +308,8 @@ try {
     insertExact: (at, i, n, inv) => t.insertExactDirect(at, i, n, inv), takeExact: (at, i, n, inv) => t.takeExactDirect(at, i, n, inv), itemCount: (at, inv, i) => t.entityItemCount(at, inv, i),
     stacks: () => t.inventorySlots(), chatSend: (x) => t.chatSend(x), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
     assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed }, me: name, lessons: delivery?.pick,
+    // 放不下时问模组 placements 找附近放得下的位置 (代理在下面才建, 用到时已经有了)
+    read: (action, args) => (broker ? broker.read(action, args) : Promise.resolve(null)),
   });
   if (useRcon) {
     const conn = rcon!;

@@ -112,6 +112,8 @@ def main() -> int:
     g["__py_json_decode"] = lambda s: to_lua(lua, json.loads(s))
     g["__py_json_encode"] = lambda t: json.dumps(from_lua(lua, t), ensure_ascii=False, separators=(",", ":"))
     g["__py_read_mod"] = lambda name: open(os.path.join(MOD, name + ".lua"), encoding="utf-8").read() if os.path.exists(os.path.join(MOD, name + ".lua")) else None
+    # 游戏外自己的 Lua 库 (placeable.lua 放置检查): 和 fake_game.lua 同目录, 不在模组目录里
+    g["__py_read_offgame"] = lambda name: open(os.path.join(HERE, name + ".lua"), encoding="utf-8").read()
     g["__py_log"] = lambda s: None
     g["__defines_json"] = open(args.defines, encoding="utf-8").read()
     g["__proto_json"] = proto_text

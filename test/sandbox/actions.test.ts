@@ -425,11 +425,16 @@ test("地块: map 有水, nearest_water 找得到, observe 看得到, 抽水机�
   const seen = await act("observe", { position: center, radius: 6, tiles: true, limit: 1 });
   const inPond = Math.abs(Number(near.result?.position?.x) - pond.cx) <= 3.5 && Math.abs(Number(near.result?.position?.y) - pond.cy) <= 3.5;
   const tilesText = JSON.stringify(seen.result?.tiles ?? {});
+  // 假接口的放置检查 (game/offgame/placeable.lua, 2026-11-08): nearest_water 要带抽水机能放的位置; 放错地方 (离水 4 格) 要被拒, 回复带附近放得下的位置
+  const spots = (near.result?.pump_spots ?? []) as { position: { x: number; y: number }; direction?: string }[];
   await truth(`game.connected_players[1].get_main_inventory().insert{name = "offshore-pump", count = 1} return true`);
+  const bad = await act("build", { item: "offshore-pump", position: { x: pond.x0 + 3.5, y: pond.y0 + 10.5 }, direction: "east", walk: true }, "--wait");
+  const badMsg = seenOf(bad);
   const pump = await act("build", { item: "offshore-pump", position: { x: pond.x0 + 7.5, y: pond.y0 + 10.5 }, direction: "north", walk: true }, "--wait");
   await truth(`local a = ... for _, e in pairs(game.surfaces[1].find_entities_filtered{name = "offshore-pump", area = {{a.x0, a.y0}, {a.x0 + 32, a.y0 + 32}}}) do e.destroy() end
     local t = {} for x = a.x0 + 8, a.x0 + 13 do for y = a.y0 + 8, a.y0 + 13 do t[#t + 1] = {name = "grass-1", position = {x, y}} end end game.surfaces[1].set_tiles(t) return true`, pond);
-  return { pass: !!map.ok && regions.some((r) => r.count >= pond.n) && near.result?.found === true && inPond && tilesText.includes("water") && !!pump.ok, seen: `真值 ${pond.n} 格; map ${JSON.stringify(regions).slice(0, 120)}; nearest_water ${String(near.result?.line ?? seenOf(near)).slice(0, 120)}; observe ${tilesText.slice(0, 80)}; 抽水机 ${seenOf(pump).slice(0, 120)}` };
+  return { pass: !!map.ok && regions.some((r) => r.count >= pond.n) && near.result?.found === true && inPond && tilesText.includes("water") && !!pump.ok && spots.length > 0 && !bad.ok && /放得下的位置/.test(badMsg),
+    seen: `真值 ${pond.n} 格; map ${JSON.stringify(regions).slice(0, 120)}; nearest_water ${String(near.result?.line ?? seenOf(near)).slice(0, 160)}; pump_spots ${spots.length}; observe ${tilesText.slice(0, 80)}; 放错 ${badMsg.slice(0, 160)}; 抽水机 ${seenOf(pump).slice(0, 120)}` };
 }));
 test("say 发聊天", () => check(async () => { const r = await act("say", { text: "动作核对 你好 [gps=1,2,nauvis]" }); return { pass: !!r.ok, seen: seenOf(r) }; }));
 test("走路: 逆着传送带走到了, 不被运回去", () => check(async () => {

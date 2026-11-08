@@ -187,3 +187,67 @@ test("代理: 沙盘模式不走行动层 (动作在游戏里的模组上)", asy
   assert.equal(r.text, "ok");
   assert.equal(sent.length, 1);
 });
+
+/** 放建筑的假游戏: 角色在原点, 手上拿着 item, 背包里也有; 放下一律失败; 周围的实体和那格地块由参数给 */
+function buildGame(o: { item: string; tile?: string | null; around?: Record<string, unknown>[]; placements?: Record<string, unknown> | null; me?: { x: number; y: number } }) {
+  const reads: { action: string; args: Record<string, unknown> }[] = [];
+  const over: Partial<ActionDeps> = {
+    me: "Claude-Sonnet",
+    call: async (name, args) => {
+      const sel = (args as { selection: { kind?: string } }).selection;
+      if (sel.kind === "player") return { ok: true, data: { player: { position: o.me ?? { x: 0, y: 0 } }, objects: [{ attributes: { character: true, cursor_stack: { valid_for_read: true, name: o.item, count: 1 } } }] } };
+      if (sel.kind === "inventory") return { ok: true, data: { objects: [{ valid_for_read: true, attributes: { name: o.item, count: 2 } }] } };
+      if (sel.kind === "tiles") return o.tile === null ? { ok: false, error: "没注入" } : { ok: true, data: { objects: [{ attributes: { name: o.tile ?? "grass-1" } }] } };
+      if (sel.kind === "entities") return { ok: true, data: { objects: (o.around ?? []).map((attributes) => ({ attributes })) } };
+      return { ok: true, data: { objects: [] } };
+    },
+    placeHeld: async () => ({ ok: false, error: `放不下: ${o.item} 没放上 (手上还是 1 个), 那格是 空的 (可能够不着或被挡)` }),
+    read: o.placements === undefined ? undefined : async (action, args) => { reads.push({ action, args }); return o.placements; },
+  };
+  return { reads, over };
+}
+
+test("放不下时多说几句: 那格地块、抽水机的岸边规则、附近放得下的位置 (问模组 placements, 12 格); 没有空位就指去 nearest_water", async () => {
+  const g = buildGame({ item: "offshore-pump", tile: "grass-1", placements: { placements: [{ position: { x: -32.5, y: -34.5 }, direction: "east" }, { position: { x: -31.5, y: -36.5 }, direction: "north" }] } });
+  const r = await new PlayerActions(deps(g.over)).run({ id: "a", action: "build", args: { item: "offshore-pump", position: { x: 3.5, y: 3.5 }, direction: "north" } });
+  assert.equal(r.ok, false);
+  const msg = (r.error as { message: string }).message;
+  assert.match(msg, /^placement blocked by 看不到挡着的东西; 那格地块 grass-1; 抽水机只能放在岸上/);
+  assert.match(msg, /附近放得下的位置 \(按游戏规则算的, 12 格内\): \(-32\.5,-34\.5\) 朝 east、\(-31\.5,-36\.5\) 朝 north/);
+  assert.doesNotMatch(msg, /离你/, "够得着就不说距离");
+  assert.deepEqual(g.reads, [{ action: "placements", args: { name: "offshore-pump", near: { x: 3.5, y: 3.5 }, radius: 12, limit: 3 } }]);
+
+  const none = buildGame({ item: "offshore-pump", tile: "water", placements: { placements: [], in_the_way: "water everywhere" } });
+  const n = await new PlayerActions(deps(none.over)).run({ id: "b", action: "build", args: { item: "offshore-pump", position: { x: 3.5, y: 3.5 } } });
+  assert.match((n.error as { message: string }).message, /那格地块 water; .*12 格内没有放得下的位置 \(water everywhere\); 换一片水: \.\/fh call nearest_water/);
+});
+
+test("放不下 (别的建筑): 够不着就说离多远; 问不到模组就给 placements 命令; 地块读不到不编", async () => {
+  const far = buildGame({ item: "stone-furnace", tile: null, placements: null, me: { x: 0, y: 0 } });
+  // 离 (9,0) 9 格: 够得着 (走路那步不触发), 放不下
+  const r = await new PlayerActions(deps(far.over)).run({ id: "a", action: "build", args: { item: "stone-furnace", position: { x: 9, y: 0 } } });
+  const msg = (r.error as { message: string }).message;
+  assert.match(msg, /^placement blocked by 看不到挡着的东西; 找附近放得下的位置: \.\/fh call placements --args '\{"name":"stone-furnace","near":\{"x":9,"y":0\}\}'/);
+  assert.doesNotMatch(msg, /那格地块/, "地块读不到就不说");
+  assert.doesNotMatch(msg, /抽水机/);
+  // 没给 read (旧接线): 也只是少一句, 不报错
+  const plain = buildGame({ item: "stone-furnace" });
+  const p = await new PlayerActions(deps(plain.over)).run({ id: "b", action: "build", args: { item: "stone-furnace", position: { x: 6, y: 2 } } });
+  assert.match((p.error as { message: string }).message, /那格地块 grass-1; 找附近放得下的位置: \.\/fh call placements/);
+});
+
+test("dry_run 单件被挡: blocked 之外一起给附近放得下的位置 (spots)", async () => {
+  const g = buildGame({ item: "stone-furnace", around: [{ name: "stone-furnace", type: "furnace", unit_number: 7, position: { x: 11, y: 10 }, bounding_box: { left_top: { x: 10.3, y: 9.3 }, right_bottom: { x: 11.7, y: 10.7 } } }],
+    placements: { placements: [{ position: { x: 13, y: 10 }, direction: "north" }] } });
+  const r = await new PlayerActions(deps(g.over)).run({ id: "a", action: "build", args: { item: "stone-furnace", position: { x: 10, y: 10 }, box: { left: 9, top: 9, right: 11, bottom: 11 }, dry_run: true } });
+  assert.equal(r.ok, true);
+  const res = r.result as { blocked: string[]; spots?: { position: { x: number; y: number }; direction?: string }[] };
+  assert.deepEqual(res.blocked, ["stone-furnace (11,10)"]);
+  assert.deepEqual(res.spots, [{ position: { x: 13, y: 10 }, direction: "north" }]);
+  assert.deepEqual(g.reads[0], { action: "placements", args: { name: "stone-furnace", near: { x: 10, y: 10 }, radius: 6, limit: 3 } });
+  // 没被挡就不问
+  const free = buildGame({ item: "stone-furnace", placements: { placements: [] } });
+  const f = await new PlayerActions(deps(free.over)).run({ id: "b", action: "build", args: { item: "stone-furnace", position: { x: 10, y: 10 }, box: { left: 9, top: 9, right: 11, bottom: 11 }, dry_run: true } });
+  assert.equal((f.result as { spots?: unknown }).spots, undefined);
+  assert.equal(free.reads.length, 0);
+});

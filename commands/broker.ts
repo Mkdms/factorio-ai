@@ -182,6 +182,16 @@ export class CommandBroker {
   /** 后台任务跑得怎么样、假接口缺了什么 (真服上跑完留底, 看真实世界还差哪些) */
   probeStats(): Promise<Record<string, unknown>> { return this.askProbe({ stats: true }); }
 
+  /** 行动层自己要问模组一句读 (放不下时找附近放得下的位置: placements): 直接问宿主, 和读命令排同一个队; 问不到 / 模组报错回 null, 不盖过动作本身的错 */
+  async read(action: string, args: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+    try {
+      const row = await this.ask(JSON.stringify({ id: `act-${Date.now().toString(36)}`, action, args }));
+      if (row.exception !== undefined || row.text === undefined) return null;
+      const r = JSON.parse(row.text) as { ok?: boolean; result?: Record<string, unknown> };
+      return r.ok === true && r.result && typeof r.result === "object" ? r.result : null;
+    } catch { return null; }
+  }
+
   private count(action: string, route: Route | "act" | "ledger", ms: number): void {
     const a = (this.stats.byAction[action] ??= { route, n: 0, ms: 0 });
     a.route = route; a.n++; a.ms += ms;
