@@ -593,12 +593,13 @@ async function checkLayout() {
   // 这两条接手时也要报: 炉子积着板没人取、研究中心和瓶子谁卡谁 (原来是我手动发的读数)
   const stuck = stuckNote(freshItems(scan.stuck, layoutSeen.stuck, atKey));
   if (stuck) { for (const a of agents) if (!a.left) await tellAgent(a, `监工 (只给事实): ${stuck}。`); log(`监工: ${stuck.slice(0, 160)}`); }
-  const lab = labNote(scan.labs, zh);
+  // 研究中心那条提示 (原来变量也叫 lab, 把沙盘实例 lab 遮住了, 函数第一行就报 "Cannot access 'lab' before initialization", 这项检查一直没做成; 2026-11-08 改名)
+  const labHint = labNote(scan.labs, zh);
   // 状态变了才报, 同一种 20 分钟内不重复
-  if (lab && lab.key !== lastLabNote.key && Date.now() - lastLabNote.at >= 20 * 60_000) {
-    lastLabNote = { key: lab.key, at: Date.now() };
-    for (const a of agents) if (!a.left) await tellAgent(a, `监工 (只给事实): ${lab.text}`);
-    log(`监工: ${lab.text.slice(0, 160)}`);
+  if (labHint && labHint.key !== lastLabNote.key && Date.now() - lastLabNote.at >= 20 * 60_000) {
+    lastLabNote = { key: labHint.key, at: Date.now() };
+    for (const a of agents) if (!a.left) await tellAgent(a, `监工 (只给事实): ${labHint.text}`);
+    log(`监工: ${labHint.text.slice(0, 160)}`);
   }
 }
 // 工具诉求一来就报 (派对是工程师当场修): 写进 tool-requests.md + 日志 + 界面弹窗
