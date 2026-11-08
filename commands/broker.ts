@@ -65,6 +65,8 @@ export const AGENT_CALLS = new Set([
   "reminders", "reminder_add", "reminder_edit", "reminder_remove", "reminder_ack", "reminder_snooze",
   "lessons", "lesson_add", "lesson_edit", "lesson_verify", "vote", "votes", "confess", "confessions", "chronicle", "clock", "profile", "harness_request", "mention_counts",
   "ingredient_gap", "belt_flow", "ghosts", "checks", "dependency", "uptime", "heat_budget", "alerts_digest", "logistics_audit", "circuit_audit", "turret_tally", "players", "sight", "trace", "disclosure", "research_done",
+  // ③ 等: 角色站着等几 tick / 等条件成立, 模组在游戏外按读数判断 (和 sleep 一样不动游戏)
+  "wait_ticks", "wait_until",
 ]);
 
 /** ./fh call research 不带要改的参数是查队列, 模组自己答, 不碰游戏 (2026-11-06 真服第二班: 原来当成要改研究给拒了) */
@@ -200,8 +202,8 @@ export class CommandBroker {
    * 行动层自己要问模组一句读 (放不下时找空位 placements; 铺线命令的试算): 直接问宿主, 和读命令排同一个队。
    * 模组报错 / 宿主出错抛出原话 (铺线要把"from is blocked"这种原因带给模型); 只给附加信息的调用方自己 catch
    */
-  async read(action: string, args: Record<string, unknown>): Promise<Record<string, unknown> | null> {
-    const row = await this.ask(JSON.stringify({ id: `act-${Date.now().toString(36)}`, action, args }));
+  async read(action: string, args: Record<string, unknown>, act = false): Promise<Record<string, unknown> | null> {
+    const row = await this.ask(JSON.stringify({ id: `act-${Date.now().toString(36)}`, action, args }), act);
     if (row.exception !== undefined || row.text === undefined) throw new Error(`模组宿主出错: ${String(row.exception ?? "没回").slice(0, 300)}`);
     const r = JSON.parse(row.text) as { ok?: boolean; result?: Record<string, unknown>; error?: { message?: string } | string };
     if (r.ok !== true) throw new Error(typeof r.error === "string" ? r.error : r.error?.message ?? "模组没给原因");

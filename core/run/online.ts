@@ -298,6 +298,9 @@ try {
   // 3. 走 RCON: ./fh 经管道直接到服务器上的模组; 走外挂: 游戏外的模组 + 行动层
   const probeArgs = hostArgs({ defines: path.join(protoDir, "defines.json"), proto: path.join(protoDir, "data-raw-dump.json"), pid: clientPid, exe: gameExe, extra: ["--state", path.join(runDir, "ledger.lua"), ...(reveal ? ["--reveal"] : []), ...(readOnly ? ["--read-only"] : []), "--serve"] });
   const raw = JSON.parse(fs.readFileSync(path.join(protoDir, "data-raw-dump.json"), "utf8")) as { recipe?: Record<string, { energy_required?: number }> };
+  // 每种建筑的下一档 (原型的 next_upgrade): upgrade 用
+  const upgradeOf = new Map<string, string>();
+  for (const rows of Object.values(raw as Record<string, Record<string, { next_upgrade?: unknown }>>)) for (const [n, p] of Object.entries(rows ?? {})) if (p && typeof p === "object" && typeof p.next_upgrade === "string") upgradeOf.set(n, p.next_upgrade);
   const t = target;
   // 教训: 训练集里核实过的种子 + 之前各班模型记的, 做对应动作时行动层在回复里带出 (动作不经过模组; core/run/deliver.ts)
   const delivery = !useRcon && !readOnly && t ? lessonDelivery() : null;
@@ -309,7 +312,8 @@ try {
     stacks: () => t.inventorySlots(), chatSend: (x) => t.chatSend(x), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
     assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed }, me: name, lessons: delivery?.pick,
     // 放不下时问模组 placements 找附近放得下的位置 (代理在下面才建, 用到时已经有了)
-    read: (action, args) => (broker ? broker.read(action, args) : Promise.resolve(null)),
+    read: (action, args, act) => (broker ? broker.read(action, args, act) : Promise.resolve(null)),
+    nextUpgrade: (name) => upgradeOf.get(name) ?? null, setRequest: (at, item, min, max) => t.setRequest(at, item, min, max),
   });
   if (useRcon) {
     const conn = rcon!;

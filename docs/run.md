@@ -54,8 +54,9 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 - [x] 记账类按读者身份跑 (记不到角色头上): board_* reminder_* lesson_* vote confess(ions) chronicle clock profile harness_request mention_counts → 同上, 按角色身份
 - [x] 铺线: pole_route belt_route pipe_route → 模组试算出逐格清单 (details), 行动层走过去一个个放 (`commands/actions.ts route / layTiles / routeTiles`; 游戏外的假接口补了放置检查、占地框、流体口、电线杆接线距离, 三个试算才算得出)。地下带出口端不转方向 (放在入口下游时游戏自动配成出口), 待沙盘核
 - [x] 一组建筑: place_ghosts → 直接放实物; construct / rebuild → 范围里现有的虚影按名字一个个放实物 (协助模式下虚影不算别人的东西)。assembler_batch 是一串排队动作, 归到下面"常驻命令和队列"
-- [ ] 配置和物品: configure (机械臂过滤 / 箱子限格 / 配方) pickup equip equipment use_item cancel_craft deliver upgrade belt_upgrade clear_cliffs rearm turret_feeds recover → 玩家操作 (界面点选 / 拿在手上点)
-- [ ] 等待: wait_ticks wait_until walk → 行动层 (等 = 按 tick 轮询; walk = move_to)
+- [x] 配置和物品 (`commands/actions.ts`): recover (走到自己的尸体挖) pickup (走过去按住拾取键) deliver (走过去放) rearm (背包里最好的弹匣补炮塔) upgrade / belt_upgrade (拿下一档放在原位快速替换; 下一档取原型的 next_upgrade; belt_upgrade 按半径, 不是整条线追) use_item (拿在手上左键点) clear_cliffs (悬崖炸药) equip (背包里 Shift+点进装备格) configure (这条路上只会设 recipe 和 requests, 别的设置明说还没翻译)
+- [ ] 还差: cancel_craft (手搓队列) equipment (护甲网格) 要先在活的客户端里读一次界面树找控件名; turret_feeds 要看模组试算回的格式。最后沙盘核时对着真界面写
+- [x] 等待: walk = move_to; wait_ticks wait_until 交给游戏外的模组按读数等 (和 sleep 一样, `AGENT_CALLS`)
 - [ ] 常驻命令和队列: order_set orders order_remove orders_pause orders_resume queue_* → 闸门放行但游戏外跑不了 (要模组在游戏里替角色干活) → 游戏外的监工按单子用行动层执行
 - [ ] 战斗和载具: kite spider_kite retreat_guard vehicle train train_stop rail_route attach detach → 玩家操作
 - [ ] 电路: wire circuit_set circuit_gate signal_watch → 玩家操作 (拿红绿线点两头 / 界面)

@@ -3,7 +3,7 @@
 // 操控 MK 的身体也走这里: 没有控制台命令, 不影响成就 (上真服后要真拿一个才算核过)。
 // 回复格式照模组 (班次 10-16-30 journal 的样子), 不同的: 模组是发起后计时跑, 这里做完才回, 所以回复里没有 until_tick, 命令行 --wait 也就不用再等。
 import { Timeline } from "./timeline.ts";
-import { cancelResearch, craftByHand, researchTech } from "./gui.ts";
+import { cancelResearch, clickWidget, closeWindows, craftByHand, invSlot, openCharacterGui, researchTech } from "./gui.ts";
 import { readArea, readInventory, readPlayer, type Call } from "./query.ts";
 import { PASSABLE, walkTo } from "./walk.ts";
 import type { Controls, ResolvedControl } from "./controls.ts";
@@ -158,8 +158,12 @@ export type ActionDeps = {
   assist?: { me: string; allowed?: (at: Pos) => boolean };
   /** 自己在游戏里的名字 (不是协助模式时也要: 挡路的建筑是不是自己放的) */
   me?: string;
-  /** 问模组一句读 (游戏外的假接口上跑; 放不下时找附近放得下的位置用 placements): 问不到回 null */
-  read?: (action: string, args: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+  /** 问模组一句读 (游戏外的假接口上跑; 放不下时找附近放得下的位置用 placements): 问不到回 null; act = 按角色身份问 (模组的读者闸门不放行的试算) */
+  read?: (action: string, args: Record<string, unknown>, act?: boolean) => Promise<Record<string, unknown> | null>;
+  /** 这种建筑的下一档 (原型的 next_upgrade: 传送带 → 快速传送带, 石炉 → 钢炉); 没有回 null */
+  nextUpgrade?: (entity: string) => string | null;
+  /** 设请求格 (界面点选; configure 的 requests 用) */
+  setRequest?: (at: Pos, item: string, min: number, max?: number) => Promise<unknown>;
 };
 
 /** 协助模式: 这件东西动不动得 (纯函数): 树、石头、矿谁都能挖; 建筑只动自己放的 (last_user 是自己) */
@@ -179,7 +183,8 @@ const posOf = (v: unknown): Pos | null => { const p = v as Partial<Pos> | undefi
 const fmt = (p: Pos) => `(${p.x},${p.y})`;
 
 /** 动手的这些命令 (say 也算: 别人看得到) */
-const ACTION_NAMES = ["move_to", "build", "transfer", "craft", "mine", "rotate", "research", "say", "build_path", "collect", "refuel", "feed", "shoot", "pole_route", "belt_route", "pipe_route", "place_ghosts", "construct", "rebuild"] as const;
+const ACTION_NAMES = ["move_to", "build", "transfer", "craft", "mine", "rotate", "research", "say", "build_path", "collect", "refuel", "feed", "shoot", "pole_route", "belt_route", "pipe_route", "place_ghosts", "construct", "rebuild",
+  "walk", "recover", "pickup", "deliver", "rearm", "upgrade", "belt_upgrade", "use_item", "clear_cliffs", "equip", "configure"] as const;
 
 /** --read-only 的行动层: 认得所有动作, 全部拒绝, 什么都不发给游戏 (这些动作模组的只读闸门有的不拦, 不接这一层就落到假接口上报怪错)。
  *  回复要带真的 tick: 写 0 命令行会当成世界回档了, 告诉模型 "the game rolled back" (2026-11-06 彩排查出) */
@@ -229,6 +234,16 @@ export class PlayerActions {
       case "pole_route": case "belt_route": case "pipe_route": return this.route(action, a);
       case "place_ghosts": return this.placeList(a);
       case "construct": case "rebuild": return this.constructGhosts(action, a);
+      case "walk": return this.moveTo({ ...a, position: a.position ?? a.to });
+      case "recover": return this.recover(a);
+      case "pickup": return this.pickup(a);
+      case "deliver": return this.deliver(a);
+      case "rearm": return this.rearm(a);
+      case "upgrade": case "belt_upgrade": return this.upgrade(action, a);
+      case "use_item": return this.useItem(a);
+      case "clear_cliffs": return this.clearCliffs(a);
+      case "equip": return this.equip(a);
+      case "configure": return this.configure(a);
       case "collect": return this.collect(a);
       case "refuel": return this.refuel(a);
       case "feed": return this.feed(a);
@@ -277,6 +292,166 @@ export class PlayerActions {
     if (a.dry_run === true) return this.buildCheck(builds);
     const out = await this.build({ builds, walk: true, skip_existing: true, ...(typeof a.start_index === "number" ? { start_index: a.start_index } : {}) });
     return { op: "place_ghosts", note: "没有机器人, 虚影没人建: 直接放了实物", ...out };
+  }
+
+  /** recover: 走到自己的尸体挖回背包 (近的先; 尸体 = character-corpse) */
+  private async recover(a: Record<string, unknown>) {
+    const me = await this.me();
+    const r = Math.min(typeof a.radius === "number" ? a.radius : 256, 256);
+    const box = { left_top: { x: me.x - r, y: me.y - r }, right_bottom: { x: me.x + r, y: me.y + r } };
+    const corpses = ((await readArea(this.d.call, box, ["name", "type", "position"], 64, { type: ["character-corpse"] })).entities as Record<string, any>[])
+      .sort((p, q) => Math.hypot(p.position.x - me.x, p.position.y - me.y) - Math.hypot(q.position.x - me.x, q.position.y - me.y));
+    if (!corpses.length) return { op: "recover", corpses: 0, note: `${r} 格内没有尸体` };
+    let recovered = 0;
+    for (const c of corpses) {
+      if (Date.now() > this.deadline - 15_000) break;
+      await this.mine({ position: c.position, walk: true });
+      recovered++;
+    }
+    return { op: "recover", corpses: corpses.length, recovered, ...(recovered < corpses.length ? { not_done: "再跑一次接着拿" } : {}) };
+  }
+
+  /** pickup: 地上的物品 (item-on-ground), 走过去按住拾取键; 回实际进背包多少 */
+  private async pickup(a: Record<string, unknown>) {
+    const me = await this.me();
+    const t = targetArea(a, me, 10);
+    const box = t.box ?? { left_top: { x: Math.min(...t.positions!.map((p) => p.x)) - 1, y: Math.min(...t.positions!.map((p) => p.y)) - 1 }, right_bottom: { x: Math.max(...t.positions!.map((p) => p.x)) + 1, y: Math.max(...t.positions!.map((p) => p.y)) + 1 } };
+    const items = ((await readArea(this.d.call, box, ["name", "type", "position"], 512, { type: ["item-entity"] })).entities as Record<string, any>[])
+      .sort((p, q) => Math.hypot(p.position.x - me.x, p.position.y - me.y) - Math.hypot(q.position.x - me.x, q.position.y - me.y));
+    if (!items.length) return { op: "pickup", picked: 0, note: "范围里地上没有东西" };
+    const total = async () => Object.values(await readInventory(this.d.call)).reduce((n, c) => n + c, 0);
+    const before = await total();
+    const control = this.d.controls().resolve("pick-items");
+    const visited: Pos[] = [];
+    for (const it of items) {
+      if (Date.now() > this.deadline - 10_000) break;
+      if (visited.some((v) => Math.hypot(v.x - it.position.x, v.y - it.position.y) < 2)) continue; // 按住拾取键会把周围一圈都捡起来
+      await walkTo(this.d.call, this.d.controls(), it.position as Pos, { tolerance: 0.8, deadline: this.deadline }).catch(() => undefined);
+      const r = await this.d.call("input", { timeline: new Timeline().holdControl(control, 0, 60).entries });
+      if (!r.ok) throw new Error(`拾取键没按下去: ${(r.error ?? "").slice(0, 160)}`);
+      visited.push(it.position as Pos);
+    }
+    const picked = (await total()) - before;
+    return { op: "pickup", on_ground: items.length, picked, ...(picked <= 0 ? { note: "一件都没进背包 (背包满了?)" } : {}) };
+  }
+
+  /** deliver: 物品送进目标 (燃料、弹药、原料): 走过去一样样放; 这条路上没有机器人送货 */
+  private async deliver(a: Record<string, unknown>) {
+    const want: [string, number][] = Array.isArray(a.items)
+      ? (a.items as unknown[]).map((x) => (typeof x === "string" ? [x, 10] : [String((x as { name?: unknown }).name), Number((x as { count?: unknown }).count ?? 10)]) as [string, number])
+      : typeof a.items === "object" && a.items ? Object.entries(a.items as Record<string, number>) : typeof a.item === "string" ? [[a.item, typeof a.count === "number" ? a.count : 10]] : [];
+    if (!want.length) throw new Error(`deliver 要 items; e.g. fh call deliver --args '{"position":{"x":1,"y":2},"items":{"coal":20}}'`);
+    const targets = (Array.isArray(a.positions) ? a.positions.map(posOf) : [posOf(a.position)]).filter((p): p is Pos => !!p);
+    if (!targets.length) throw new Error("deliver 要 position 或 positions");
+    let moved = 0;
+    for (const at of targets) for (const [item, count] of want) {
+      if (Date.now() > this.deadline - 10_000) return { op: "deliver", moved, not_done: "一条命令最多干 60 秒: 再跑一次接着送" };
+      const r = await this.transfer({ position: at, direction: "to_entity", item, count, walk: true });
+      moved += Number(r.moved ?? 0);
+    }
+    return { op: "deliver", moved, note: "没有机器人: 角色走过去放的" };
+  }
+
+  /** rearm: 范围里的炮塔补弹 (背包里最好的弹匣, 每台 count 个, 默认 10) */
+  private async rearm(a: Record<string, unknown>) {
+    const inv = await readInventory(this.d.call);
+    const ammo = typeof a.ammo === "string" ? a.ammo : ["uranium-rounds-magazine", "piercing-rounds-magazine", "firearm-magazine"].find((n) => (inv[n] ?? 0) > 0);
+    if (!ammo || (inv[ammo] ?? 0) <= 0) throw new Error("背包里没有弹匣 (firearm-magazine 等): 先 craft 或从箱子取");
+    const per = typeof a.count === "number" ? a.count : 10;
+    const rows = await this.targets(a, ["ammo-turret"]);
+    if (!rows.length) return { op: "rearm", turrets: 0, note: "范围里没有炮塔" };
+    let moved = 0, places = 0;
+    for (const e of rows) {
+      if (Date.now() > this.deadline - 10_000) return { op: "rearm", turrets: rows.length, places, moved, ammo, not_done: "一条命令最多干 60 秒: 再跑一次接着补" };
+      if (((await readInventory(this.d.call))[ammo] ?? 0) <= 0) break;
+      const r = await this.transfer({ position: e.position, direction: "to_entity", item: ammo, count: per, walk: true });
+      moved += Number(r.moved ?? 0); places++;
+    }
+    return { op: "rearm", turrets: rows.length, places, moved, ammo };
+  }
+
+  /**
+   * upgrade / belt_upgrade: 拿下一档 (原型的 next_upgrade, 或 to 指定) 放在原位, 游戏快速替换 (方向照旧, 拆下的旧件回背包)。
+   * belt_upgrade 只换带子类 (传送带、地下带、分流器); 只给 position 时换它周围 radius (默认 16) 内的, 不是按整条线追
+   */
+  private async upgrade(action: string, a: Record<string, unknown>) {
+    const me = await this.me();
+    const t = targetArea(a, me, action === "belt_upgrade" ? 16 : 10);
+    const belts = new Set(["transport-belt", "underground-belt", "splitter"]);
+    const rows = t.positions ? (await Promise.all(t.positions.map((p) => this.entityAt(p)))).filter((e): e is Record<string, any> => !!e)
+      : ((await readArea(this.d.call, t.box!, ["name", "type", "position", "direction"], 512)).entities as Record<string, any>[]).filter((e) => !NOT_ENTITIES.has(String(e.type)) && e.type !== "resource");
+    const to = (e: Record<string, any>) => (typeof a.to === "string" ? a.to : this.d.nextUpgrade?.(String(e.name)) ?? null);
+    const want = rows.filter((e) => (action !== "belt_upgrade" || belts.has(String(e.type))) && (typeof a.from !== "string" || e.name === a.from) && to(e) && to(e) !== e.name);
+    if (!want.length) return { op: action, upgraded: 0, note: "范围里没有能升级的 (或没有下一档)" };
+    const builds = want.map((e) => ({ item: to(e)!, position: e.position as Pos, direction: NAME_BY_DIR[Number(e.direction ?? 0)] }));
+    if (a.dry_run === true) return { op: action, dry_run: true, count: builds.length, ...(await this.buildCheck(builds)) };
+    const out = await this.build({ builds, walk: true, ...(typeof a.start_index === "number" ? { start_index: a.start_index } : {}) });
+    return { op: action, upgraded: Number((out as { built?: number; consumed?: number }).built ?? (out as { consumed?: number }).consumed ?? 0), ...out };
+  }
+
+  /** use_item: 手里拿着胶囊 / 手雷 / 悬崖炸药 / 鱼, 左键点那一点 (够不着先走近, range 默认 15); 回用掉几个 */
+  private async useItem(a: Record<string, unknown>) {
+    const item = String(a.item ?? a.name ?? "");
+    const at = posOf(a.position) ?? (await this.me());
+    if (!item) throw new Error(`use_item 要 item; e.g. fh call use_item --args '{"item":"grenade","position":{"x":1,"y":2}}'`);
+    const count = async () => { const p = await readPlayer(this.d.call); return ((await readInventory(this.d.call))[item] ?? 0) + (p.cursor?.name === item ? p.cursor.count ?? 0 : 0); };
+    const before = await count();
+    if (before < 1) throw new Error(`背包里没有 ${item}`);
+    try {
+      await this.walkInto(at, typeof a.range === "number" ? a.range : 15, true);
+      if (!(await this.d.holdItem(item))) throw new Error(`${item} 没拿到手上`);
+      await this.d.placeHeld(at);
+      await (this.d.sleep ?? defaultSleep)(300);
+    } finally { await this.d.clearCursor().catch(() => undefined); }
+    const used = before - (await count());
+    if (used <= 0) throw new Error(`${item} 没用出去 (够不着、冷却中, 或这东西不能这样用)`);
+    return { op: "use_item", item, used, at };
+  }
+
+  /** clear_cliffs: 范围里的悬崖一处处扔悬崖炸药 (要背包里有; 走到 9 格内扔) */
+  private async clearCliffs(a: Record<string, unknown>) {
+    const me = await this.me();
+    const t = targetArea(a, me, 10);
+    const cliffs = t.positions ? t.positions.map((p) => ({ position: p })) : ((await readArea(this.d.call, t.box!, ["name", "type", "position"], 128, { type: ["cliff"] })).entities as Record<string, any>[])
+      .sort((p, q) => Math.hypot(p.position.x - me.x, p.position.y - me.y) - Math.hypot(q.position.x - me.x, q.position.y - me.y));
+    if (!cliffs.length) return { op: "clear_cliffs", cliffs: 0, note: "范围里没有悬崖" };
+    let used = 0;
+    for (const c of cliffs) {
+      if (Date.now() > this.deadline - 10_000) return { op: "clear_cliffs", cliffs: cliffs.length, used, not_done: "再跑一次接着炸" };
+      used += Number((await this.useItem({ item: "cliff-explosives", position: c.position, range: 9 })).used ?? 0);
+    }
+    return { op: "clear_cliffs", cliffs: cliffs.length, used };
+  }
+
+  /** equip: 枪 / 弹匣 / 护甲从背包装上 (背包里 Shift+点那一格, 游戏把它移进对应的装备格); 回装上几个 */
+  private async equip(a: Record<string, unknown>) {
+    const item = String(a.item ?? a.name ?? "");
+    if (!item) throw new Error(`equip 要 item; e.g. fh call equip --args '{"item":"submachine-gun"}'`);
+    const before = (await readInventory(this.d.call))[item] ?? 0;
+    if (before < 1) throw new Error(`背包里没有 ${item}`);
+    await openCharacterGui(this.d.call, this.d.controls());
+    try { await clickWidget(this.d.call, invSlot(item), "left", ["shift"]); await (this.d.sleep ?? defaultSleep)(300); }
+    finally { await closeWindows(this.d.call, this.d.controls()).catch(() => undefined); }
+    const moved = before - ((await readInventory(this.d.call))[item] ?? 0);
+    if (moved <= 0) throw new Error(`${item} 没装上 (装备格满了, 或这东西不进装备格)`);
+    return { op: "equip", item, moved };
+  }
+
+  /** configure: 这条路上能设的: recipe (组装机配方)、requests [{name, min, max?}] (请求格); 别的设置 (过滤、限格、优先级…) 还没翻译成界面点选, 明说 */
+  private async configure(a: Record<string, unknown>) {
+    const at = posOf(a.position);
+    if (!at) throw new Error(`configure 要 position; e.g. fh call configure --args '{"position":{"x":1,"y":2},"recipe":"iron-gear-wheel"}'`);
+    const known = new Set(["position", "recipe", "requests", "request", "walk"]);
+    const other = Object.keys(a).filter((k) => !known.has(k));
+    if (other.length) throw new Error(`configure 在这条路上只会设 recipe 和 requests; ${other.join("、")} 还没翻译成界面点选`);
+    const done: Record<string, unknown> = {};
+    if (typeof a.recipe === "string") { await this.walkInto(at, BUILD_REACH, true); await this.d.setRecipe(at, a.recipe); done.recipe = a.recipe; }
+    const reqs = (Array.isArray(a.requests) ? a.requests : a.request ? [a.request] : []) as { name?: unknown; min?: unknown; count?: unknown; max?: unknown }[];
+    if (reqs.length && !this.d.setRequest) throw new Error("这条路没接请求格的界面操作");
+    for (const r of reqs) { await this.walkInto(at, BUILD_REACH, true); await this.d.setRequest!(at, String(r.name), Number(r.min ?? r.count ?? 0), typeof r.max === "number" ? r.max : undefined); }
+    if (reqs.length) done.requests = reqs.length;
+    if (!Object.keys(done).length) throw new Error("configure 没给要设的 (recipe / requests)");
+    return { op: "configure", applied: done };
   }
 
   /** construct / rebuild: 范围里现有的虚影 (队友放的、./bp 贴的、被毁的建筑留下的) 按名字走过去一个个放实物; 近的先。标了拆除的这条路上不管 (要拆用 mine) */
