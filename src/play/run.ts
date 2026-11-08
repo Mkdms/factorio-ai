@@ -45,6 +45,7 @@ import { loadZhNames } from "./chattags.ts";
 import { newWatchState, observe, recovered, recoverLab, downtimeMs, type RecoverResult } from "./watchdog.ts";
 import { RESEARCH_LUA, normalizeResearch, pickResearch, triggerText } from "./research.ts";
 import { writeCurrentRun } from "./shift-recover.ts";
+import { botNameCandidates } from "./online-lib.ts";
 import { propose, normalizeExisting, EXISTING_LUA, type Rung } from "./expand.ts";
 import { SCAN_LUA, composeScan, normalizeScan } from "./world-scan.ts";
 import { AlertDedupe, appendAlert, isApiFailure } from "./alerts.ts";
@@ -907,14 +908,23 @@ try {
     const listed = (await lab.exec(`return remote.call("agent_harness", "bots")`)) as string | { bots?: { name: string; alive?: boolean; position?: { x: number; y: number } }[] };
     const botList = (typeof listed === "string" ? JSON.parse(listed) : listed)?.bots;
     // 新地图还没有服务器角色: Lua 空表传回来是 {} 不是 [] (第十一轮开跑前干跑 "find is not a function")
-    const old = (Array.isArray(botList) ? botList : []).find((b: { name: string }) => b.name === a.who);
+    const bots = (Array.isArray(botList) ? botList : []) as { name: string; position?: { x: number; y: number } }[];
+    // 存档里已经有同名的玩家 (不装模组那条路用这个名字连进来过: 2026-11-08 接第六班存档, "a player is named Claude-Sonnet-5.5"): 服务器角色不能同名,
+    // 照角色名的规矩依次试 -2 / -3 … (online-lib.ts botNameCandidates); 上一班已经造过的那个名字就接着用
+    let old: (typeof bots)[number] | undefined, r: { bot?: { unit_number?: number } } | string | undefined;
+    for (const cand of botNameCandidates(a.who)) {
+      old = bots.find((b) => b.name === cand);
+      if (old) { a.who = cand; break; }
+      const made = (await lab.exec(`return remote.call("agent_harness", "bot_create", "${cand}")`)) as { bot?: { unit_number?: number } } | string;
+      r = made;
+      if (!/a player is named/.test(typeof made === "string" ? made : JSON.stringify(made))) { if (cand !== a.who) log(`存档里已有叫 ${a.who} 的玩家, 服务器角色改叫 ${cand}`); a.who = cand; break; }
+    }
     // 玩家身上的身体都不算 (在线的和不在线的; 2026-11-05 窗口分开后, 存档里还留着原来 mkdm 的身体)
-    const r = old ? { bot: { unit_number: (await lab.exec(`local mine = {} for _, p in pairs(game.players) do if p.character then mine[p.character.unit_number] = true end end local best, bd
+    if (old) r = { bot: { unit_number: (await lab.exec(`local mine = {} for _, p in pairs(game.players) do if p.character then mine[p.character.unit_number] = true end end local best, bd
         for _, c in pairs(game.surfaces[1].find_entities_filtered{name = "character", force = "player"}) do
           local d = (c.position.x - ${old.position?.x ?? 0}) ^ 2 + (c.position.y - ${old.position?.y ?? 0}) ^ 2
           if not mine[c.unit_number] and (not bd or d < bd) then best, bd = c.unit_number, d end
-        end return best`)) as number } }
-      : (await lab.exec(`return remote.call("agent_harness", "bot_create", "${a.who}")`)) as { bot?: { unit_number?: number } } | string;
+        end return best`)) as number } };
     const o = typeof r === "string" ? JSON.parse(r) : r;
     a.unit = o?.bot?.unit_number;
     if (old) log(`服务器角色 ${a.who} 存档里已有, 接着用 (实体 ${a.unit})`);
