@@ -11,7 +11,7 @@ import { argvFilePs1 } from "./ps1-wrap.ts";
 import { bashExe } from "./shell.ts";
 import { fhCliPath } from "./fh-cli.ts";
 import { setupRef } from "../../core/run/workspace.ts";
-import { composeBrief } from "../../core/run/brief.ts";
+import { composeBrief, refIndex } from "../../core/run/brief.ts";
 
 export type KitOpts = {
   partyRepo: string;
@@ -96,10 +96,10 @@ export function adaptBrief(text: string, ours: string): { text: string; missed: 
 }
 
 /** 中文简报 (src/play/brief-zh.md, 派对 AGENTS.md 正文的翻译; 第十一轮: 英文简报下大脑一半的话是英文): 手册主题列表从英文简报里原样取 */
-export function zhBrief(template: string, english: string, v: { ours: string; player: string; teammate?: string; teammateNotes?: string; role?: string; p1: string; team?: string }): string {
+export function zhBrief(template: string, english: string, v: { ours: string; player: string; teammate?: string; teammateNotes?: string; role?: string; p1: string; team?: string; /** 没有派对的英文简报时, 手册主题表由我们自己的 ref 目录生成 (core/run/brief.ts refIndex) */ refIndex?: string }): string {
   const en = english.replace(/\r\n/g, "\n");
   const a = en.indexOf("## Reference topics\n"), b = en.indexOf("\n## Your shell");
-  const refIndex = a >= 0 ? topicIndex(en.slice(en.indexOf("\n", a) + 1, b > a ? b : undefined)) : "(见 ./fh help)";
+  const refIndex = v.refIndex ?? (a >= 0 ? topicIndex(en.slice(en.indexOf("\n", a) + 1, b > a ? b : undefined)) : "(见 ./fh help)");
   // 两个人才有"那个队友"; 5 个人的班原来也只写一个 (2026-11-05 发现: 每个大脑都以为只有 mkdm 是队友, 笔记路径也只给它的)
   const many = (v.team ?? "").split("、").length > 2;
   const coop = v.teammate ? `## 合作
@@ -222,24 +222,51 @@ export function setupPartyWorkspace(o: KitOpts): { missed: string[] } {
   return { missed };
 }
 
-/** 没有派对仓库时的角色目录: 简报 = 训练集的模板 (manuals/brief.md) + 装模组这条路的说明 + 我们的规矩 (o.ours); 手册 = 训练集 manuals/ref + 思路 + 事实 (和不装模组那条路同一份) */
+/**
+ * 没有派对仓库时的角色目录 (重构后不下载别人的项目): 简报照第二版用中文模板 src/play/brief-zh.md (目标、接口、节奏、规则、记忆、真人 / 监工 / 工具诉求、结束、合作、压缩说明),
+ * 手册主题表由我们自己的 ref 目录生成; 手册 = 训练集 manuals/ref + 思路 + 事实 (和不装模组那条路同一份)。
+ * 2026-11-08 前这里用的是训练集给不装模组那条路写的通用简报, 少了上面好几节 (自己写工具、describe.json、lesson_add、工具诉求、合作、压缩说明 …)。
+ */
 function ownWorkspace(o: KitOpts): { missed: string[] } {
   const refDir = path.join(o.dir, "ref");
   setupRef(refDir);
-  const team = o.team ? `- **全队**: ${o.team}${o.teammate ? `; 队友 \`${o.teammate.name}\` 的笔记在 ${o.teammate.notes}` : ""}\n` : "";
-  const world = `## 先读这一节 (本机沙盘, 服务器装了我们的模组)
+  // 装模组这条路才有的几句 (第二版 o.ours 之外): 服务器角色、整块建、常驻命令要写 walk
+  const world = `## 这条路 (服务器装了我们的模组)
 
-- **你是谁**: 游戏里叫 \`${o.name}\`, 是服务器上的角色 (模组造的, 不是真客户端)。命令全部能用, 在游戏里由模组执行: 铺线 (\`pole_route\`、\`belt_route\`、\`pipe_route\`)、虚影 (\`place_ghosts\`、\`paste\`) 和 \`construct\` 去建、常驻命令 (\`order_set\`) 和队列、配置、装备、载具都有。参数拿不准先 \`./fh help 动作\`。
-- **算和建**: \`./calc\` 算配比; \`./plan 物品 每分钟\` 算全链并找空地, 加 \`--build\` 直接放; \`./bp list\` / \`./bp show\` / \`./bp build 编号 --at x,y\` 整块建 (这条路上贴虚影再建, 比一件件手放快得多)。整条线先 \`./plan\`, 别一台台手摆。
-- **让角色一直干着**: 定时动作 (move_to、mine、build_path、construct…) 加 \`--wait\`; \`a && b\` 一次往返里 a 成功才做 b。例行活 (补煤、补弹、喂研究中心) 设成常驻命令 \`order_set\` (触发条件 \`fuel_below\` 等), 成串的动作排进队列, 去想事情之前先挂好。常驻命令里的取放补料步骤写 \`walk: true\` (队列会自动加, 常驻命令不加; 不写时目标超过 64 格整步失败)。直接驱动角色的动作会暂停队列, 之后要 \`./fh queue resume\`。细节: \`./fh help waits-queues\`。
-${team}${o.role ? `- **这一班你主要负责**: ${o.role}\n` : ""}- **语言**: 全部简体中文; 建筑物品用官方中文名 (ref/names.tsv)。
+- **你是谁**: 服务器上的角色 (模组造的, 不是真客户端)。命令全部能用, 在游戏里由模组执行: 铺线 (\`pole_route\`、\`belt_route\`、\`pipe_route\`)、虚影 (\`place_ghosts\`、\`paste\`) 和 \`construct\` 去建、常驻命令 (\`order_set\`) 和队列、配置、装备、载具都有。
+- **算和建**: \`./calc\` 算配比; \`./plan 物品 每分钟\` 算全链并找空地, 加 \`--build\` 直接放; \`./bp list\` / \`./bp show\` / \`./bp build 编号 --at x,y\` 整块建 (贴虚影再建, 比一件件手放快得多)。整条线先 \`./plan\`, 别一台台手摆。
+- **常驻命令里的取放补料步骤写 \`walk: true\`**: 队列会自动加, 常驻命令不加; 不写时目标超过 64 格整步失败。
 ${o.resume ? "- **接着上一班的世界玩**: 先读 notes.md 和开班扫描, 别重建已有的东西。\n" : ""}`;
-  const text = composeBrief({ world: `${o.ours.trim()}\n\n${world}`, name: o.name, refDir });
+  const tpl = path.join(path.dirname(o.shim), "brief-zh.md");
+  const p1 = typeof o.who === "number" ? o.name : o.teammate?.name ?? "MK";
+  const text = fs.existsSync(tpl)
+    ? zhBrief(fs.readFileSync(tpl, "utf8"), "", { ours: `${o.ours.trim()}\n\n${world}`, player: o.name, teammate: o.teammate?.name, teammateNotes: o.teammate?.notes, role: o.role, p1, team: o.team, refIndex: refIndex(refDir) })
+    : composeBrief({ world: `${o.ours.trim()}\n\n${world}`, name: o.name, refDir });
   fs.writeFileSync(path.join(o.dir, "AGENTS.md"), text);
   fs.writeFileSync(path.join(o.dir, "CLAUDE.md"), text);
-  const missed: string[] = ["describe.json (没有派对仓库; ./fh help 动作 照样查得到)"];
+  const missed: string[] = [];
   writeFh(o, missed);
+  // describe.json: 全部动作和参数, 一行一个 (简报里叫大脑 grep 它; 第二版靠派对的转换脚本, 这里自己转)。联机由调用方异步写 (writeDescribeJson)
+  if (!o.socket) try {
+    const raw = execFileSync(bashExe(), [path.join(o.dir, "fh"), "call", "describe", "--format", "json"], { cwd: o.dir, env: { ...process.env, FH_MAX_OUTPUT: "0", FH_NO_EXTRAS: "1" }, encoding: "utf8", timeout: 60_000, maxBuffer: 64 * 1024 * 1024 });
+    fs.writeFileSync(path.join(o.dir, "describe.json"), describeLines(raw));
+  } catch { missed.push("describe.json (./fh help 动作 照样查得到)"); }
   return { missed };
+}
+
+/** ./fh call describe --format json 的输出 → describe.json: 外层一个键一行, 动作表里一个动作一行 (grep '"build"' describe.json 就是那一条) */
+export function describeLines(raw: string): string {
+  let j = JSON.parse(raw) as Record<string, unknown>;
+  if (j && typeof j === "object" && "result" in j && j.result && typeof j.result === "object") j = j.result as Record<string, unknown>;
+  const isTable = (v: unknown) => !!v && typeof v === "object" && !Array.isArray(v) && Object.values(v as object).length > 3 && Object.values(v as object).every((x) => x && typeof x === "object" && !Array.isArray(x));
+  const keys = Object.keys(j);
+  const body = keys.map((k, i) => {
+    const v = j[k], comma = i < keys.length - 1 ? "," : "";
+    if (!isTable(v)) return `  ${JSON.stringify(k)}: ${JSON.stringify(v)}${comma}`;
+    const inner = Object.entries(v as Record<string, unknown>).map(([n, x], m, all) => `    ${JSON.stringify(n)}: ${JSON.stringify(x)}${m < all.length - 1 ? "," : ""}`);
+    return `  ${JSON.stringify(k)}: {\n${inner.join("\n")}\n  }${comma}`;
+  });
+  return `{\n${body.join("\n")}\n}\n`;
 }
 
 /** deadline.txt 和 ./fh (sh + ps1): 派对整套和我们自己的角色目录共用 */
@@ -272,14 +299,16 @@ export async function writeDescribeJson(dir: string, partyRepo: string): Promise
   const run = promisify(execFile);
   const env = { ...process.env, PYTHONUTF8: "1", POG_SPACE_AGE: "1", FH_MAX_OUTPUT: "0" };
   try {
-    const { stdout } = await run(bashExe(), [path.join(dir, "fh"), "call", "describe", "--format", "json"], { cwd: dir, env, encoding: "utf8", timeout: 60_000, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
-    const p = execFile("python", ["-I", "-X", "utf8", path.join(partyRepo, "tools", "describe-lines.py")], { env, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true }, () => undefined);
-    const lines = await new Promise<string>((resolve, reject) => {
+    const { stdout } = await run(bashExe(), [path.join(dir, "fh"), "call", "describe", "--format", "json"], { cwd: dir, env: { ...env, FH_NO_EXTRAS: "1" }, encoding: "utf8", timeout: 60_000, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    // 派对的 describe-lines.py 有就用 (和第二版一样), 没有就用自己的 describeLines
+    const py = partyRepo ? path.join(partyRepo, "tools", "describe-lines.py") : "";
+    const lines = py && fs.existsSync(py) ? await new Promise<string>((resolve, reject) => {
+      const p = execFile("python", ["-I", "-X", "utf8", py], { env, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true }, () => undefined);
       let out = "";
       p.stdout!.on("data", (d: string) => { out += d; });
       p.on("exit", (code) => (code === 0 ? resolve(out) : reject(new Error(`describe-lines 退出 ${code}`))));
       p.stdin!.end(stdout);
-    });
+    }) : describeLines(stdout);
     fs.writeFileSync(path.join(dir, "describe.json"), lines);
     return true;
   } catch { return false; }

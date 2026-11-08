@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defaultDumpPath } from "../blueprint/rules.ts";
 import { zhNamesFrom } from "../lab/names.ts";
+import { trainingRoots } from "../../core/run/training.ts";
 
 const root = path.join(import.meta.dirname, "..", "..");
 const dumpPath = defaultDumpPath();
@@ -30,9 +31,10 @@ const techs = Object.entries(raw.technology ?? {}).filter(([, t]) => !t.hidden).
 
 const read = (p: string) => (fs.existsSync(p) ? fs.readFileSync(p, "utf8") : "");
 const dirText = (d: string) => (fs.existsSync(d) ? fs.readdirSync(d).filter((f) => f.endsWith(".md")).map((f) => read(path.join(d, f))).join("\n") : "");
-const facts = read(path.join(root, "knowledge", "facts.json"));
-const patterns = dirText(path.join(root, "knowledge", "patterns"));
-const research = dirText(path.join(root, "docs", "research", "players")) + read(path.join(root, "docs", "verify.md"));
+// 新项目里都在训练集 (公开 training/ + 只本机 data/training-private/; 第二版是 knowledge/ 和 docs/research/players/, 搬家后这里没跟着改, 盘出来全是空白)
+const facts = trainingRoots().map((r) => read(path.join(r, "knowledge", "verified", "facts.json"))).join("\n");
+const patterns = trainingRoots().flatMap((r) => ["verified", "pending"].map((a) => dirText(path.join(r, "patterns", a)))).join("\n");
+const research = trainingRoots().map((r) => dirText(path.join(r, "knowledge", "pending", "research"))).join("\n") + read(path.join(root, "docs", "v2", "verify.md"));
 
 type Level = "核实" | "思路" | "检索" | "空白";
 function level(name: string): Level {

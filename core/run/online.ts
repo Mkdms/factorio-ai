@@ -52,6 +52,9 @@ import { writeWorld } from "../../src/play/worlds.ts";
 import { writeCurrentRun } from "../../src/play/shift-recover.ts";
 import { EnglishWatch } from "../../src/play/lang.ts";
 import { reviewNotes } from "../../src/play/review-shift.ts";
+import { USER_RULES } from "../../src/play/ours-brief.ts";
+import { copyTools, ensureGamedata, setupFullTools } from "../../src/play/partykit.ts";
+import { defaultDumpPath } from "../../src/blueprint/rules.ts";
 import { ratesFrom, type Rates, type RateRow } from "./science.ts";
 
 const { values } = parseArgs({ options: {
@@ -108,6 +111,9 @@ if (values.group && !group) { console.error(`没有这个群: ${values.group}`);
 const runDir = path.join(dataRoot(), "play", group ? "runs" : "online", runId);
 const brainRoot = process.env.BRAIN_DIR ?? path.join(os.homedir(), "factorio-ai-brain");
 const dir = path.join(brainRoot, `online-${runId}`, "a");
+/** 全队共享的工具目录 (这一班) 和跨班留着的那份 (和装模组那条路 run.ts 同一处) */
+const teamTools = path.join(dir, "..", "team-tools");
+const TEAM_TOOLS_KEEP = path.join(dataRoot(), "play", "team-tools-keep");
 fs.mkdirSync(runDir, { recursive: true });
 fs.mkdirSync(dir, { recursive: true });
 if (group) writeWorld(runDir, groupWorld(group));
@@ -253,14 +259,20 @@ try {
   } else {
     if (!viewer.playerName) throw new Error("开新客户端要 .env 的 FACTORIO_VIEWER_DIR (独立版), 不用 Steam 版: 不碰用户的账号");
     if (toServer) {
-      server = readServer(keysFile);
+      server = readServer(keysFile, group?.kind === "server" ? group.id : undefined); // 按群取 keys.json 的 group_servers (第二版这么做, 搬过来时丢了群, 一律连默认 server)
       if (!server) throw new Error("keys.json 里没有 server (地址和密码只放本机 data/accounts/keys.json)");
       log(`连服务器 (地址和密码不写进日志); 选项 ${prefer}`);
       choice = await connectServer(server);
       log(`走哪条路: ${choice.why}`);
     } else {
       if (values.save) { lab.prepare(); fs.copyFileSync(values.save, lab.savePath("m")); }
-      else { log("开一张新图 (干净的服务器, 不装任何模组)"); await lab.createMap("m"); }
+      else {
+        // 群的"和平 / 有敌人"设置 (src/play/groups.ts peaceful, 没写 = 和平, 和装模组那条路 run.ts 一样): 写进建图参数 (游戏自带 map-gen-settings 的 peaceful_mode, 不是控制台命令);
+        // 搬家后这里一直用游戏默认 (有敌人), 界面上的开关不起作用。"先留几分钟和平再关"要在游戏里改设置, 这条路做不了
+        const peaceful = group ? group.peaceful !== false : undefined;
+        log(`开一张新图 (干净的服务器, 不装任何模组)${peaceful === undefined ? "" : peaceful ? "; 和平模式" : "; 有敌人"}`);
+        await lab.createMap("m", peaceful === undefined ? {} : { mapGenSettings: { peaceful_mode: peaceful } });
+      }
       await lab.start("m");
       try { fs.rmSync(clientLog, { force: true }); } catch { /* 还占着 */ }
       // 按"连别人的服务器"的方式连 (address 形式 = 客户端不带任何我们的模组): 服务器是干净的, 客户端带了沙盘模组会被拒 (Connection refused, 2026-11-07 第一次跑查出)
@@ -358,10 +370,16 @@ try {
 
   // 4. 角色目录: 简报 + ./fh (sh 和 ps1), 经管道; 模型手里没有 RCON
   // 简报 = 训练集的模板 (manuals/brief.md) + 世界真实值那一节 + 用户目标 + 手册目录; 大脑会话再加压缩说明
-  const world = onlineBrief({ name, server: toServer, readOnly, steam: !!values["steam-pid"], rcon: useRcon, ownWorld: values["own-world"] });
+  // 用户定的规矩 (一条道一种料、按最高档建、手搬只用于开局和应急 …): 装模组那条路的简报一直有, 这条路 2026-11-08 补上 (src/play/ours-brief.ts USER_RULES)
+  const world = onlineBrief({ name, server: toServer, readOnly, steam: !!values["steam-pid"], rcon: useRcon, ownWorld: values["own-world"] }) + (readOnly ? "" : `\n\n${USER_RULES}`);
   const goal = values["goal-file"] && !readOnly ? fs.readFileSync(values["goal-file"], "utf8") : undefined;
   const ws = setupWorkspace({ dir, name, pipe, deadline, protoDir, brief: (refDir) => composeBrief({ world, name, refDir, goal }) + (driver ? COMPACT_INSTRUCTIONS : "") });
   log(`手册目录 ref/ ${ws.refFiles} 个文件; ./know 查积累`);
+  // 完整工具 (第二版这条路有, 搬家时没接: 角色自己的 tools/、全队共享的 team-tools/、fhlib.py、拆好的游戏数据), 跨班带: 上一班角色目录的 tools/ 和 data/play/team-tools-keep
+  try {
+    const prevDir = values.notes && fs.existsSync(values.notes) && fs.statSync(values.notes).isDirectory() ? values.notes : undefined;
+    setupFullTools({ dir, shared: teamTools, prevTools: prevDir ? path.join(prevDir, "tools") : undefined, prevShared: TEAM_TOOLS_KEEP, gamedataDir: ensureGamedata(defaultDumpPath(), path.join(dataRoot(), "gamedata", path.basename(path.dirname(defaultDumpPath())))) });
+  } catch (e) { log(`完整工具 (tools/、fhlib.py) 没准备好: ${(e as Error).message.slice(0, 160)}`); }
   // 接着上一班的存档 (--save <上一班记录目录>/end.zip): 上一班复盘的"先修这几条"放到笔记最前面, 上一班整班平均产量给监工播报和班末复盘比
   // (每班硬指标: 科技包每分钟产量比上一班高; 装模组那条路 run.ts 一直这么做, 这条路 2026-11-08 补上)
   if (values.save) {
@@ -486,7 +504,19 @@ try {
       collected = m.added;
       log(`教训: 笔记里 ${m.candidates} 条, 收进待核区 ${m.added} 条${m.skipped.length ? ` (跳过 ${m.skipped.length}: ${m.skipped.slice(0, 2).map((s) => s.why).join(" / ")})` : ""}`);
     } catch (e) { log(`收教训没做成: ${(e as Error).message.slice(0, 160)}`); }
+    // 工具诉求: 简报叫模型把工具问题写进笔记、以"工具:"开头 (training/manuals/brief.md "真人" 一节), 监工只收 operator 里"工具诉求"开头的;
+    // 笔记里的这些原来没人收 (2026-11-08 对照时发现) → 一起记进 tool-requests.md, 复盘里计数
+    try {
+      const tools = fs.readFileSync(path.join(dir, "notes.md"), "utf8").split(/\r?\n/).map((l) => l.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim()).filter((l) => /^工具(?:诉求|问题)?\s*[:：]/.test(l));
+      if (tools.length) {
+        fs.appendFileSync(path.join(runDir, "tool-requests.md"), tools.map((t) => `- 笔记: ${t}\n`).join(""));
+        if (supervisor) supervisor.stats.toolRequests += tools.length;
+        log(`工具诉求: 笔记里 ${tools.length} 条, 记进 tool-requests.md`);
+      }
+    } catch { /* 没有笔记 */ }
   }
+  // 全队共享的工具留给下一班 (和装模组那条路一样存 data/play/team-tools-keep)
+  if (driver && !readOnly) try { copyTools(teamTools, TEAM_TOOLS_KEEP); } catch { /* 没有就算了 */ }
   // 班末总结和复盘 (core/records/summary.ts): summary.json + review.md
   if (supervisor || driver) {
     try {

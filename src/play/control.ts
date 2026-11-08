@@ -56,7 +56,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { parseArgs } from "node:util";
 import { factorioExe, findFactorioDir, labRoot, REPO } from "../lab/gamedir.ts";
-import { mkArgs, mkRunning, mkStop, mkView, readMkCurrent, steamClientRunning } from "./mk-lib.ts";
+import { mkArgs, mkRunning, mkStop, mkView, pidAlive, readMkCurrent, steamClientRunning } from "./mk-lib.ts";
 import { spawn } from "node:child_process";
 import { connectArgs, createGroup, groupsDir, onlineStartArgs, readGroup, readGroups, saveGroupSeats, setBackend, setGroupGoal, setGroupMe, setRevealUncharted, startArgs, type Group } from "./groups.ts";
 import { cleanServerConn, readServer, serverView } from "./online-lib.ts";
@@ -384,12 +384,15 @@ const server = http.createServer(async (req, res) => {
       }
       const cur = currentRun(PLAY);
       if (cur) { const st = runStatus(cur); if (!st.ended && !st.interrupted) return send(400, { error: `有一班在跑 (${path.basename(cur)}), 先停班再开` }); }
-      // 开班时按群的路线选主循环 (docs/decisions.md 2026-11-08): memory (默认) = 不装模组, core/run/online.ts 一班一个角色, 到点收工存 end.zip;
+      // 不装模组路的接力 (core/run/relay.ts) 两班之间 current-run 是收工的, 看它的标记
+      try { const rl = JSON.parse(fs.readFileSync(path.join(PLAY, "relay.json"), "utf8")) as { pid?: number; group?: string }; if (rl.pid && pidAlive(rl.pid)) return send(400, { error: `群 ${rl.group} 的连续班在换班, 先停班再开` }); } catch { /* 没有接力 */ }
+      // 开班时按群的路线选主循环 (docs/decisions.md 2026-11-08): memory (默认) = 不装模组, core/run/relay.ts 接力跑 core/run/online.ts (一班一个角色, 到点存 end.zip 接着同一个世界开下一班, 停班才停);
       // mods = 装模组 + RCON 全性能, 第二版 run.ts 经 shifts.ts 连跑到停班 (--shifts 0 --live, 每班到点只换大脑, 服务器和窗口留着)
       const route = g.route ?? "memory";
       let args: string[];
       try { args = route === "mods" ? startArgs(PLAY, g) : onlineStartArgs(PLAY, g); } catch (e) { return send(400, { error: (e as Error).message }); }
-      const script = route === "mods" ? [path.join(REPO, "src", "play", "shifts.ts"), "--shifts", "0", "--live"] : [path.join(REPO, "core", "run", "online.ts")];
+      const script = route === "mods" ? [path.join(REPO, "src", "play", "shifts.ts"), "--shifts", "0", "--live"] : [path.join(REPO, "core", "run", "relay.ts"), "--group", g.id];
+      if (route !== "mods") args = []; // 接力每班自己按群算参数 (onlineStartArgs 上面只用来检查能不能开)
       // 脱离控制接口跑 (关界面不影响这一班); 输出写进群目录的日志; 界面"停班" (记录目录放 STOP) 才关
       const logFile = path.join(PLAY, "groups", `${g.id}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.log`);
       const fd = fs.openSync(logFile, "a");

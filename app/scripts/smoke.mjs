@@ -4,7 +4,7 @@
 //   → 开编好的界面程序, 让 WebView2 开调试端口 → 像人一样点界面、打字 → 核对显示的东西和控制接口那边的效果 → 全部关掉、删临时目录。
 // 之后: 关掉界面和控制接口, 不起控制接口直接开界面 → 核对界面自己起了控制接口、读到数, 关界面时把它收掉。
 // 用法 (仓库根目录, 先 cd app && npm run app:build): node --env-file-if-exists=.env app/scripts/smoke.mjs [界面程序路径]
-//   .env 里的 LAB_DATA_DIR 有导出的中文名时会拷过去, 研究名就按官方中文名核对。4330 被占着 (真的控制接口在跑) 就不跑。
+//   .env 里的 DATA_DIR 有导出的中文名时会拷过去, 研究名就按官方中文名核对。4330 被占着 (真的控制接口在跑) 就不跑。
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
@@ -93,7 +93,7 @@ w("turn-b-2.jsonl", [
   { type: "assistant", timestamp: t(5), message: { content: [{ type: "tool_use", name: "Bash", input: { command: `./fh call operator --args '${JSON.stringify({ text: "先修哪条?\n1. 铜列煤道\n2. 蓝瓶线" })}'`, description: "问操作员" } }] } },
 ]);
 // 中文名: 从本机导出的原型数据拷两份 (没有就按内部名核对)
-const realProto = process.env.LAB_DATA_DIR ? path.join(process.env.LAB_DATA_DIR, "prototypes") : null;
+const realProto = process.env.DATA_DIR ? path.join(process.env.DATA_DIR, "prototypes") : null;
 const protoDir = realProto && fs.existsSync(realProto) ? fs.readdirSync(realProto).map((d) => path.join(realProto, d, "locale", "zh-CN")).find((d) => fs.existsSync(d)) : null;
 let researchZh = "automation-2";
 if (protoDir) {
@@ -111,12 +111,12 @@ for (const id of ["a", "b"]) {
 
 // ── 起控制接口和界面 ──
 const procs = [];
-const control = spawn(process.execPath, ["src/play/control.ts"], { cwd: REPO, env: { ...process.env, LAB_DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore", windowsHide: true });
+const control = spawn(process.execPath, ["src/play/control.ts"], { cwd: REPO, env: { ...process.env, DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore", windowsHide: true });
 procs.push(control);
 for (let i = 0; i < 40 && !(await portOpen(4330)); i++) await sleep(250);
 fs.rmSync(path.join(os.tmpdir(), "factorio-pilot-gui-smoke"), { recursive: true, force: true }); // 从没选过主题、没存过记录开始
-// LAB_DATA_DIR 一定要给: 关界面 = 停班 (外壳写 STOP), 不给就会读真的 lab-data, 冒烟关窗口时把真在跑的那一班停掉
-const app = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), LAB_DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
+// DATA_DIR 一定要给: 关界面 = 停班 (外壳写 STOP), 不给就会读真的 lab-data, 冒烟关窗口时把真在跑的那一班停掉
+const app = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
 procs.push(app);
 
 let ws;
@@ -458,7 +458,7 @@ try {
   control.kill();
   for (let i = 0; i < 40 && (await portOpen(4330)); i++) await sleep(250);
   await sleep(1500); // 等 WebView2 的子进程退干净 (同一个数据目录)
-  const app2 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), LAB_DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
+  const app2 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
   procs.push(app2);
   let up = false;
   for (let i = 0; i < 60 && !up; i++) { await sleep(500); up = await portOpen(4330); }
@@ -569,7 +569,7 @@ try {
   fs.mkdirSync(liveRun, { recursive: true });
   fs.writeFileSync(path.join(tmp, "lab", "play", "current-run.json"), JSON.stringify({ runId: LIVE, runDir: liveRun, startedAt: new Date().toISOString() }));
   await sleep(1500);
-  const app3 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), FP_REPO_DIR: fakeRepo, LAB_DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
+  const app3 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), FP_REPO_DIR: fakeRepo, DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
   procs.push(app3);
   await connect();
   check(await until("document.querySelector('.banner.down')?.innerText.includes('退出了') && !document.querySelector('.stop-button').disabled && document.querySelector('.stop-note').innerText.includes('直接写停班标记')", 30_000),
@@ -591,7 +591,7 @@ try {
   fs.mkdirSync(live2, { recursive: true });
   fs.writeFileSync(path.join(tmp, "lab", "play", "current-run.json"), JSON.stringify({ runId: LIVE2, runDir: live2, startedAt: new Date().toISOString() }));
   await sleep(1500);
-  const app4 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), LAB_DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
+  const app4 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
   procs.push(app4);
   await connect();
   await sleep(1000);
@@ -605,7 +605,7 @@ try {
   fs.writeFileSync(path.join(tmp, "lab", "play", "current-run.json"), JSON.stringify({ runId: DONE, runDir: doneDir, startedAt: new Date().toISOString() }));
   for (let i = 0; i < 40 && (await portOpen(4330)); i++) await sleep(250);
   await sleep(1500);
-  const app5 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), LAB_DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
+  const app5 = spawn(EXE, [], { env: { ...process.env, FP_GUI_DEBUG_PORT: String(DBG), DATA_DIR: path.join(tmp, "lab"), BRAIN_DIR: path.join(tmp, "brain") }, stdio: "ignore" });
   procs.push(app5);
   await connect();
   check(await closeApp(app5) && !fs.existsSync(path.join(doneDir, "STOP")), "没有在跑的班时关界面: 什么都不写");

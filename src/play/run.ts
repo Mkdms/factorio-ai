@@ -1014,7 +1014,8 @@ try {
         team: agents.map((x) => `\`${typeof x.who === "string" ? x.who : playerName}\` (${modelDisplayName(x.brain, x.model)})`).join("、"),
         partyRepo: PARTY_REPO, dir: a.dir, name: typeof a.who === "string" ? a.who : playerName, who: a.who,
         teammate: mate ? { name: typeof mate.who === "string" ? mate.who : playerName, notes: `../${mate.id}/notes.md` } : undefined,
-        role: a === agents[0] ? (values.save ? "keep the base running (fuel, power, depleted ore, blocked belts) and smelting" : "mining, smelting and power") : (values.save ? "science production (chemical science next)" : "the first science assemblers and research"),
+        // 中文 (原来是派对简报的英文原句, 中文简报里夹着英文, 模型跟着说英文)
+        role: a === agents[0] ? (values.save ? "让基地一直转 (燃料、电、采空的矿、堵住的带子) 和冶炼" : "采矿、冶炼和电") : (values.save ? "科技包生产 (下一步绿瓶 / 化工瓶)" : "第一批科技包组装机和研究"),
         rconPort: lab.rconPort, passwordFile: pw, deadline, resume: !!values.save, ours: oursFor(a),
         nodeBin: process.execPath, shim: path.join(REPO, "src", "play", "fh-shim.ts"), protoRoot: path.join(labRoot(), "prototypes"),
       });
@@ -1051,6 +1052,8 @@ try {
       // 我们的老玩家经验 (knowledge/patterns/, 已核实事实 facts.md): 换成派对配置时漏了 (派对简报只给事实不给打法)
       // → 放进 ref/ 当手册主题, ./fh help pilot-<主题> 能查
       for (const f of fs.readdirSync(knowledgeFile("patterns"))) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(knowledgeFile("patterns"), f), path.join(a.dir, "ref", `pilot-${f}`));
+      // 只本机的思路 (联机服务器基地的实例分析等, data/training-private/patterns/): 第二版和公开的放在一起都给模型, 搬家后分开了就没拷
+      for (const area of ["verified", "pending"]) { const d = path.join(labRoot(), "training-private", "patterns", area); for (const f of fs.existsSync(d) ? fs.readdirSync(d) : []) if (f.endsWith(".md") && f !== "README.md") fs.copyFileSync(path.join(d, f), path.join(a.dir, "ref", `pilot-${f}`)); }
       fs.copyFileSync(knowledgeFile("facts.md"), path.join(a.dir, "ref", "pilot-facts.md"));
       fs.copyFileSync(knowledgeFile("ref-index.md"), path.join(a.dir, "ref", "index.md")); // 按情况查 (./fh help index)
       fs.copyFileSync(path.join(knowledgeFile("research"), "game-tips.md"), path.join(a.dir, "ref", "pilot-game-tips.md")); // 游戏自带提示与技巧 81 条的转述 (之前只在仓库文档里, 模型看不到)

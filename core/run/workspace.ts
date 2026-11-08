@@ -29,7 +29,8 @@ export function setupRef(refDir: string, o: { protoDir?: string; roots?: string[
   const man = manualsDir(trainingRoot());
   for (const f of fs.existsSync(man) ? fs.readdirSync(man) : []) { if (/\.(md|tsv)$/.test(f) || f === "LICENSE") { fs.copyFileSync(path.join(man, f), path.join(refDir, f)); n++; } }
   const roots = o.roots ?? trainingRoots();
-  for (const f of trainingFiles("patterns", "verified", ".md", roots)) {
+  // 待核区的思路也给 (第二版全部思路都给模型, 包括只在本机的联机服务器基地实例分析; 拆成正式区 / 待核区后待核区的没拷)
+  for (const f of [...trainingFiles("patterns", "verified", ".md", roots), ...trainingFiles("patterns", "pending", ".md", roots)]) {
     const base = path.basename(f);
     if (base === "README.md") continue;
     fs.copyFileSync(f, path.join(refDir, `pattern-${base}`)); n++;

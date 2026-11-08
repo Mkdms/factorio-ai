@@ -16,6 +16,7 @@
   "scripts": {
     "test": "node --env-file-if-exists=.env --test --test-timeout=30000 \"test/*.test.ts\"",
     "test:sandbox": "node --env-file-if-exists=.env --test --test-timeout=3600000 \"test/sandbox/*.test.ts\"",
+    "test:sandbox-v2": "node --env-file-if-exists=.env --test --test-timeout=3600000 \"test/sandbox-v2/*.test.ts\"",
     "sandbox:demo": "node --env-file-if-exists=.env game/sandbox/cli.ts demo",
     "memory:setup": "node --env-file-if-exists=.env game/memory/setup.ts",
     "offgame:setup": "node --env-file-if-exists=.env game/offgame/setup.ts",
@@ -26,6 +27,26 @@
     "play:run": "node --env-file-if-exists=.env src/play/run.ts",
     "play:mk": "node --env-file-if-exists=.env src/play/mk-world.ts",
     "calc": "node --env-file-if-exists=.env src/calc/cli.ts",
-    "bp": "node --env-file-if-exists=.env src/play/bp.ts"
+    "bp": "node --env-file-if-exists=.env src/blueprint/cli.ts",
+    "play:bp": "node --env-file-if-exists=.env src/play/bp.ts",
+    "play:shifts": "node --env-file-if-exists=.env src/play/shifts.ts",
+    "play:review": "node --env-file-if-exists=.env src/play/review-cli.ts",
+    "play:seen": "node --env-file-if-exists=.env src/play/seen.ts",
+    "play:tokens": "node --env-file-if-exists=.env src/play/tokens.ts",
+    "play:quota": "node --env-file-if-exists=.env src/play/quota-cli.ts",
+    "play:check": "node --env-file-if-exists=.env src/play/check.ts",
+    "play:world-export": "node --env-file-if-exists=.env src/play/world-export.ts",
+    "play:online": "node --env-file-if-exists=.env core/run/online.ts",
+    "fp": "node --env-file-if-exists=.env src/play/fp.ts",
+    "verify": "node --env-file-if-exists=.env src/lab/cli.ts verify",
+    "coverage": "node --env-file-if-exists=.env src/verify/coverage.ts",
+    "lab:demo": "node --env-file-if-exists=.env src/lab/cli.ts demo",
+    "lab:watch": "node --env-file-if-exists=.env src/lab/cli.ts watch",
+    "lab:dump": "node --env-file-if-exists=.env src/lab/cli.ts dump-data",
+    "dataset": "node --env-file-if-exists=.env src/dataset/ingest.ts",
+    "calc:crosscheck": "node --env-file-if-exists=.env src/calc/fp-crosscheck.ts",
+    "search": "node --env-file-if-exists=.env src/search/cli.ts",
+    "io:rehearse": "node --env-file-if-exists=.env src/io/rehearse-server.ts",
+    "api-catalog": "node --env-file-if-exists=.env tools/api-catalog.mjs"
   }
 }

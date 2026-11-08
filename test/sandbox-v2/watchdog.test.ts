@@ -40,8 +40,8 @@ test("服务器被杀后: 用最新自动存档重启, 端口密码不变, 读�
   assert.equal(r.fallback, false);
   assert.equal(lab.alive, true);
   assert.deepEqual({ game: lab.gamePort, rcon: lab.rconPort, udp: lab.udpPort, pw: lab.password }, ports, "端口和密码不变, ./fh 配置不用改");
-  const ping = (await lab.rpc("ping")) as { io_lab?: string };
-  assert.ok(ping.io_lab, "重启后 io-lab 能答");
+  const ping = (await lab.rpc("ping")) as { mod?: string };
+  assert.ok(ping.mod, "重启后沙盘模组能答"); // 第二版 io-lab 回 io_lab 字段, 新项目的沙盘模组 (game/mod/factorio-ai) 回 mod
   const xs = (await lab.exec(`local t = {} for _, e in pairs(game.surfaces[1].find_entities_filtered{name = "wooden-chest"}) do t[#t + 1] = e.position.x end return t`)) as number[];
   assert.deepEqual(xs, [3.5], "存档前放的箱子在, 存档后放的不在");
   assert.equal(st.downtimeMs, 60_000);

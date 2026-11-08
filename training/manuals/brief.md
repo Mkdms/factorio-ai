@@ -15,8 +15,9 @@
 - 手册: `./fh help 主题` (主题列在后面; 大的先回目录, `./fh help 主题 序号` 看一段)。查全部积累 (老玩家思路、核实过的事实、教训、检索资料; 官方中文名或内部名都行): `./know 关键词`。放机器、查东西、报错时回复会自动附相关经验, 用不用你定。
 - 算和建: `./calc '{"targets":{"automation-science-pack":30}}'` 按目标产量算每个配方要几台、吃多少 (只给 targets 自动展开全链); `./plan 物品 每分钟 [--near x,y]` 算全链 → 减场上已有 → 挑蓝图块 → 找空地 → 查背包缺什么, 打出能直接跑的命令, 加 `--build` 算完直接放; `./bp list 关键词` / `./bp show 编号` / `./bp build 编号 --at x,y [--dir east]` 整块建 (一条命令: 备料 → 清树石 → 一件件放; 没放完回下一条命令)。用不用你定, 手放也行。
 - 每个失败都要读: 退出码非零有一行 `error:`, 部分成功以 `warning:` 结尾。别把 `./fh` 的输出丢掉或接 `head` / `tail`, 会藏起报错和队友的话。动作和相关的 `say` 用 `&&` 连。
-- 命令被拒时只是那一条被拒: 拆成 `&&` 连的几条。不放行: 变量赋值、`$(…)`、heredoc、`while` 轮询、循环里 sleep。
+- 命令被拒时只是那一条被拒: 拆成 `&&` 连的几条, 或写成 Python 脚本。不放行: 变量赋值、`$(…)`、heredoc、`while` 轮询、循环里 sleep。
 - 要精确字段加 `--format json`; 默认是紧凑表格。
+- `tools/` 是你自己的, `../team-tools/` 全队共享: 脚本、计算器、规划器, 想要什么自己写, 下一班还在。Python 3 能用: `python tools/x.py`, 里面 `from fhlib import fh, call, gamedata` 调游戏和读游戏数据 (共享目录的脚本先 `import sys; sys.path.insert(0, "../team-tools")`)。
 
 ## 节奏
 

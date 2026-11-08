@@ -164,7 +164,7 @@ export function permitWhy(command: string, cwd = ""): string | null {
 export function permit(command: string, cwd = ""): boolean { return permitWhy(command, cwd) === null; }
 
 /** --allowedTools 里本来就放行的开头: 这些不替 Claude Code 决定, 让它自己按规则判 */
-const RULE_PREFIX = /^\s*(\.\/(fh|calc|bp|plan|know)|python3?)(\s|$)/;
+const RULE_PREFIX = /^\s*(\.\/(fh|calc|bp|plan|know|fp)|python3?)(\s|$)/; // fp: 装模组那条路的 fp 配置 (第二版有)
 /**
  * 被拒时告诉模型真实原因: 不回答的话 Claude Code 只说 "don't ask 模式拒绝", 模型第一条命令被拒就以为 Bash 全禁了, 几轮都停下来找人要权限。
  * 本来就过得了规则的返回 null, 交给 Claude Code。
@@ -180,7 +180,7 @@ function sleepSeconds(argv: string[]): number | undefined {
   const unit: Record<string, number> = { "": 1, s: 1, m: 60, h: 3600, d: 86400 };
   const sec = (a: string) => { const m = /^(\d+(?:\.\d+)?)([smhd]?)$/.exec(a); return m ? Number(m[1]) * unit[m[2]] : NaN; };
   if (argv[0] === "sleep") return argv.length > 1 ? argv.slice(1).reduce((x, a) => x + sec(a), 0) : NaN; // coreutils 把几个参数加起来
-  const rest = argv[0] === "./fh" ? (argv[1] === "sleep" ? argv.slice(2) : argv[1] === "call" && argv[2] === "sleep" ? argv.slice(3) : undefined) : undefined;
+  const rest = argv[0] === "./fh" || argv[0] === "./fp" ? (argv[1] === "sleep" ? argv.slice(2) : argv[1] === "call" && argv[2] === "sleep" ? argv.slice(3) : undefined) : undefined;
   if (!rest) return undefined;
   const n = rest.find((a) => /^\d+$/.test(a)); // fh sleep 的秒数是第一个位置参数, 选项 (--until …) 可以在前面
   return n === undefined ? NaN : Number(n);
@@ -191,7 +191,7 @@ export function sleepVerdict(command: string): string | null {
   const s = parseShell(command);
   const secs = s
     ? s.cmds.map((c) => sleepSeconds(c.map((k) => k.t))).filter((x): x is number => x !== undefined)
-    : [...command.matchAll(/(?:\.\/fh\s+(?:call\s+)?sleep|(?:^|[;&|\s])sleep)\s+(\d+)/g)].map((m) => Number(m[1])); // 切不了词 (heredoc、$(…)) 就按原来的正则数
+    : [...command.matchAll(/(?:\.\/f[hp]\s+(?:call\s+)?sleep|(?:^|[;&|\s])sleep)\s+(\d+)/g)].map((m) => Number(m[1])); // 切不了词 (heredoc、$(…)) 就按原来的正则数
   const how = "睡觉不算玩: 先挂队列或常驻命令让角色干着, 再用 ./fh sleep 秒数 --until 条件 等一件具体的事 (一次最多 300 秒)。";
   if (s && s.loops.length && secs.length) return `拒绝: 循环里有 sleep (每一圈睡一次, 等于串联 sleep)。${how}`;
   if (s && s.loops.some((l) => l !== "for")) return `拒绝: while / until 循环会一直轮询, 刷请求也占着这一轮。等一件事用 ./fh sleep 秒数 --until 条件 (到了会提前醒); 要重复固定几次用 for 循环。`;

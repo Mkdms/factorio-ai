@@ -25,8 +25,10 @@ before(async () => {
     game.forces.player.chart(s, {{-128, -128}, {128, 128}})
     for _, t in pairs({"automation", "electronics", "logistics"}) do local x = game.forces.player.technologies[t] if x then x.researched = true end end
     return true`);
-  await new Promise((r) => setTimeout(r, 3000)); // 探图要过几个 tick
   await lab.exec(`return remote.call("agent_harness", "bot_create", "Test")`);
+  // 角色建好后给每个势力都探 (60,60) 一带, 等到确实探过 (原来只给 player 探、干等 3 秒; 11-06 起 ./bp build 先试放, 模组按角色自己的势力判断探没探过, 没探过整块拒, "料不够"那两条就测不到缺料)
+  const chartAll = `local s = game.surfaces[1] local ok = true for _, f in pairs(game.forces) do if f.name ~= "enemy" and f.name ~= "neutral" then f.chart(s, {{-128, -128}, {128, 128}}) ok = ok and f.is_chunk_charted(s, {1, 1}) and f.is_chunk_charted(s, {2, 2}) end end return ok`;
+  if (VIEW) for (let i = 0; i < 60; i++) { if (await lab.exec(chartAll)) break; await new Promise((r) => setTimeout(r, 1000)); }
   // 只放原料: 块 244 (铁齿轮 × 3) 要 组装机1型*3 电力机械臂*12 基础传送带*20 小型电线杆*4
   await lab.exec(`local s = game.surfaces[1]
     for _, e in pairs(s.find_entities_filtered{area = {{-12, -12}, {12, 12}}, type = {"tree", "simple-entity"}}) do e.destroy() end
@@ -49,7 +51,8 @@ test("背包空, 箱子里只有原料: ./bp build 拿料、手搓, 搓完再跑
   assert.ok((await count("transport-belt")) >= 20);
 });
 
-test("料不够: 如实报还缺什么, 不放半块", async () => {
+// 下面两条也要开窗口: 11-06 起 ./bp build 先试放, 没探过的区块整块拒; 无窗口沙盘没有客户端连着时 force.chart 不生效 (2.1.24 实测: tick 在走、区块已生成, 10 秒后 (0,0) 仍是没探过)
+test("料不够: 如实报还缺什么, 不放半块", { skip: VIEW ? false : "要开窗口: BP_GATHER_VIEW=1 (没有客户端时探不了图)" }, async () => {
   await lab.exec(`local s = game.surfaces[1] s.find_entity("steel-chest", {4.5, 4.5}).clear_items_inside()
     for _, c in pairs(s.find_entities_filtered{type = "character"}) do c.clear_items_inside() end return true`);
   const machines = await count("assembling-machine-1");
@@ -60,7 +63,7 @@ test("料不够: 如实报还缺什么, 不放半块", async () => {
   assert.equal(await count("assembling-machine-1"), machines);
 });
 
-test("--no-gather: 缺就报, 不去拿", () => {
+test("--no-gather: 缺就报, 不去拿", { skip: VIEW ? false : "要开窗口: BP_GATHER_VIEW=1 (没有客户端时探不了图)" }, () => {
   const r = bp("build", "244", "--at", "60.5,60.5", "--no-gather");
   assert.equal(r.status, 1);
   assert.doesNotMatch(r.stdout, /备料: /);
