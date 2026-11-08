@@ -1085,7 +1085,7 @@ try {
   if (KIT === "party") haul0 = list<HaulAgent>((await opCall("hauling", { top: 20 }) as { agents?: unknown } | null)?.agents);
   // 上一班的最后一次摘要 (派对: 和上一次摘要比, 含接着的那一班): 接存档时从它的记录目录读回
   if (KIT === "party" && values.save) { try { const last = JSON.parse(fs.readFileSync(path.join(path.dirname(values.save), "digest.jsonl"), "utf8").trim().split(/\r?\n/).at(-1)!); if (last.facts) { digestPrev = last.facts; digestSource = last.source ?? ""; } } catch { /* 上一班没有摘要 */ } }
-  log(`就绪: 游戏窗口已连上; 大脑目录 ${brainDir}; 记录 ${runDir}; 截止 ${values.minutes} 分钟; 阵容 ${agents.map((a) => `${a.id.toUpperCase()}=${a.brain}/${a.model}`).join(" ")} 强度 ${values.effort}`);
+  log(`就绪: 游戏窗口已连上; 大脑目录 ${brainDir}; 记录 ${runDir}; 截止 ${values.minutes} 分钟; 阵容 ${agents.map((a) => `${a.id.toUpperCase()}=${a.brain}/${a.model}@${a.effort}`).join(" ")} (强度按每个角色的; 没写的用 --effort ${values.effort})`);
   if (KIT === "party") setInterval(() => void pollHuman(), 5000).unref(); // 窗口一连上就开始听 (原来放在开班扫描之后, 这段真人说话要等半分钟)
 
   if (values.dry) {
