@@ -3,7 +3,7 @@
 // 操控 MK 的身体也走这里: 没有控制台命令, 不影响成就 (上真服后要真拿一个才算核过)。
 // 回复格式照模组 (班次 10-16-30 journal 的样子), 不同的: 模组是发起后计时跑, 这里做完才回, 所以回复里没有 until_tick, 命令行 --wait 也就不用再等。
 import { Timeline } from "./timeline.ts";
-import { cancelResearch, clickWidget, closeWindows, craftByHand, invSlot, openCharacterGui, researchTech } from "./gui.ts";
+import { cancelResearch, clickWidget, closeWindows, craftByHand, invSlot, openCharacterGui, readTree, researchTech } from "./gui.ts";
 import { readArea, readInventory, readPlayer, type Call } from "./query.ts";
 import { PASSABLE, walkTo } from "./walk.ts";
 import type { Controls, ResolvedControl } from "./controls.ts";
@@ -184,7 +184,7 @@ const fmt = (p: Pos) => `(${p.x},${p.y})`;
 
 /** 动手的这些命令 (say 也算: 别人看得到) */
 const ACTION_NAMES = ["move_to", "build", "transfer", "craft", "mine", "rotate", "research", "say", "build_path", "collect", "refuel", "feed", "shoot", "pole_route", "belt_route", "pipe_route", "place_ghosts", "construct", "rebuild",
-  "walk", "recover", "pickup", "deliver", "rearm", "upgrade", "belt_upgrade", "use_item", "clear_cliffs", "equip", "configure"] as const;
+  "walk", "recover", "pickup", "deliver", "rearm", "upgrade", "belt_upgrade", "use_item", "clear_cliffs", "equip", "configure", "cancel_craft", "equipment"] as const;
 
 /** --read-only 的行动层: 认得所有动作, 全部拒绝, 什么都不发给游戏 (这些动作模组的只读闸门有的不拦, 不接这一层就落到假接口上报怪错)。
  *  回复要带真的 tick: 写 0 命令行会当成世界回档了, 告诉模型 "the game rolled back" (2026-11-06 彩排查出) */
@@ -244,6 +244,8 @@ export class PlayerActions {
       case "clear_cliffs": return this.clearCliffs(a);
       case "equip": return this.equip(a);
       case "configure": return this.configure(a);
+      case "cancel_craft": return this.cancelCraft(a);
+      case "equipment": return this.equipment(a);
       case "collect": return this.collect(a);
       case "refuel": return this.refuel(a);
       case "feed": return this.feed(a);
@@ -322,14 +324,18 @@ export class PlayerActions {
     const total = async () => Object.values(await readInventory(this.d.call)).reduce((n, c) => n + c, 0);
     const before = await total();
     const control = this.d.controls().resolve("pick-items");
-    const visited: Pos[] = [];
-    for (const it of items) {
-      if (Date.now() > this.deadline - 10_000) break;
-      if (visited.some((v) => Math.hypot(v.x - it.position.x, v.y - it.position.y) < 2)) continue; // 按住拾取键会把周围一圈都捡起来
-      await walkTo(this.d.call, this.d.controls(), it.position as Pos, { tolerance: 0.8, deadline: this.deadline }).catch(() => undefined);
+    // 拾取键只捡角色身边一小圈 (2026-11-08 沙盘: 站在一处按住, 撒开的 20 块只捡回 4~6): 每轮重读地上还剩的, 走到最近那件按 1 秒; 连着 3 轮背包不增加就停
+    let stuck = 0;
+    for (let round = 0; round < 60 && stuck < 3 && Date.now() < this.deadline - 8_000; round++) {
+      const here = await this.me();
+      const left = ((await readArea(this.d.call, box, ["name", "type", "position"], 512, { type: ["item-entity"] })).entities as Record<string, any>[])
+        .sort((p, q) => Math.hypot(p.position.x - here.x, p.position.y - here.y) - Math.hypot(q.position.x - here.x, q.position.y - here.y));
+      if (!left.length) break;
+      await walkTo(this.d.call, this.d.controls(), left[0].position as Pos, { tolerance: 0.4, deadline: this.deadline }).catch(() => undefined);
+      const was = await total();
       const r = await this.d.call("input", { timeline: new Timeline().holdControl(control, 0, 60).entries });
       if (!r.ok) throw new Error(`拾取键没按下去: ${(r.error ?? "").slice(0, 160)}`);
-      visited.push(it.position as Pos);
+      stuck = (await total()) > was ? 0 : stuck + 1;
     }
     const picked = (await total()) - before;
     return { op: "pickup", on_ground: items.length, picked, ...(picked <= 0 ? { note: "一件都没进背包 (背包满了?)" } : {}) };
@@ -400,8 +406,11 @@ export class PlayerActions {
     try {
       await this.walkInto(at, typeof a.range === "number" ? a.range : 15, true);
       if (!(await this.d.holdItem(item))) throw new Error(`${item} 没拿到手上`);
-      await this.d.placeHeld(at);
-      await (this.d.sleep ?? defaultSleep)(300);
+      // 用物品是单独的键 use-item (2026-11-08 沙盘读键位表; 放建筑的 build 键扔不出手雷): 鼠标指着那一点按一下
+      const t = new Timeline().worldPosition(at, 0, 10).control(this.d.controls().resolve("use-item"), 4, 6);
+      const r = await this.d.call("input", { timeline: t.entries });
+      if (!r.ok) throw new Error(`use-item 键没按下去: ${(r.error ?? "").slice(0, 160)}`);
+      await (this.d.sleep ?? defaultSleep)(500);
     } finally { await this.d.clearCursor().catch(() => undefined); }
     const used = before - (await count());
     if (used <= 0) throw new Error(`${item} 没用出去 (够不着、冷却中, 或这东西不能这样用)`);
@@ -435,6 +444,60 @@ export class PlayerActions {
     const moved = before - ((await readInventory(this.d.call))[item] ?? 0);
     if (moved <= 0) throw new Error(`${item} 没装上 (装备格满了, 或这东西不进装备格)`);
     return { op: "equip", item, moved };
+  }
+
+  /**
+   * cancel_craft: 取消手搓队列 (背包窗口里的手搓队列格子 CraftingQueueSlot, 2026-11-08 沙盘读界面树): recipe 不给 = 最后排的那一项;
+   * count 不给或 ≥ 剩下的 = 那一项全取消 (Shift+左键), 否则左键一次取消一个
+   */
+  private async cancelCraft(a: Record<string, unknown>) {
+    const sizeOf = async () => (await readPlayer(this.d.call)).craftingQueueSize ?? 0;
+    const before = await sizeOf();
+    if (!before) return { op: "cancel_craft", cancelled: 0, note: "手搓队列是空的" };
+    await openCharacterGui(this.d.call, this.d.controls());
+    try {
+      const slots = (await readTree(this.d.call, { path: [{ axis: "descendant", match: { native_type: "CraftingQueueSlot" } }] })).filter((n) => n.type === "CraftingQueueSlot");
+      const recipe = typeof a.recipe === "string" ? a.recipe : slots.at(-1)?.properties?.prototype?.name;
+      const slot = slots.find((n) => n.properties?.prototype?.name === recipe);
+      if (!recipe || !slot) throw new Error(`手搓队列里没有 ${recipe ?? "东西"} (队列: ${slots.map((n) => `${n.properties?.prototype?.name}×${n.properties?.number?.value ?? "?"}`).join("、") || "读不到格子"})`);
+      const left = Number(slot.properties?.number?.value ?? 1);
+      const want = typeof a.count === "number" ? Math.max(1, a.count) : left;
+      const sel = { path: [{ axis: "descendant", match: { native_type: "CraftingQueueSlot", prototype: { name: recipe } } }] };
+      if (want >= left) await clickWidget(this.d.call, sel, "left", ["shift"]);
+      else for (let i = 0; i < want; i++) { await clickWidget(this.d.call, sel, "left"); await (this.d.sleep ?? defaultSleep)(80); }
+      await (this.d.sleep ?? defaultSleep)(300);
+    } finally { await closeWindows(this.d.call, this.d.controls()).catch(() => undefined); }
+    const after = await sizeOf();
+    if (after >= before) throw new Error("点了手搓队列, 队列没变短");
+    return { op: "cancel_craft", queue_before: before, queue_after: after };
+  }
+
+  /** equipment {insert: 插件名 | [插件名…]}: 护甲网格里装插件 (穿着带网格的护甲; 背包里 Shift+点插件, 游戏放进网格的空位); 回装上几个。取下来这条路上还没做 */
+  private async equipment(a: Record<string, unknown>) {
+    const items = Array.isArray(a.insert) ? a.insert.map(String) : typeof a.insert === "string" ? [a.insert] : typeof a.item === "string" ? [a.item] : [];
+    if (!items.length) throw new Error(`equipment 这条路上只会装 (insert): e.g. fh call equipment --args '{"insert":"solar-panel-equipment"}'; 取下来还没做`);
+    const moved: Record<string, number> = {};
+    let seenTypes = "";
+    await openCharacterGui(this.d.call, this.d.controls());
+    try {
+      // 网格要先打开: 装备栏 (ToolEquipGui) 里穿着的护甲那一格右键 (2026-11-08 沙盘读界面树: 那一格是 InventoryGuiSlot, 带护甲名)
+      const armorSel = (name: string) => ({ path: [{ axis: "descendant", match: { native_type: "ToolEquipGui" } }, { axis: "descendant", match: { native_type: "InventoryGuiSlot", prototype: { name } } }] });
+      const armor = (await readTree(this.d.call, { path: [{ axis: "descendant", match: { native_type: "ToolEquipGui" } }, { axis: "descendant", match: { native_type: "InventoryGuiSlot" } }] }))
+        .map((n) => String(n.properties?.prototype?.name ?? "")).find((n) => /armor/.test(n));
+      if (!armor) throw new Error("没穿护甲 (先 equip 一件带网格的护甲, 例 modular-armor)");
+      await clickWidget(this.d.call, armorSel(armor), "right");
+      await (this.d.sleep ?? defaultSleep)(400);
+      seenTypes = [...new Set((await readTree(this.d.call)).map((n) => n.type).filter((t) => /Grid|Equip/i.test(t)))].join(", ");
+      for (const item of items) {
+        const before = (await readInventory(this.d.call))[item] ?? 0;
+        if (before < 1) throw new Error(`背包里没有 ${item}`);
+        await clickWidget(this.d.call, invSlot(item), "left", ["shift"]);
+        await (this.d.sleep ?? defaultSleep)(300);
+        moved[item] = before - ((await readInventory(this.d.call))[item] ?? 0);
+      }
+    } finally { await closeWindows(this.d.call, this.d.controls()).catch(() => undefined); }
+    if (!Object.values(moved).some((n) => n > 0)) throw new Error(`一件都没装上 (网格满了, 或网格没打开; 当时界面里: ${seenTypes || "没有网格类控件"}): ${items.join("、")}`);
+    return { op: "equipment", inserted: moved };
   }
 
   /** configure: 这条路上能设的: recipe (组装机配方)、requests [{name, min, max?}] (请求格); 别的设置 (过滤、限格、优先级…) 还没翻译成界面点选, 明说 */

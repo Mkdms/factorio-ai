@@ -18,6 +18,7 @@ import { hostArgs, venvPython, venvReady } from "../../game/offgame/host.ts";
 import { clientReady } from "../../game/client/connect.ts";
 import { CommandBroker } from "../../commands/broker.ts";
 import { Body } from "../../commands/body.ts";
+import { closeWindows, openCharacterGui, readTree } from "../../commands/gui.ts";
 import { PlayerActions } from "../../commands/actions.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -108,7 +109,9 @@ before(async () => {
     stacks: () => target.inventorySlots(), chatSend: (t) => target.chatSend(t), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
     assist: { me: home.name, allowed: (at) => assistAllow.some((p) => Math.hypot(p.x - at.x, p.y - at.y) < 0.6) },
     // 放不下时问模组 placements (和 core/run/online.ts 同一个接法; 代理在下面才建)
-    read: (a, args) => (broker ? broker.read(a, args) : Promise.resolve(null)),
+    read: (a, args, act) => (broker ? broker.read(a, args, act) : Promise.resolve(null)),
+    nextUpgrade: (n) => { const all = raw as unknown as Record<string, Record<string, { next_upgrade?: unknown }>>; for (const rows of Object.values(all)) { const u = rows?.[n]?.next_upgrade; if (typeof u === "string") return u; } return null; },
+    setRequest: (at, item, min, max) => target.setRequest(at, item, min, max),
   });
   broker = new CommandBroker({ pipe, python: venvPython(), probeArgs: hostArgs({ defines: path.join(protoDir, "defines.json"), proto: path.join(protoDir, "data-raw-dump.json"), pid: proc.pid!, exe, extra: ["--serve"] }), mode: "server", rcon: null, actions, luaRead: (a) => target.call("world_query", a) });
   await broker.start();
@@ -471,8 +474,9 @@ test("sleep 账本命令在外面跑; 没翻译的动作明确拒绝", () => che
   const t0 = Date.now();
   const r = await fh("sleep", "2");
   const s = (Date.now() - t0) / 1000;
-  const c = await act("construct", { area: { left_top: P(0, 0), right_bottom: P(1, 1) } }).catch((e: Error) => ({ ok: false, error: { message: e.message } }) as Reply);
-  return { pass: !!r.ok && s >= 1.5 && s < 30 && !c.ok && /不能做/.test(c.error?.message ?? ""), seen: `sleep ${s.toFixed(1)} 秒; construct ${seenOf(c).slice(0, 120)}` };
+  // construct 2026-11-08 接上了 (按虚影放实物); 还没翻译的拿 turret_feeds 当例子
+  const c = await act("turret_feeds", { position: P(0, 0), radius: 4 }).catch((e: Error) => ({ ok: false, error: { message: e.message } }) as Reply);
+  return { pass: !!r.ok && s >= 1.5 && s < 30 && !c.ok && /不能做/.test(c.error?.message ?? ""), seen: `sleep ${s.toFixed(1)} 秒; turret_feeds ${seenOf(c).slice(0, 120)}` };
 }));
 test("换地表: 读数跟着身体走, 地表清单对真值; 新地表上放和取; 回来不把原来的算成被拆", () => check(async () => {
   await truth(`local s = game.planets.gleba.create_surface()
@@ -563,4 +567,118 @@ test("注入 Lua: 别的玩家 (第二个客户端); 后台没出错; 服务器�
   const bad = /desync|Desync/.test(out);
   const still = (await lab.exec(`return #game.connected_players`)) as number;
   return { pass: !!r.ok && real.includes("ActSecond") && text.includes("ActSecond") && !s.fault && !s.background?.errors && (s.lua?.reads ?? 0) > 0 && !bad && still >= 2, seen: `真值在线 ${JSON.stringify(real)}; ${text.slice(0, 160)}; Lua ${JSON.stringify(s.lua)}; 后台出错 ${s.background?.errors}; 不同步 ${bad}, 在线 ${still}` };
+}));
+
+// ── 2026-11-08 接上的命令 (docs/run.md "第二版给模型的命令在这条路上接了多少"): 单跑 --test-name-pattern "接线:" ──
+const give = (items: Record<string, number>) => truth(`local inv = game.connected_players[1].get_main_inventory() for n, c in pairs(...) do inv.insert{name = n, count = c} end return true`, items);
+const countIn = (name: string, a: Pos, b: Pos) => truth<number>(`local a = ... return game.surfaces[1].count_entities_filtered{area = {{a.x0, a.y0}, {a.x1, a.y1}}, name = a.name}`, { name, x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) });
+// mine: true = 以角色的名义造 (last_user 是自己; 协助模式下自己的才能动)
+const spawnAt = (name: string, p: Pos, extra: Record<string, unknown> = {}) => truth(`local a = ... local e = game.surfaces[1].create_entity{name = a.name, position = a.p, force = "player", inner_name = a.inner, direction = a.dir, player = a.mine and game.connected_players[1] or nil} return e ~= nil`, { name, p, ...extra });
+
+test("接线: 键位表里用物品 / 扔东西是哪个键 (打出来)", () => check(async () => {
+  const r = await target.call("input_bindings", { limit: 1024 });
+  const ids = (((r.data ?? {}) as { controls?: { id: string }[] }).controls ?? []).map((c) => c.id);
+  return { pass: ids.length > 0, seen: `共 ${ids.length} 个; 相关: ${ids.filter((i) => /use|throw|capsule|shoot|build|item|pick/i.test(i)).join(", ")}` };
+}));
+test("接线: cancel_craft 取消手搓队列; equipment 往护甲网格装插件", () => check(async () => {
+  await give({ "iron-plate": 100, "modular-armor": 1, "solar-panel-equipment": 2 });
+  await act("craft", { recipe: "iron-gear-wheel", count: 20 }, "--wait");
+  const q0 = await truth<number>(`return game.connected_players[1].crafting_queue_size`);
+  const r1 = await act("cancel_craft", { recipe: "iron-gear-wheel" }, "--wait");
+  const q1 = await truth<number>(`return game.connected_players[1].crafting_queue_size`);
+  const r2 = await act("equip", { item: "modular-armor" }, "--wait");
+  // 穿上带网格的护甲后的界面树: 找打开网格的那一格 (存 data/play/ui-tree-armor.json)
+  await openCharacterGui(target.call, target.controls!);
+  const armorTree = await readTree(target.call);
+  await closeWindows(target.call, target.controls!).catch(() => undefined);
+  fs.writeFileSync(path.join(ROOT, "data", "play", "ui-tree-armor.json"), JSON.stringify(armorTree, null, 1));
+  console.log(`  护甲界面相关: ${[...new Set(armorTree.filter((n) => /Equip|Grid|Armor/i.test(n.type) || /armor|equipment/.test(String(n.properties?.prototype?.name ?? ""))).map((n) => `${n.type}${n.properties?.prototype?.name ? `(${n.properties.prototype.name})` : ""}`))].join(", ")}`);
+  const r3 = await act("equipment", { insert: "solar-panel-equipment" }, "--wait");
+  const grid = await truth<number>(`local ch = game.connected_players[1].character local arm = ch.get_inventory(defines.inventory.character_armor)[1] if not (arm and arm.valid_for_read and arm.grid) then return -1 end return #arm.grid.equipment`);
+  return { pass: !!r1.ok && q1 < q0 && !!r2.ok && !!r3.ok && grid >= 1, seen: `队列 ${q0} → ${q1}; 网格里 ${grid} 件; cancel ${seenOf(r1).slice(0, 120)}; equip ${seenOf(r2).slice(0, 100)}; equipment ${seenOf(r3).slice(0, 120)}` };
+}));
+
+test("接线: 界面树: 手搓队列、护甲网格的控件名 (存一份到 data/play/ui-tree-character.json)", () => check(async () => {
+  await clearArea(-12, 26, 44, 74);
+  await give({ "iron-plate": 200, "modular-armor": 1, "solar-panel-equipment": 2 });
+  await act("craft", { recipe: "iron-gear-wheel", count: 30 }, "--wait");
+  await openCharacterGui(target.call, target.controls!);
+  const nodes = await readTree(target.call);
+  await closeWindows(target.call, target.controls!).catch(() => undefined);
+  fs.writeFileSync(path.join(ROOT, "data", "play", "ui-tree-character.json"), JSON.stringify(nodes, null, 1));
+  const types = [...new Set(nodes.map((n) => n.type))];
+  return { pass: nodes.length > 0, seen: `控件 ${nodes.length} 个; 相关: ${types.filter((t) => /Craft|Queue|Equip|Grid|Armor|Gun|Ammo/i.test(t)).join(", ")}; 全部类型 ${types.length} 种` };
+}));
+test("接线: pole_route 模组按接线距离算位置, 角色一根根放", () => check(async () => {
+  await give({ "small-electric-pole": 20 });
+  const before = await myCount("small-electric-pole");
+  const r = await act("pole_route", { from: P(0, 30), to: P(30, 30) }, "--wait");
+  const n = await countIn("small-electric-pole", P(-2, 28), P(33, 33));
+  return { pass: !!r.ok && n >= 4 && (await myCount("small-electric-pole")) === before - n, seen: `放了 ${n} 根; ${seenOf(r)}` };
+}));
+test("接线: belt_route 带拐弯, 角色一格格放, 方向对", () => check(async () => {
+  await give({ "transport-belt": 60, "underground-belt": 4 });
+  const r = await act("belt_route", { from: P(0, 36), to: P(16, 40) }, "--wait");
+  const n = await countIn("transport-belt", P(-1, 35), P(17, 41));
+  return { pass: !!r.ok && n >= 18, seen: `带子 ${n} 格; ${seenOf(r)}` };
+}));
+test("接线: pipe_route 水管 (可用地下管), 角色一格格放", () => check(async () => {
+  await give({ pipe: 40, "pipe-to-ground": 6 });
+  const r = await act("pipe_route", { from: P(0, 44), to: P(14, 44) }, "--wait");
+  const n = (await countIn("pipe", P(-1, 43), P(15, 45))) + (await countIn("pipe-to-ground", P(-1, 43), P(15, 45)));
+  return { pass: !!r.ok && n >= 3, seen: `管子 ${n} 件; ${seenOf(r)}` };
+}));
+test("接线: place_ghosts 直接放实物; construct 按现有的虚影放实物", () => check(async () => {
+  await give({ "stone-furnace": 4, "wooden-chest": 4 });
+  const r1 = await act("place_ghosts", { entities: [{ name: "stone-furnace", position: P(0, 50) }, { name: "stone-furnace", position: P(3, 50) }] }, "--wait");
+  const f = await countIn("stone-furnace", P(-2, 48), P(5, 52));
+  await spawnAt("entity-ghost", P(8, 50), { inner: "wooden-chest" });
+  await spawnAt("entity-ghost", P(10, 50), { inner: "wooden-chest" });
+  const r2 = await act("construct", { position: P(9, 50), radius: 4 }, "--wait");
+  const c = await countIn("wooden-chest", P(7, 49), P(11, 51));
+  return { pass: !!r1.ok && f === 2 && !!r2.ok && c === 2, seen: `炉子 ${f}, 箱子 ${c}; place_ghosts ${seenOf(r1).slice(0, 160)}; construct ${seenOf(r2).slice(0, 160)}` };
+}));
+test("接线: pickup 地上的东西; rearm 炮塔补弹", () => check(async () => {
+  await truth(`local a = ... game.surfaces[1].spill_item_stack{position = a, stack = {name = "iron-plate", count = 20}} return true`, P(14, 50));
+  const before = await myCount("iron-plate");
+  const r1 = await act("pickup", { position: P(14, 50), radius: 4 }, "--wait");
+  const got = (await myCount("iron-plate")) - before;
+  await spawnAt("gun-turret", P(18, 50));
+  await give({ "firearm-magazine": 30 });
+  const r2 = await act("rearm", { position: P(18, 50), radius: 4, count: 10 }, "--wait");
+  const ammo = await truth<number>(`local a = ... local t = game.surfaces[1].find_entity("gun-turret", a) return t and t.get_inventory(defines.inventory.turret_ammo).get_item_count() or -1`, P(18, 50));
+  return { pass: !!r1.ok && got >= 15 && !!r2.ok && ammo >= 10, seen: `捡回 ${got}; 炮塔 ${ammo} 发; pickup ${seenOf(r1).slice(0, 140)}; rearm ${seenOf(r2).slice(0, 140)}` };
+}));
+test("接线: upgrade 带子换下一档 (快速替换, 方向照旧)", () => check(async () => {
+  for (let i = 0; i < 3; i++) await spawnAt("transport-belt", P(i, 56), { dir: 4, mine: true });
+  await give({ "fast-transport-belt": 5 });
+  const r = await act("upgrade", { area: { left_top: P(-1, 55), right_bottom: P(3, 57) } }, "--wait");
+  const fast = await countIn("fast-transport-belt", P(-1, 55), P(3, 57)), old = await countIn("transport-belt", P(-1, 55), P(3, 57));
+  return { pass: !!r.ok && fast === 3 && old === 0, seen: `快速 ${fast}, 旧的 ${old}; ${seenOf(r)}` };
+}));
+test("接线: use_item 扔手雷; equip 装冲锋枪; configure 改配方", () => check(async () => {
+  await give({ grenade: 3, "submachine-gun": 1 });
+  const r1 = await act("use_item", { item: "grenade", position: P(8, 62) }, "--wait");
+  const g = await myCount("grenade");
+  const r2 = await act("equip", { item: "submachine-gun" }, "--wait");
+  const gun = await truth<number>(`return game.connected_players[1].character.get_inventory(defines.inventory.character_guns).get_item_count("submachine-gun")`);
+  await spawnAt("assembling-machine-1", P(20, 62));
+  const r3 = await act("configure", { position: P(20, 62), recipe: "iron-gear-wheel" }, "--wait");
+  const e = await entityAt("assembling-machine-1", P(20, 62));
+  return { pass: !!r1.ok && g === 2 && !!r2.ok && gun === 1 && !!r3.ok && e?.recipe === "iron-gear-wheel", seen: `手雷剩 ${g}; 枪格 ${gun}; 配方 ${e?.recipe}; use ${seenOf(r1).slice(0, 100)}; equip ${seenOf(r2).slice(0, 100)}; configure ${seenOf(r3).slice(0, 100)}` };
+}));
+test("接线: 读命令按角色身份问 (ingredient_gap ghosts players); wait_ticks", () => check(async () => {
+  const rs = [await act("ingredient_gap", { position: P(20, 62) }), await act("ghosts", {}), await act("players", {}), await act("wait_ticks", { ticks: 30 }, "--wait")];
+  return { pass: rs.every((r) => r.ok), seen: rs.map((r) => seenOf(r).slice(0, 90)).join(" | ") };
+}));
+test("接线: queue_submit 角色空着 20 秒后一步步跑; order_set 燃料低了自动补", () => check(async () => {
+  await give({ "wooden-chest": 2, coal: 40 });
+  const q = await act("queue_submit", { steps: [{ action: "build", args: { item: "wooden-chest", position: P(24, 66) }, label: "箱子" }] });
+  await spawnAt("stone-furnace", P(28, 66));
+  const o = await act("order_set", { name: "keep-fuel", when: { until: "fuel_below", count: 3, position: P(28, 66), radius: 2 }, steps: [{ action: "refuel", args: { positions: [P(28, 66)], fuel: "coal", count: 5 } }] });
+  let chest = 0, fuel = 0;
+  for (let i = 0; i < 40 && (chest < 1 || fuel < 3); i++) { await sleep(3000); chest = await countIn("wooden-chest", P(23, 65), P(25, 67)); fuel = (await entityAt("stone-furnace", P(28, 66)))?.fuel ?? 0; }
+  const st = await act("queue_status", {}), ord = await act("orders", {});
+  await act("order_remove", { name: "keep-fuel" });
+  return { pass: !!q.ok && !!o.ok && chest === 1 && fuel >= 3, seen: `箱子 ${chest}, 炉子燃料 ${fuel}; 队列 ${seenOf(st).slice(0, 160)}; 常驻 ${seenOf(ord).slice(0, 200)}` };
 }));
