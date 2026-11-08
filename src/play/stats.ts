@@ -71,6 +71,8 @@ type Summary = {
   /** 整班的 ./fp / ./fh 调用次数 (老记录没有) */
   fpCalls?: number;
   realMinutes?: number; gameMinutes?: number; idleShare?: number;
+  /** 不装模组那条路 (core/records/summary.ts) 没有 requests.jsonl, 按动作的计数在这里 */
+  journal?: { requests?: number; byAction?: Record<string, number>; failures?: { count?: number } };
   perMin10Total?: { red?: number; green?: number; blue?: number };
   redPerMin10?: number; greenPerMin10?: number;
 };
@@ -136,6 +138,13 @@ export function scienceOf(s: Summary): number | null {
   return null;
 }
 
+/** 不装模组那条路的班 (只有一个角色): 请求数按总结里 journal 的计数 */
+function journalCounts(j: NonNullable<Summary["journal"]>) {
+  const by = Object.entries(j.byAction ?? {});
+  const sum = (set: Set<string>) => by.filter(([k]) => set.has(k)).reduce((n, [, v]) => n + v, 0);
+  return { requests: j.requests ?? 0, reads: sum(READS), builds: sum(BUILDS), fails: j.failures?.count ?? 0 };
+}
+
 /** 不到这么多真实分钟的班 (刚开就中断的) 不计, 也不作为下一班算增量的基准 (2026-11-04 真实记录里 13 个几分钟的中断班把增量算成了负的) */
 export const MIN_SHIFT_MINUTES = 3;
 
@@ -170,7 +179,8 @@ export function shiftStats(playDir: string, minMinutes = MIN_SHIFT_MINUTES): Shi
       out.push({
         calc: use.calc, bp: use.bp, plan: use.plan, python: use.python, knowledge: use.pilotHelp + use.pilotReads, lessons: use.lessonsShown,
         run: id, world: world.id, worldName: world.name, agent: a.id, model, vendor: vendorOfModel(model),
-        turns: a.turns ?? 0, requests: rs.length, reads: rs.filter((r) => READS.has(r.action)).length, builds: rs.filter((r) => BUILDS.has(r.action)).length, fails: rs.filter((r) => !r.ok).length,
+        ...(requests.length === 0 && s.journal ? journalCounts(s.journal) : { requests: rs.length, reads: rs.filter((r) => READS.has(r.action)).length, builds: rs.filter((r) => BUILDS.has(r.action)).length, fails: rs.filter((r) => !r.ok).length }),
+        turns: a.turns ?? 0,
         costUsd: cost === null ? null : Math.round((direct ? perAgent.get(a.id) ?? 0 : cost * share) * 100) / 100,
         realMinutes: s.realMinutes ?? 0, gameMinutes: s.gameMinutes ?? null,
         science, scienceGain: gain, idleShare: typeof s.idleShare === "number" ? s.idleShare : null,

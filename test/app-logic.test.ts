@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  TEAM, accountSeatFirst, agentTitle, askText, commandLabel, composerBlock, fmtGameTime, fmtPct, fmtRate, foldLines, isOperatorAsk, localItems, mergeThread, needsReply, rosterDiff,
+  TEAM, accountSeatFirst, agentTitle, askText, commandLabel, composerBlock, controlsAccount, fmtGameTime, fmtPct, fmtRate, foldLines, isOperatorAsk, localItems, mergeThread, needsReply, rosterDiff,
   groupEnemyLabel, parseComposer, pendingAsks, presence, teamPresence, preview, quotaDetail, runBanner, runLabel, runStart, staleMinutes, stepsMeta, timeMarks, trimLocals, LOCAL_MAX, watchdogLines,
   accountStatus, accountsLine, accountsBrief, accountQuota, SLASH_COMMANDS, SOURCES, askOptions, fmtBalance, landingBanner, nextViewRun, runBriefStatus, speakerStarts, vendorOf, askReply, downBanner, loginDone, relayModelGroups, remainPct, resetIn, tightest,
   lineupOptions, parseSeatValue, seatLabel, seatValue, seatDisplay, defaultInvite, seatGameName, prettyModel, mentionTargets, seatWord, effortLabel, verifyLine, relayKind, stopButton,
@@ -194,6 +194,14 @@ test("左栏圆点: 等你优先, 没在跑, 再看忙闲", () => {
   assert.equal(presence(a, 2, false), "没在跑");
   assert.equal(preview([]), "还没有说过话");
   assert.equal(preview([{ type: "you", agent: "a", text: "\n  多造炉子\n第二行", at: at(1), status: "发送中" }]), "你: 多造炉子");
+});
+
+test("'控制你的账号': 会话文件写明的听它的 (不装模组那条路: 沙盘独立版角色不是, 挂在用户 Steam 客户端上的是); 老班按第 1 个角色没有服务器角色名", () => {
+  assert.equal(controlsAccount("a", { account: false }), false, "沙盘里的独立版角色 (2026-11-08 界面上误标成控制你的账号)");
+  assert.equal(controlsAccount("a", { account: true }), true);
+  assert.equal(controlsAccount("a", {}), true, "第二版老班: 第 1 个没有 bot = 玩家的身体");
+  assert.equal(controlsAccount("a", { bot: "claude" }), false);
+  assert.equal(controlsAccount("b", {}), false);
 });
 
 test("界面上的角色名 = 模型名; 同模型两个带游戏名; 控制接口没给模型名时只写字母; 全队就是全队", () => {

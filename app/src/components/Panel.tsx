@@ -1,7 +1,7 @@
 // 右栏: 群公告 (上一班复盘 "先修这几条")、在线成员, 下面是游戏读数、体检、额度、停班按钮。
 // 读数部分的版式照 OpenGrokBot 的右侧面板 (MIT, 见 NOTICE)。
 import { useState, type ReactNode } from "react";
-import { BACKEND_OPTIONS, EFFORTS, SCIENCE, type BackendPref, groupEnemyLabel, accountQuota, agentLabel, effortLabel, fmtGameTime, fmtNum, fmtPct, fmtRate, fmtSigned, groupKindLabel, lineupOptions, mkStatusLine, type MkState, parseSeatValue, quietLabel, quotaDetail, runLabel, seatDisplay, seatLabel, seatValue, seatWord, stopButton, vendorOf, watchdogLines, type Account, type Group, type ModelStat, type Review, type RosterSeat, type Scan, type ShiftBlueprint, type State } from "../logic.ts";
+import { BACKEND_OPTIONS, EFFORTS, SCIENCE, type BackendPref, controlsAccount, groupEnemyLabel,accountQuota, agentLabel, effortLabel, fmtGameTime, fmtNum, fmtPct, fmtRate, fmtSigned, groupKindLabel, lineupOptions, mkStatusLine, type MkState, parseSeatValue, quietLabel, quotaDetail, runLabel, seatDisplay, seatLabel, seatValue, seatWord, stopButton, vendorOf, watchdogLines, type Account, type Group, type ModelStat, type Review, type RosterSeat, type Scan, type ShiftBlueprint, type State } from "../logic.ts";
 import { Avatar } from "./Avatar.tsx";
 import type { Row } from "./Sidebar.tsx";
 
@@ -151,9 +151,10 @@ export function Panel({ state, review, scan, zh, onStop, members, selected, onSe
         {landing && group ? <section className="panel-section"><div className="panel-empty" data-landing-note>{mine ? "选好下面第 1 席的模型, 点上面\"开局\"; 这局的进展在上面群卡里" : group.kind === "server" ? "联机服务器: 点上面\"只读连接\", 不叫模型" : "这个群还没开过班 (或没在看它的班): 点上面\"开班\""}</div></section> : null}
         {!landing && scan ? <section className="panel-section scan" data-scan>
           <div className="panel-section-title">开班扫描<span className="sub">{scan.stage}</span></div>
-          <ol className="fix-list">{[...scan.judgement.slice(1), ...scan.plan].map((l, i) => <li key={i}><span>{l}</span></li>)}</ol>
-          <button className="link-button" onClick={() => setScanOpen((v) => !v)}>{scanOpen ? "收起现状" : `现状读数 ${scan.lines.length} 行`}</button>
-          {scanOpen ? <ul className="review-lines">{scan.lines.map((l, i) => <li key={i}>{l}</li>)}</ul> : null}
+          {/* 字段缺了不许整页崩 (2026-11-08: 不装模组那条路的旧扫描没有 judgement / plan, 点开那一班界面整页变白) */}
+          <ol className="fix-list">{[...(scan.judgement ?? []).slice(1), ...(scan.plan ?? [])].map((l, i) => <li key={i}><span>{l}</span></li>)}</ol>
+          <button className="link-button" onClick={() => setScanOpen((v) => !v)}>{scanOpen ? "收起现状" : `现状读数 ${(scan.lines ?? []).length} 行`}</button>
+          {scanOpen ? <ul className="review-lines">{(scan.lines ?? []).map((l, i) => <li key={i}>{l}</li>)}</ul> : null}
         </section> : null}
         {!landing ? <section className="panel-section notice">
           <div className="panel-section-title">群公告<span className="sub">{reviewTitle} · 先修这几条</span></div>
@@ -173,7 +174,7 @@ export function Panel({ state, review, scan, zh, onStop, members, selected, onSe
               <div key={m.id} className="member-line">
                 <button className={`member-row${m.id === selected ? " selected" : ""}`} data-id={m.id} onClick={() => onSelect(m.id)} title={`和 ${m.title} 单聊`}>
                   <Avatar vendor={vendorOf(m.agent?.model)} text={(m.agent?.name?.[0] ?? agentLabel(m.id)).toUpperCase()} state={m.presence} />
-                  <span className="member-text"><span className="member-name">{m.title}</span>{m.agent ? <span className="member-sub">{m.id === "a" && !m.agent.bot ? "控制你的账号 · " : ""}游戏里: {m.agent.name}{quietLabel(m.agent.quietS) ? ` · ${quietLabel(m.agent.quietS)}` : ""}</span> : null}</span>
+                  <span className="member-text"><span className="member-name">{m.title}</span>{m.agent ? <span className="member-sub">{controlsAccount(m.id, m.agent) ? "控制你的账号 · " : ""}游戏里: {m.agent.name}{quietLabel(m.agent.quietS) ? ` · ${quietLabel(m.agent.quietS)}` : ""}</span> : null}</span>
                   {m.presence ? <span className={`member-tag s-${m.presence}`}>{m.presence === "没在跑" ? "离线" : m.presence}</span> : null}
                 </button>
                 {accountMode && onMakeAccount && m.id !== "a" && m.agent?.seat && seatValue(m.agent.seat) !== (admin ? seatValue(admin) : "") ? <button className="link-button" data-make-account={m.id} disabled={inviteBusy} title="下一班起让这个模型控制你的账号 (这一班不变; 想马上换: 停班再开班)" onClick={() => act(() => onMakeAccount(m.agent!.seat!))}>控制我的账号</button> : null}

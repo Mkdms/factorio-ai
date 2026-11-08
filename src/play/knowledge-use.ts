@@ -54,7 +54,12 @@ export function countKnowledgeUse(turnLogs: string[]): KnowledgeUse {
 /** 从记录目录读这个角色的全部轮次日志 (turn-<角色>-N.jsonl) 再数 */
 export function knowledgeUse(runDir: string, agent: string): KnowledgeUse {
   let files: string[] = [];
-  try { files = fs.readdirSync(runDir).filter((f) => f.startsWith(`turn-${agent}-`) && f.endsWith(".jsonl") && !f.endsWith("-raw.jsonl")); } catch { /* 没有 */ }
+  try {
+    const all = fs.readdirSync(runDir);
+    files = all.filter((f) => f.startsWith(`turn-${agent}-`) && f.endsWith(".jsonl") && !f.endsWith("-raw.jsonl"));
+    // 不装模组那条路 (core/run/online.ts) 只有一个角色, 轮次文件叫 turn-N.jsonl
+    if (!files.length && agent === "a") files = all.filter((f) => /^turn-\d+\.jsonl$/.test(f));
+  } catch { /* 没有 */ }
   return countKnowledgeUse(files.map((f) => { try { return fs.readFileSync(path.join(runDir, f), "utf8"); } catch { return ""; } }));
 }
 

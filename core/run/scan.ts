@@ -84,7 +84,8 @@ export function composeScan(raw: ScanRaw, at = new Date().toISOString()): Scan {
   const plan = next ? [`下一档: ${next} 还没有机器在出。整条线一条命令 (算全链 → 减场上已有 → 挑蓝图块 → 找空地 → 备料 → 放): ./plan ${next} 30 --build; 只看方案: ./plan ${next} 30; 配比: ./calc '{"targets":{"${next}":30}}'; 库里的块: ./bp list`] : [];
   const md = [`# 开班扫描 (${at.slice(0, 16).replace("T", " ")} 读的; 先看这个再动手)`, "", "## 现状", ...lines.map((l) => `- ${l}`), "", "## 判断", ...judgement.map((l) => `- ${l}`), ...(plan.length ? ["", "## 规划", ...plan.map((l) => `- ${l}`)] : []), "",
     "这是开班时按读数自动算的, 不是命令: 情况变了以你看到的为准。"].join("\n");
-  return { at, stage, summary, lines, md };
+  // judgement / plan 也给界面 (右栏"开班扫描"那节读这两样; 缺了界面整页崩, 2026-11-08 核出来)
+  return { at, stage, summary, lines, judgement, plan, md };
 }
 
 /** 写 <dir>/world-scan.md 和 <runDir>/world-scan.json; 回一句摘要 */

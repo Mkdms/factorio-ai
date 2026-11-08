@@ -102,7 +102,30 @@ export function writeSummary(o: { runDir: string; dir: string; runId: string; br
   const data: ShiftData = { runId: o.runId, brain: o.brain, model: o.model, minutes: o.minutes, why: o.why, journal: journalStats(journalLines), turns: turnStats(turnFiles), monitor: rows<MonitorRow>(path.join(o.runDir, "monitor.jsonl")), health: rows<{ lines: string[] }>(path.join(o.runDir, "health.jsonl")), supervisor: o.supervisor, lessons: o.lessons, prevRates: o.prevRates ?? null };
   const r = reviewShift(data, o.zh);
   const { monitor: _m, health: _h, ...rest } = data; void _m; void _h;
-  fs.writeFileSync(path.join(o.runDir, "summary.json"), JSON.stringify({ ...rest, samples: data.monitor.length, review: r, endedAt: new Date().toISOString() }, null, 1));
+  fs.writeFileSync(path.join(o.runDir, "summary.json"), JSON.stringify({ ...rest, samples: data.monitor.length, review: r, endedAt: new Date().toISOString(), ...guiFields(data) }, null, 1));
   fs.writeFileSync(path.join(o.runDir, "review.md"), reviewMarkdown(r, o.runId));
+  // 界面的群公告"上一班复盘先修这几条"读 review.json (src/play/control-lib.ts reviewFor)
+  fs.writeFileSync(path.join(o.runDir, "review.json"), JSON.stringify(r, null, 1));
   return r;
+}
+
+/**
+ * 界面的统计卡 (src/play/stats.ts shiftStats) 认的字段: 第二版 run.ts 的总结格式。不写这些, 不装模组那条路的班在统计里一班都不算 (realMinutes 0 被当成刚开就中断的)。
+ * realMinutes = 监工采样的首尾真实时间; perMin10Total = 最后 10 游戏分钟的每分钟产量; fpCalls = ./fh 请求数; agents 只有一个角色 a
+ */
+export function guiFields(d: Pick<ShiftData, "brain" | "model" | "journal" | "turns" | "monitor" | "minutes">) {
+  const m = d.monitor, first = m[0], last = m.at(-1);
+  const realMinutes = first && last && last.t > first.t ? Math.round(((last.t - first.t) / 60000) * 10) / 10 : d.minutes;
+  const tail = last ? m.filter((x) => x.tick >= last.tick - 36000) : [];
+  const per10 = ratesFrom(tail, 1);
+  const two = (x: number | null) => (x === null ? undefined : Math.round(x * 100) / 100);
+  return {
+    realMinutes,
+    gameMinutes: last ? Math.round((last.tick / 3600) * 10) / 10 : null,
+    idleShare: m.length ? Math.round((m.filter((x) => x.idle).length / m.length) * 100) / 100 : null,
+    fpCalls: d.journal.requests,
+    ...(per10 ? { perMin10Total: { red: two(per10.red), green: two(per10.green), blue: two(per10.blue) } } : {}),
+    usage: { costUsd: d.turns.costUsd },
+    agents: [{ id: "a", turns: d.turns.turns, brain: d.brain, model: d.model, costUsd: d.turns.costUsd }],
+  };
 }

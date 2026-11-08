@@ -166,14 +166,14 @@ export function currentRun(playDir: string): string | null {
 
 /** 这一班有哪些角色 (session-<id>.json; 单角色时 session.json)。
  *  name = 游戏里的名字 (会话文件 2026-11-03 起有; 旧的没有); model = 模型显示名: 会话文件的 → 大脑轮次文件第一行 (system/init) 的 → "Claude Opus 5.5" */
-export function agentsOf(runDir: string): { id: string; session: string; bot?: string; player?: number; name?: string; model: string; /** 中途被移出 (run.ts applyRosterOp 在会话文件里标的) */ left?: boolean; /** 阵容里的那一席 (11-05 起的班才有) */ seat?: { brain: string; model: string } }[] {
+export function agentsOf(runDir: string): { id: string; session: string; bot?: string; player?: number; name?: string; model: string; /** 中途被移出 (run.ts applyRosterOp 在会话文件里标的) */ left?: boolean; /** 阵容里的那一席 (11-05 起的班才有) */ seat?: { brain: string; model: string }; /** 操控的是不是用户自己的账号 (不装模组那条路的会话文件写的; 没有 = 按老规矩: 第 1 个角色没有服务器角色名就是) */ account?: boolean }[] {
   const files = fs.existsSync(runDir) ? fs.readdirSync(runDir) : [];
   const multi = files.filter((f) => /^session-[a-z]\.json$/.test(f)).sort(); // a~z (角色上限 26, 中途加人也按字母续; 以前只认 a~d)
   const list = multi.length ? multi.map((f) => ({ id: f.slice(8, 9), file: f })) : files.includes("session.json") ? [{ id: "a", file: "session.json" }] : [];
   return list.map(({ id, file }) => {
     const s = JSON.parse(fs.readFileSync(path.join(runDir, file), "utf8"));
     const model = typeof s.model === "string" && s.model ? s.model : modelFromTurns(runDir, multi.length ? id : null) ?? DEFAULT_MODEL_NAME;
-    return { id, session: path.join(runDir, file), bot: s.bot, player: s.player, ...(typeof s.name === "string" && s.name ? { name: s.name } : {}), model, ...(s.left === true ? { left: true } : {}), ...(s.seat && typeof s.seat.brain === "string" ? { seat: { brain: s.seat.brain, model: String(s.seat.model ?? "") } } : {}) };
+    return { id, session: path.join(runDir, file), bot: s.bot, player: s.player, ...(typeof s.name === "string" && s.name ? { name: s.name } : {}), model, ...(s.left === true ? { left: true } : {}), ...(s.seat && typeof s.seat.brain === "string" ? { seat: { brain: s.seat.brain, model: String(s.seat.model ?? "") } } : {}), ...(typeof s.account === "boolean" ? { account: s.account } : {}) };
   });
 }
 

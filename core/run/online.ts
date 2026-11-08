@@ -37,7 +37,7 @@ import { setupWorkspace } from "./workspace.ts";
 import { writeScan } from "./scan.ts";
 import { brainDriver, brainProblem, defaultModel, killBrain, runBrainTurn, type Driver } from "../brains/driver.ts";
 import { brainLoop } from "../brains/loop.ts";
-import { botName } from "../brains/lineup.ts";
+import { botName, modelDisplayName } from "../brains/lineup.ts";
 import { brainSettings, compactAt, COMPACT_INSTRUCTIONS } from "../brains/hooks/context.ts";
 import { appendScanHints, collectNotesLessons, lessonDelivery } from "./deliver.ts";
 import { composeBrief } from "./brief.ts";
@@ -353,6 +353,9 @@ try {
   }
   log(`角色目录 ${dir}; 记录 ${runDir}; 停: 放 STOP 文件`);
   fs.writeFileSync(path.join(runDir, "run.json"), JSON.stringify({ runId, name, dir, server: toServer, backend: choice?.backend ?? "memory", why: choice?.why ?? "沙盘试外挂", prefer, reveal, readOnly, brain, model, effort: values.effort, compactAt: at, steam: !!values["steam-pid"], group: values.group ?? null, startedAt: new Date().toISOString() }, null, 1));
+  // 界面的角色列表 / 对话 / 输入框认 session.json (src/play/control-lib.ts agentsOf): 游戏名、模型显示名、角色目录; 没有 RCON (route memory), 说话写记录目录的 tell.txt (src/play/control.ts tell)
+  // account: 挂在用户 Steam 客户端上 (--steam-pid, "我 · 管理员"那行选的模型) 才是在操控用户的账号; 沙盘 / 联机的独立版角色不是
+  fs.writeFileSync(path.join(runDir, "session.json"), JSON.stringify({ name, model: modelDisplayName(brain, model), seat: { brain, model }, player: 1, dir, route: useRcon ? "rcon" : "memory", account: !!values["steam-pid"] }, null, 1));
   // 界面的"停班"和外壳按 play/current-run.json 找在跑的那一班 (src/play/control.ts currentRun / app 的 stop_run); 群开的班记一下
   if (group) writeCurrentRun(path.join(dataRoot(), "play"), { runId, runDir, brainDir: dir, instanceDir: lab.dir, startedAt: new Date().toISOString() });
 

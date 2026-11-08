@@ -129,7 +129,15 @@ function agentInfo(runDir: string, id: string) {
   const a = agentsOf(runDir).find((x) => x.id === id);
   if (!a) return null;
   const multi = agentsOf(runDir).length > 1;
-  return { ...a, dir: path.join(brainRoot, path.basename(runDir), multi ? id : "") };
+  // 不装模组那条路 (core/run/online.ts) 的角色目录不按第二版的规矩放 (BRAIN_DIR/online-<班次>/a), 会话文件里写着
+  let own: string | undefined;
+  try { const s = JSON.parse(fs.readFileSync(a.session, "utf8")) as { dir?: unknown }; if (typeof s.dir === "string" && s.dir) own = s.dir; } catch { /* 读不到按老规矩 */ }
+  return { ...a, dir: own ?? path.join(brainRoot, path.basename(runDir), multi ? id : "") };
+}
+
+/** 这一班没有 RCON (不装模组那条路的会话文件没有 rconPort): 话写进记录目录的 tell.txt, online.ts 5 秒内读走转给模型 (core/run/online.ts, 和游戏聊天同一个口径) */
+function noRcon(session: string): boolean {
+  try { return !(JSON.parse(fs.readFileSync(session, "utf8")) as { rconPort?: unknown }).rconPort; } catch { return false; }
 }
 
 async function rconFor(session: string) {
@@ -160,6 +168,12 @@ function lookUpGameName(runDir: string, a: { id: string; session: string; player
 async function tell(runDir: string, id: string, text: string, scope: "team" | "direct" = "direct") {
   const a = agentInfo(runDir, id);
   if (!a) throw new Error(`没有角色 ${id}`);
+  if (noRcon(a.session)) {
+    // 只有一个角色, 群发和单聊一样; 紧急不紧急由 online.ts 按原话判断 (isUrgent); tells.jsonl 由它递话时记
+    if (runStatus(runDir).ended) throw new Error("这一班已经收工了, 话递不到");
+    fs.appendFileSync(path.join(runDir, "tell.txt"), `${text}\n`);
+    return { to: a.name ?? "角色", parts: 1, via: "tell.txt" };
+  }
   const r = await rconFor(a.session);
   try {
     const k = `${runDir}|${id}`;
@@ -185,7 +199,7 @@ async function tell(runDir: string, id: string, text: string, scope: "team" | "d
  *  动作类模组会拒 ("a reader request takes reads only") → 返回 null, 走真的 ./fh; 连不上也返回 null */
 async function readerFh(a: { session: string; bot?: string; player?: number }, safe: string): Promise<{ code: number; out: string } | null> {
   const parsed = parseFhRead(safe);
-  if (!parsed) return null;
+  if (!parsed || noRcon(a.session)) return null; // 没有 RCON: 直接在角色目录跑 ./fh (经管道到游戏外的模组)
   let r;
   try { r = await rconFor(a.session); } catch { return null; }
   try {
@@ -241,7 +255,7 @@ async function state(runParam: string | null) {
     agents: agentsOf(runDir).map((a) => {
       if (!a.name && !a.bot && !ended) lookUpGameName(runDir, a);
       const multi = agentsOf(runDir).length > 1;
-      return { id: a.id, name: gameNameOf(a, fromGame.get(`${runDir}|${a.id}`) ?? nameFromTurns(runDir, multi ? a.id : null)), busy: gameState(runDir)?.busy?.[a.id] ?? null, thinking: gameState(runDir)?.thinking?.[a.id] ?? null, last: brainLines(runDir, agentsOf(runDir).length > 1 ? a.id : null, 1)[0] ?? null, model: a.model, ...(a.left ? { left: true } : {}), ...(a.bot ? { bot: a.bot } : {}), ...(a.seat ? { seat: a.seat } : {}),...(ended ? {} : { quietS: quietSeconds(runDir, a.id) }) };
+      return { id: a.id, name: gameNameOf(a, fromGame.get(`${runDir}|${a.id}`) ?? nameFromTurns(runDir, multi ? a.id : null)), busy: gameState(runDir)?.busy?.[a.id] ?? null, thinking: gameState(runDir)?.thinking?.[a.id] ?? null, last: brainLines(runDir, agentsOf(runDir).length > 1 ? a.id : null, 1)[0] ?? null, model: a.model, ...(a.left ? { left: true } : {}), ...(a.bot ? { bot: a.bot } : {}), ...(a.seat ? { seat: a.seat } : {}), ...(a.account !== undefined ? { account: a.account } : {}),...(ended ? {} : { quietS: quietSeconds(runDir, a.id) }) };
     }),
     replies: repliesNow(runDir), // (2026-11-05 加) 你说的话谁回了谁没回, 界面显示在那句话下面
     game: gameState(runDir), health: healthNow(runDir), quota: await quotaNow(), review,
@@ -478,7 +492,12 @@ const server = http.createServer(async (req, res) => {
     // 开班扫描: run.ts 开班时写的 world-scan.json (现状 / 判断 / 规划); 没有 → null
     if (req.method === "GET" && u.pathname === "/api/scan") {
       const d = runParam ? runDirOf(PLAY, runParam) : currentRun(PLAY);
-      try { return send(200, d ? JSON.parse(fs.readFileSync(path.join(d, "world-scan.json"), "utf8")) : null); } catch { return send(200, null); }
+      // 不装模组那条路 11-08 下午以前的扫描没有 judgement / plan: 补空数组 (界面按数组读, 缺了整页崩)
+      const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
+      try {
+        const s = d ? (JSON.parse(fs.readFileSync(path.join(d, "world-scan.json"), "utf8")) as Record<string, unknown>) : null;
+        return send(200, s ? { ...s, lines: arr(s.lines), judgement: arr(s.judgement), plan: arr(s.plan) } : null);
+      } catch { return send(200, null); }
     }
     // 蓝图预览入口: 这一班大脑看过 / 用过的蓝图 + 预览链接; POST /api/editor 起本机蓝图编辑器 (已开着就直接回); POST /api/open 只开编辑器自己的地址
     if (req.method === "GET" && u.pathname === "/api/blueprints") { const d = runParam ? runDirOf(PLAY, runParam) : currentRun(PLAY); return send(200, { editor: fbeUrl(), blueprints: d ? blueprintsOf(d) : [] }); }

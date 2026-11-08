@@ -54,6 +54,15 @@ test("复盘: 读数几行; 先修: 没研究中心 > 产量比上一班低 > �
   const summary = JSON.parse(fs.readFileSync(path.join(runDir, "summary.json"), "utf8"));
   assert.equal(summary.samples, 3);
   assert.equal(summary.journal.failures.count, 2);
+  // 界面统计卡认的字段 (第二版总结格式) 和群公告读的 review.json
+  assert.equal(summary.realMinutes, 0, "采样的真实时间 t 首尾差 (这里 0 → 20 毫秒)");
+  assert.equal(summary.gameMinutes, 20);
+  assert.equal(summary.idleShare, 0.67);
+  assert.equal(summary.fpCalls, 3);
+  assert.deepEqual(summary.perMin10Total, { red: 5, green: 0 }, "最后 10 游戏分钟; 没有蓝瓶读数就不写");
+  assert.deepEqual(summary.usage, { costUsd: 0.1 });
+  assert.deepEqual(summary.agents, [{ id: "a", turns: 50, brain: "claude", model: "claude-haiku-5-5", costUsd: 0.1 }]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(runDir, "review.json"), "utf8")), r);
   assert.match(fs.readFileSync(path.join(runDir, "review.md"), "utf8"), /^# 复盘 r1\n[\s\S]*## 下一班先修\n1\. 没有研究中心/);
   const calm = reviewShift({ runId: "x", brain: "b", model: "m", minutes: 1, why: "w", journal: journalStats([]), turns: turnStats([]), monitor: [], health: [], supervisor: {}, lessons: null });
   assert.deepEqual(calm.fixes, []);

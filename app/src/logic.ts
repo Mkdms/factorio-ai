@@ -4,7 +4,10 @@
 /** /api/brain?detail=1 的一行 (src/play/control-lib.ts BrainLineDetail) */
 export type Line = { kind: "说" | "命令" | "结果"; text: string; at?: string; desc?: string; error?: boolean };
 /** name = 游戏里的名字 (用户自己建的角色名 / bot 名); model = 大脑模型显示名 ("Claude Opus 5.5", 控制接口 2026-11-03 起给) */
-export type Agent = { id: string; name: string; busy: boolean | null; /** 大脑这一轮还在跑 (想或等命令; 2026-11-05 起的班才有) */ thinking?: boolean | null; last: Line | null; model?: string; /** 多少秒没发过命令 (2026-11-05 加) */ quietS?: number; /** 中途被移出 (界面"移出"; 2026-11-05) */ left?: boolean; /** 阵容里的那一席 (2026-11-05 起的班才有) */ seat?: { brain: string; model: string }; /** 服务器角色的名字; 没有 = 玩家的身体 (老班, 或联机控制用户账号的) */ bot?: string };
+export type Agent = { id: string; name: string; busy: boolean | null; /** 大脑这一轮还在跑 (想或等命令; 2026-11-05 起的班才有) */ thinking?: boolean | null; last: Line | null; model?: string; /** 多少秒没发过命令 (2026-11-05 加) */ quietS?: number; /** 中途被移出 (界面"移出"; 2026-11-05) */ left?: boolean; /** 阵容里的那一席 (2026-11-05 起的班才有) */ seat?: { brain: string; model: string }; /** 服务器角色的名字; 没有 = 玩家的身体 (老班, 或联机控制用户账号的) */ bot?: string; /** 操控的是不是用户自己的账号 (不装模组那条路写明; 没有就按 bot 推) */ account?: boolean };
+
+/** 这个角色是不是在操控用户自己的账号: 会话文件写明了就听它的 (不装模组那条路: 只有挂在用户 Steam 客户端上才是); 老班按第二版的规矩 = 第 1 个角色没有服务器角色名 */
+export const controlsAccount = (id: string, a: { bot?: string; account?: boolean }): boolean => a.account ?? (id === "a" && !a.bot);
 export type Game = {
   tick: number; gameMinutes: number; researched?: number; research?: string; labs?: number; labsWorking?: number; machines?: number;
   busy?: Record<string, boolean>; perMin10?: { red: number; green: number; blue: number }; at?: number;
@@ -519,7 +522,8 @@ export type KeyPatch = { url?: string; model?: string; access?: string; user?: s
 export const fmtBalance = (b: Balance): string => (/^\d/.test(b.total) ? `${b.currency === "CNY" ? "¥" : b.currency === "USD" ? "$" : `${b.currency} `}${b.total}` : b.total);
 
 /** 开班扫描 (控制接口 /api/scan; run.ts 开班时按读数算的现状 / 判断 / 规划); 没有 → null */
-export type Scan = { at: string; stage: string; summary: string; lines: string[]; judgement: string[]; plan: string[] } | null;
+/** 开班扫描 (world-scan.json); 不装模组那条路 11-08 下午以前的没有 judgement / plan, 字段按可能缺读 */
+export type Scan = { at: string; stage: string; summary: string; lines?: string[]; judgement?: string[]; plan?: string[] } | null;
 
 // ── 下一班阵容 (控制接口 /api/lineup): 每个角色一个模型, 来源可以是任一家 ──
 export type RosterSeat = { brain: string; model: string; /** 思考强度 (low/medium/high/xhigh/max; 空 = 开班命令行的默认) */ effort?: string };
