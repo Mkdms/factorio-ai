@@ -162,7 +162,7 @@ export function App() {
   const [startError, setStartError] = useState<string | null>(null);
   // 我的账号的群: 这一局的状态; 只在看着这种群时才问 (别的时候不多打接口)
   const [mk, setMk] = useState<MkState | null>(null);
-  const watchMk = group?.kind === "mine";
+  const watchMk = group?.kind === "mine" || !!group?.me;
   useEffect(() => {
     if (!watchMk) return;
     let live = true;
@@ -172,11 +172,13 @@ export function App() {
     return () => { live = false; clearInterval(t); };
   }, [watchMk]);
   const setGroupGoal = async (goal: string) => { if (!group) return; await api.setGroupGoal(group.id, goal); await loadGroups(); };
+  // "我 · 管理员"那一行选的模型 = 用我的 Steam 账号玩这个世界 (选"我自己"就清掉)
+  const setGroupMe = async (seat: RosterSeat | null) => { if (!group) return; await api.setGroupMe(group.id, seat); await loadGroups(); };
   const stopMk = async () => { await api.stopMk(); setMk(await api.mk()); };
   const startGroup = async () => {
     if (!group) return;
     setStartError(null);
-    if (group.kind === "mine") {
+    if (group.kind === "mine" || group.me) {
       try { await api.startGroup(group.id); setTimeout(() => { api.mk().then(setMk, () => undefined); }, 1500); } catch (e) { setStartError((e as Error).message); throw e; }
       return;
     }
@@ -322,7 +324,7 @@ export function App() {
         seed={seed}
       />
       <Panel state={state} review={review} scan={scan} zh={zh} onStop={() => setModal("stop")} members={landing ? [] : rows.slice(1)} selected={view} onSelect={setSelected} connected={!down} accounts={accounts} now={now} stats={stats?.models ?? null} onStats={() => setModal("stats")} blueprints={blueprints} onOpenBlueprint={openBlueprint}
-        seats={seats} onRemoveSeat={removeSeat} onSetSeat={setSeat} onSetSeatEffort={setSeatEffort} onSaveSeats={saveAndApply} onLeaveAgent={leaveAgent} onMakeAccount={(seat) => saveLineup(accountSeatFirst(seats ?? [], seat))} landing={landing}
+        seats={seats} onRemoveSeat={removeSeat} onSetSeat={setSeat} onSetMe={setGroupMe} onSetSeatEffort={setSeatEffort} onSaveSeats={saveAndApply} onLeaveAgent={leaveAgent} onMakeAccount={(seat) => saveLineup(accountSeatFirst(seats ?? [], seat))} landing={landing}
         group={group} groupRunning={!!state?.latest?.running} onStartGroup={startGroup} startError={startError} onSetReveal={setGroupReveal} onSetBackend={setGroupBackend} onSetRcon={setGroupRcon} onConnect={connectGroup} mk={mk} onStopMk={stopMk} onSetGoal={setGroupGoal} />
       {modal === "stats" && stats ? <StatsModal models={stats.models} shifts={stats.shifts} onClose={() => setModal(null)} /> : null}
       {modal === "stop" && (state?.run || down) ? <StopModal runId={state?.run?.id ?? ""} down={!!down} onClose={() => setModal(null)} onConfirm={async () => {

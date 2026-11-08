@@ -18,6 +18,8 @@ export type Group = {
   id: string; name: string; createdAt: string; kind: GroupKind;
   /** kind = new / save: 走哪条路; 没写 = memory */
   route?: GroupRoute;
+  /** 谁操控"我" (用户的 Steam 账号) 玩这个世界: 选了模型 = 这个模型用用户的账号在本机玩, 只走玩家操作、不装模组、不开 RCON (算成就; mk-world.ts); 没写 = 用户自己看和说话。界面"我 · 管理员"那一行里选 */
+  me?: RosterSeat;
   /** kind = save: 接着哪个存档开第一班 (.zip 路径; 之后的班接这个群自己最近一班的 end.zip) */
   save?: string;
   /** kind = server: 走哪条路 (没写 = 自动, src/io/backend.ts)。服务器地址和密码不在这里: 群文件进备份, 它们只在 keys.json (accounts.ts saveGroupServer) */
@@ -51,6 +53,7 @@ function cleanGroup(raw: unknown): Group | null {
   const minutes = typeof r.minutes === "number" && Number.isFinite(r.minutes) ? Math.min(600, Math.max(5, Math.round(r.minutes))) : 180;
   return { id: r.id, name: r.name.trim().slice(0, GROUP_NAME_MAX), createdAt: typeof r.createdAt === "string" ? r.createdAt : "", kind,
     ...((kind === "new" || kind === "save") && r.route === "mods" ? { route: "mods" as const } : {}),
+    ...(cleanSeat(r.me) ? { me: cleanSeat(r.me)! } : {}),
     ...(kind === "save" && typeof r.save === "string" ? { save: r.save } : {}),
     ...(kind === "server" && cleanBackendPref(r.backend) !== "auto" ? { backend: cleanBackendPref(r.backend) } : {}),
     ...(kind === "server" && r.revealUncharted === true ? { revealUncharted: true } : {}),
@@ -95,11 +98,23 @@ export function createGroup(playDir: string, input: { name: string; kind: GroupK
   return writeGroup(playDir, g);
 }
 
+/** 界面"我 · 管理员"那一行选的: 谁操控用户的账号 (seat 为空 = 用户自己); 在跑的班不受影响, 下一班起 */
+export function setGroupMe(playDir: string, id: string, seat: unknown): Group {
+  const g = readGroup(playDir, id);
+  if (!g) throw new Error(`没有这个群: ${id}`);
+  const { me: _old, ...rest } = g; void _old;
+  if (seat === null || seat === undefined || seat === "") return writeGroup(playDir, rest);
+  const s = cleanSeat(seat);
+  if (!s) throw new Error("操控你账号的模型不合格: 家要是认识的, 模型名不能有空格或中文");
+  if (s.brain === "none") return writeGroup(playDir, rest);
+  return writeGroup(playDir, { ...rest, me: s });
+}
+
 /** 改"我的账号"这一局要做什么 (下一次开局生效) */
 export function setGroupGoal(playDir: string, id: string, goal: unknown): Group {
   const g = readGroup(playDir, id);
   if (!g) throw new Error(`没有这个群: ${id}`);
-  if (g.kind !== "mine") throw new Error("只有\"我的账号\"的群有目标");
+  if (g.kind !== "mine" && !g.me) throw new Error("先在\"我 · 管理员\"那一行选一个模型操控你的账号, 才有这一局的目标");
   const { goal: _old, ...rest } = g; void _old;
   const v = typeof goal === "string" ? goal.trim().slice(0, GROUP_GOAL_MAX) : "";
   return writeGroup(playDir, v ? { ...rest, goal: v } : rest);

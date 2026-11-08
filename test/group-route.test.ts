@@ -4,7 +4,22 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createGroup, onlineStartArgs, readGroup, routeLabel, startArgs } from "../src/play/groups.ts";
+import { createGroup, onlineStartArgs, readGroup, routeLabel, setGroupGoal, setGroupMe, startArgs } from "../src/play/groups.ts";
+
+test("'我 · 管理员'那一行选的模型 (group.me): 存进群文件、清掉、none 等于清掉、不合格的拒; 选了才有这一局的目标", () => {
+  const play = fs.mkdtempSync(path.join(os.tmpdir(), "group-me-"));
+  try {
+    const g = createGroup(play, { name: "t", kind: "new" });
+    assert.equal(readGroup(play, g.id)?.me, undefined);
+    assert.throws(() => setGroupGoal(play, g.id, "拿成就"), /先在/);
+    assert.deepEqual(setGroupMe(play, g.id, { brain: "claude", model: "claude-sonnet-5-5", effort: "medium" }).me, { brain: "claude", model: "claude-sonnet-5-5", effort: "medium" });
+    assert.equal(readGroup(play, g.id)?.me?.model, "claude-sonnet-5-5");
+    assert.equal(setGroupGoal(play, g.id, "摧毁一个虫巢").goal, "摧毁一个虫巢");
+    assert.throws(() => setGroupMe(play, g.id, { brain: "gpt-9", model: "x" }), /不合格/);
+    assert.equal(setGroupMe(play, g.id, { brain: "none", model: "" }).me, undefined);
+    assert.equal(setGroupMe(play, g.id, null).me, undefined);
+  } finally { fs.rmSync(play, { recursive: true, force: true }); }
+});
 
 test("群的路线: 不写 = memory; 只有沙盘的群 (new / save) 能选 mods; 存进群文件再读出来还在", () => {
   const play = fs.mkdtempSync(path.join(os.tmpdir(), "group-route-"));

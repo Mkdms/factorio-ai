@@ -64,6 +64,7 @@ export const api = {
   mk: () => call<MkState>("GET", "/api/mk"),
   stopMk: () => call<{ stopping: boolean; run?: string }>("POST", "/api/mk/stop", {}),
   setGroupGoal: (id: string, goal: string) => call<{ group: Group }>("POST", "/api/group/goal", { id, goal }),
+  setGroupMe: (id: string, seat: RosterSeat | null) => call<{ group: Group }>("POST", "/api/group/me", { id, seat }),
   startGroup: (id: string) => call<{ started: boolean; group: string; log: string }>("POST", "/api/group/start", { id }, 60_000),
   // 蓝图预览入口: 这一班看过 / 用过的蓝图; 起本机蓝图编辑器 (第一次要等它起来, 最多 90 秒); 在系统浏览器里打开编辑器的地址
   blueprints: (run?: string) => call<{ editor: string; blueprints: ShiftBlueprint[] }>("GET", `/api/blueprints${run ? `?run=${encodeURIComponent(run)}` : ""}`),

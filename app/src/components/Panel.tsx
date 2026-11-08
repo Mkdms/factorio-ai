@@ -46,7 +46,7 @@ function ServerOptions({ group, onSetBackend, onSetRcon, onConnect, children }: 
   );
 }
 
-export function Panel({ state, review, scan, zh, onStop, members, selected, onSelect, connected, accounts, now, stats, onStats, blueprints, onOpenBlueprint, seats, onRemoveSeat, onSetSeat, onSetSeatEffort, onSaveSeats, onLeaveAgent, onMakeAccount, landing, group, groupRunning, onStartGroup, startError, mk, onStopMk, onSetGoal, onSetReveal, onSetBackend, onSetRcon, onConnect }: {
+export function Panel({ state, review, scan, zh, onStop, members, selected, onSelect, connected, accounts, now, stats, onStats, blueprints, onOpenBlueprint, seats, onRemoveSeat, onSetSeat, onSetMe, onSetSeatEffort, onSaveSeats, onLeaveAgent, onMakeAccount, landing, group, groupRunning, onStartGroup, startError, mk, onStopMk, onSetGoal, onSetReveal, onSetBackend, onSetRcon, onConnect }: {
   /** 让这个模型下一班起控制用户的账号 */ onMakeAccount?: (seat: RosterSeat) => Promise<void>;
   /** 在线成员的"移出": 现在就移出 (2026-11-05) */ onLeaveAgent?: (id: string) => Promise<void>;
   state: State | null; review: Review; /** 开班扫描 (现状 / 判断 / 规划) */ scan?: Scan; zh: (n: string) => string; onStop: () => void;
@@ -57,6 +57,8 @@ export function Panel({ state, review, scan, zh, onStop, members, selected, onSe
   seats?: RosterSeat[] | null; onRemoveSeat?: (i: number) => Promise<void>;
   /** 换第 i 个角色的模型 (管理员那行的下拉) / 思考强度 */
   onSetSeat?: (i: number, value: string) => Promise<void>; onSetSeatEffort?: (i: number, effort: string) => Promise<void>;
+  /** "我 · 管理员"那一行选的: 谁用用户的 Steam 账号玩这个世界 (null = 用户自己看和说话) */
+  onSetMe?: (seat: RosterSeat | null) => Promise<void>;
   /** 整份名单 (多选框列表勾完保存) */
   onSaveSeats?: (seats: RosterSeat[]) => Promise<void>;
   /** 空对话 (没在看任何一班): 不显示上一班的公告 / 读数 / 体检 / 蓝图 / 看门狗, 只留成员、统计、额度 */
@@ -85,9 +87,11 @@ export function Panel({ state, review, scan, zh, onStop, members, selected, onSe
   const act = async (fn: () => Promise<void>) => { setInviteBusy(true); setInviteError(null); try { await fn(); } catch (e) { setInviteError((e as Error).message); } finally { setInviteBusy(false); } };
   const nextSeats = seats ?? [];
   // 第 1 席控制用户的账号: 只有联机服务器的群 (沙盘全是服务器角色, 窗口只看)
-  const mine = group?.kind === "mine";
+  // "我"那一行选了模型 = 用用户的 Steam 账号玩 (只有一个身体, 没有名单); 老的"我的账号"类型同样
+  const mine = group?.kind === "mine" || !!group?.me;
   const accountMode = group?.kind === "server" || mine;
-  const admin = accountMode ? nextSeats[0] ?? null : null;
+  // 谁用用户的账号: 联机服务器的群 = 第 1 席; 别的群 = "我"那一行选的 (group.me; 老的"我的账号"类型是第 1 席)
+  const admin: RosterSeat | null = group?.kind === "server" ? nextSeats[0] ?? null : group?.me ?? (group?.kind === "mine" ? nextSeats[0] ?? null : null);
   const listed = accountMode ? nextSeats.slice(1) : nextSeats;
   const liveAccount = accountMode ? members.find((m) => m.id === "a" && !m.agent?.left) ?? null : null;
   const openEditor = () => { const d: Record<string, number> = {}; for (const s of listed) { const v = seatValue(s); d[v] = (d[v] ?? 0) + 1; } setDraft(d); setInviteError(null); setEditing(true); };
@@ -181,13 +185,20 @@ export function Panel({ state, review, scan, zh, onStop, members, selected, onSe
             <div className="member-row me" data-id="me">
               <Avatar vendor={null} text="我" me />
               <span className="member-text"><span className="member-name">我 · 管理员</span>
-                {accountMode ? <span className="member-sub">{run?.running && !mine ? "下一班起" : ""}控制你账号的模型: {admin ? seatDisplay(admin) : "Claude Opus"}{admin?.effort ? ` · 强度 ${effortLabel(admin.effort)}` : ""}</span> : <span className="member-sub" data-observer>在游戏窗口里看和说话, 不占角色</span>}
+                {/* 在这一行里选谁用用户的 Steam 账号玩 (2026-11-08: 不再是单独的对话类型): 选了模型 = 它用你的账号在本机玩这个世界, 只走玩家操作、不装模组, 算成就; "我自己" = 看和说话 */}
+                {admin ? <span className="member-sub" data-me-model>{run?.running ? "下一班起 " : ""}{group?.kind === "server" ? "控制你账号的模型" : "用你的 Steam 账号玩这个世界的模型"}: {seatDisplay(admin)}{admin.effort ? ` · 强度 ${effortLabel(admin.effort)}` : ""}{group?.kind === "server" ? "" : " (只走玩家操作, 不装模组, 算成就)"}</span> : <span className="member-sub" data-observer>在游戏窗口里看和说话, 不占角色</span>}
                 {run?.running && liveAccount?.agent?.seat && admin && seatValue(liveAccount.agent.seat) !== seatValue(admin) ? <span className="member-sub" data-account-now>这一班还是 {seatDisplay(liveAccount.agent.seat)}</span> : null}
-                {accountMode && onSetSeat ? <span className="admin-controls">
-                  <select className="key-select admin-select" value={admin ? seatValue(admin) : "claude:claude-opus-5-5"} disabled={inviteBusy} aria-label="哪个模型控制你的账号" onChange={(e) => act(() => onSetSeat(0, e.target.value))}>
+                {(group?.kind === "server" ? onSetSeat : onSetMe) ? <span className="admin-controls">
+                  <select className="key-select admin-select" data-me-select value={admin ? seatValue(admin) : "self"} disabled={inviteBusy} aria-label="谁用你的账号玩" onChange={(e) => act(() => group?.kind === "server" ? onSetSeat!(0, e.target.value) : onSetMe!(e.target.value === "self" ? null : parseSeatValue(e.target.value)))}>
+                    {group?.kind !== "server" ? <option value="self">我自己 (看和说话, 不占角色)</option> : null}
                     {groups.map((gr) => <optgroup key={gr.label} label={gr.label}>{gr.items.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</optgroup>)}
                   </select>
-                  {effortSelect(0, admin ?? { brain: "claude", model: "opus" })}
+                  {group?.kind === "server" ? effortSelect(0, admin ?? { brain: "claude", model: "opus" }) : admin && onSetMe ? (
+                    <select className="key-select effort-select" value={admin.effort ?? ""} disabled={inviteBusy} aria-label="思考强度" onChange={(e) => act(() => onSetMe({ ...admin, ...(e.target.value ? { effort: e.target.value } : {}) }))}>
+                      <option value="">强度: 默认 (low)</option>
+                      {["low", "medium", "high", "xhigh", "max"].map((x) => <option key={x} value={x}>{effortLabel(x)}</option>)}
+                    </select>
+                  ) : null}
                 </span> : null}</span>
               <span className={`member-tag${connected ? " s-在线" : ""}`}>{connected ? "在线" : "连不上"}</span>
             </div>

@@ -53,7 +53,7 @@ export function NewGroupModal({ worlds, onCreate, onClose }: { worlds: WorldInfo
         <input className="world-rename" style={{ width: "100%", margin: 0 }} data-group-name autoFocus value={name} maxLength={40} placeholder="例: 第二张图 / 朋友的服务器" onChange={(e) => { setName(e.target.value); setError(null); }} onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) create(); }} />
         <div className="settings-title" style={{ marginTop: 12 }}>类型</div>
         <div className="segmented" role="radiogroup" aria-label="类型">
-          {(["new", "save", "server", "mine"] as const).map((k) => <button key={k} role="radio" aria-checked={kind === k} className={kind === k ? "on" : undefined} onClick={() => setKind(k)}>{groupKindLabel(k)}</button>)}
+          {(["new", "save", "server"] as const).map((k) => <button key={k} role="radio" aria-checked={kind === k} className={kind === k ? "on" : undefined} onClick={() => setKind(k)}>{groupKindLabel(k)}</button>)}
         </div>
         {kind === "new" || kind === "save" ? (
           <div style={{ marginTop: 8 }} data-group-route>

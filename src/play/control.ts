@@ -58,7 +58,7 @@ import { parseArgs } from "node:util";
 import { factorioExe, findFactorioDir, labRoot, REPO } from "../lab/gamedir.ts";
 import { mkArgs, mkRunning, mkStop, mkView, readMkCurrent, steamClientRunning } from "./mk-lib.ts";
 import { spawn } from "node:child_process";
-import { connectArgs, createGroup, groupsDir, onlineStartArgs, readGroup, readGroups, saveGroupSeats, setBackend, setGroupGoal, setRevealUncharted, startArgs, type Group } from "./groups.ts";
+import { connectArgs, createGroup, groupsDir, onlineStartArgs, readGroup, readGroups, saveGroupSeats, setBackend, setGroupGoal, setGroupMe, setRevealUncharted, startArgs, type Group } from "./groups.ts";
 import { cleanServerConn, readServer, serverView } from "./online-lib.ts";
 import { RconClient } from "../lab/rcon.ts";
 import { luaString } from "./harness.ts";
@@ -336,6 +336,12 @@ const server = http.createServer(async (req, res) => {
     // 用模型玩用户的账号: 现在的状态 / 请它收工 / 改目标
     if (req.method === "GET" && u.pathname === "/api/mk") return send(200, mkView(PLAY));
     if (req.method === "POST" && u.pathname === "/api/mk/stop") { const r = mkStop(PLAY, "界面"); return send(r.ok ? 200 : 400, r.ok ? { stopping: true, run: r.runId } : { error: r.error }); }
+    // POST /api/group/me {id, seat|null}: "我 · 管理员"那一行选谁操控用户的账号 (2026-11-08: 不再是单独的对话类型)
+    if (req.method === "POST" && u.pathname === "/api/group/me") {
+      const b = await body(req);
+      try { return send(200, { group: groupView(setGroupMe(PLAY, String(b.id ?? ""), b.seat)) }); }
+      catch (e) { return send(400, { error: (e as Error).message }); }
+    }
     if (req.method === "POST" && u.pathname === "/api/group/goal") {
       const b = await body(req);
       try { return send(200, { group: groupView(setGroupGoal(PLAY, String(b.id ?? ""), b.goal)) }); }
@@ -345,7 +351,8 @@ const server = http.createServer(async (req, res) => {
       const b = await body(req);
       const g = readGroup(PLAY, String(b.id ?? ""));
       if (!g) return send(400, { error: `没有这个群: ${String(b.id ?? "").slice(0, 40)}` });
-      if (g.kind === "mine") {
+      // "我"那一行选了模型 (g.me; 老的"我的账号"类型也算): 用用户的 Steam 账号在本机玩, 走 mk-world.ts (干净服务器 + Steam 版客户端 + online.ts --steam-pid), 算成就
+      if (g.kind === "mine" || g.me) {
         if (mkRunning(readMkCurrent(PLAY))) return send(400, { error: "你的账号已经有一局在跑, 先停了再开" });
         // 用户自己开着游戏就不开: 那时账号归他 (2026-11-05 定); mk-world 还会再查一次
         try { if (steamClientRunning(factorioExe(findFactorioDir()))) return send(400, { error: "你的 Steam 版 Factorio 开着: 你在玩时账号归你, 这里不碰。关掉再开。" }); }
@@ -354,7 +361,7 @@ const server = http.createServer(async (req, res) => {
         fs.mkdirSync(groupsDir(PLAY), { recursive: true });
         let goalFile: string | undefined;
         if (g.goal) { goalFile = path.join(groupsDir(PLAY), `${g.id}-goal.md`); fs.writeFileSync(goalFile, g.goal); }
-        const args = mkArgs(g, goalFile);
+        const args = mkArgs({ ...g, seats: g.me ? [g.me] : g.seats }, goalFile);
         const logFile = path.join(groupsDir(PLAY), `${g.id}-${stamp}.log`);
         const fd = fs.openSync(logFile, "a");
         const c = spawn(process.execPath, ["--env-file-if-exists=" + path.join(REPO, ".env"), path.join(REPO, "src", "play", "mk-world.ts"), ...args], { cwd: REPO, detached: true, stdio: ["ignore", fd, fd], windowsHide: true, env: { ...process.env } });
