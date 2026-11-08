@@ -58,9 +58,10 @@ npm run run:online -- --server --read-only --minutes 5          连 data/account
 - [ ] 还差: cancel_craft (手搓队列) equipment (护甲网格) 要先在活的客户端里读一次界面树找控件名; turret_feeds 要看模组试算回的格式。最后沙盘核时对着真界面写
 - [x] 等待: walk = move_to; wait_ticks wait_until 交给游戏外的模组按读数等 (和 sleep 一样, `AGENT_CALLS`)
 - [x] 常驻命令和队列 (`commands/orders.ts`, 代理里 3 秒看一次): queue_submit (append / replace, on_fail abort / skip) queue_status queue_cancel queue_pause queue_resume queue_repeat (interval_ticks、times); order_set (最多 6 条 × 32 步、priority、cooldown_ticks、没有 when 的默认例行 interval_ticks、连败 3 次关掉) orders order_remove orders_pause orders_resume。照手册的规则: 角色空着 (模型最后一个自己的动作之后 20 秒) 才跑, 模型一动手跑完手上这一步就让出来 (模组是立刻停); 每一步和模型的动作过同一把身体锁。when 在游戏外按一小段只读 Lua 判断, 认 fuel_below ammo_below item_count ghosts_waiting damaged health_below health_above no_enemies (参数名照模组); 别的条件 (平台、火箭…) 单子照收、状态明说不认。没做: queue_edit (用 replace)、max_walk、guards、lane、assembler_batch。单元 `test/orders.test.ts` (含条件 Lua 在 Lua 5.2 里编译)
-- [ ] 战斗和载具: kite spider_kite retreat_guard vehicle train train_stop rail_route attach detach → 玩家操作
-- [ ] 电路: wire circuit_set circuit_gate signal_watch → 玩家操作 (拿红绿线点两头 / 界面)
-- [ ] 太空: platform_* launch silo_stage load_silo pods shipment fleet gates demolishers flight_watch min_payload → 玩家操作 (到太空时代再做, 但要列着)
+- [x] 太空那批里只读的: fleet demolishers gates platform_bom platform_digest → 按角色身份问 (`AGENT_CALLS`)
+- [ ] 战斗和载具: kite spider_kite retreat_guard vehicle train train_stop rail_route attach detach → 玩家操作 (上车 = 走近按上下车键; 开车 / 火车时刻表 / 车站名要界面) —— 要先在活的客户端里读界面树
+- [ ] 电路: wire circuit_set circuit_gate signal_watch → 玩家操作 (2.0 红绿线是快捷栏工具, 不是物品; 组合器设置要界面) —— 同上
+- [ ] 太空: platform_* launch silo_stage load_silo pods shipment flight_watch min_payload → 玩家操作 (发射井 / 平台枢纽的界面) —— 同上, 到太空时代前做完
 
 ## 证据
 `test/sandbox/run.test.ts` 5/5 (2026-11-07, 38 秒, 开一个游戏窗口): 干净的沙盘服务器 (mod-list 里只有 base / space-age 那几个) + 独立版客户端不带模组 20 秒进世界 → 注入 → 游戏外的模组起来 (`where.json`: RunCheck 在 nauvis, 有身体) → 开班扫描写出 world-scan.md / .json → 角色目录的 `./fh` (sh 版) 读背包、status、`build wooden-chest` 真放下 (背包 4 → 3) 并记 journal → `fh.ps1` 的 JSON 参数 `{"radius": 8}` 不拆坏 → 放 STOP 收工 `end.json why=STOP`, 服务器日志 `[JOIN] RunCheck` 且没有 desync, 游戏进程全关。第一次 0/5 的原因: 客户端带着沙盘模组连干净服务器被拒 (客户端日志只有 Connection refused), 改成按"连别人的服务器"的方式连 (不带任何模组)。

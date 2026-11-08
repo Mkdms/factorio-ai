@@ -68,6 +68,8 @@ export const AGENT_CALLS = new Set([
   "ingredient_gap", "belt_flow", "ghosts", "checks", "dependency", "uptime", "heat_budget", "alerts_digest", "logistics_audit", "circuit_audit", "turret_tally", "players", "sight", "trace", "disclosure", "research_done",
   // ③ 等: 角色站着等几 tick / 等条件成立, 模组在游戏外按读数判断 (和 sleep 一样不动游戏)
   "wait_ticks", "wait_until",
+  // ④ 太空那批里只读的: 舰队、撼地虫领地、条件门、平台物料和摘要
+  "fleet", "demolishers", "gates", "platform_bom", "platform_digest",
 ]);
 
 /** ./fh call research 不带要改的参数是查队列, 模组自己答, 不碰游戏 (2026-11-06 真服第二班: 原来当成要改研究给拒了) */
