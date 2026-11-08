@@ -53,6 +53,20 @@ export type BrokerStats = { mem: number; rcon: number; refused: number; acted: n
 /** 模组自己账本上的命令: 不碰游戏, 在外面的模组里照常跑 (M4 第 4 步; 新加要先核 test/sandbox/actions.test.ts) */
 export const LEDGER = new Set(["sleep", "chat_ack", "tell"]);
 
+/**
+ * 真服模式下直接按角色身份 (act) 交给游戏外的模组的命令 (2026-11-08 盘点, docs/run.md "第二版给模型的命令在这条路上接了多少"):
+ * ① 记账类: 布告板、提醒、教训库、投票、自白、时间模式、诉求 —— 只写模组自己的账, 要记在角色头上 (按读者问是偷看, 记不上);
+ * ② 其实是读、模组的读者闸门把它当成动手的: 缺料、带子流量、虚影、检查、依赖、开工率、热量、告警、物流、电路、炮塔、玩家、视野、追料、命令清单。
+ * 这些在游戏外跑不改游戏 (假接口没有写游戏的接口, 真要写会报错, 不会悄悄成功)
+ */
+export const AGENT_CALLS = new Set([
+  ...LEDGER,
+  "board", "board_post", "board_update", "board_retire", "board_review", "board_plan", "board_events", "board_focus", "board_critical", "board_progress",
+  "reminders", "reminder_add", "reminder_edit", "reminder_remove", "reminder_ack", "reminder_snooze",
+  "lessons", "lesson_add", "lesson_edit", "lesson_verify", "vote", "votes", "confess", "confessions", "chronicle", "clock", "profile", "harness_request", "mention_counts",
+  "ingredient_gap", "belt_flow", "ghosts", "checks", "dependency", "uptime", "heat_budget", "alerts_digest", "logistics_audit", "circuit_audit", "turret_tally", "players", "sight", "trace", "disclosure", "research_done",
+]);
+
 /** ./fh call research 不带要改的参数是查队列, 模组自己答, 不碰游戏 (2026-11-06 真服第二班: 原来当成要改研究给拒了) */
 export function isResearchRead(d: Dispatch): boolean {
   if (d.request.action !== "research") return false;
@@ -182,14 +196,16 @@ export class CommandBroker {
   /** 后台任务跑得怎么样、假接口缺了什么 (真服上跑完留底, 看真实世界还差哪些) */
   probeStats(): Promise<Record<string, unknown>> { return this.askProbe({ stats: true }); }
 
-  /** 行动层自己要问模组一句读 (放不下时找附近放得下的位置: placements): 直接问宿主, 和读命令排同一个队; 问不到 / 模组报错回 null, 不盖过动作本身的错 */
+  /**
+   * 行动层自己要问模组一句读 (放不下时找空位 placements; 铺线命令的试算): 直接问宿主, 和读命令排同一个队。
+   * 模组报错 / 宿主出错抛出原话 (铺线要把"from is blocked"这种原因带给模型); 只给附加信息的调用方自己 catch
+   */
   async read(action: string, args: Record<string, unknown>): Promise<Record<string, unknown> | null> {
-    try {
-      const row = await this.ask(JSON.stringify({ id: `act-${Date.now().toString(36)}`, action, args }));
-      if (row.exception !== undefined || row.text === undefined) return null;
-      const r = JSON.parse(row.text) as { ok?: boolean; result?: Record<string, unknown> };
-      return r.ok === true && r.result && typeof r.result === "object" ? r.result : null;
-    } catch { return null; }
+    const row = await this.ask(JSON.stringify({ id: `act-${Date.now().toString(36)}`, action, args }));
+    if (row.exception !== undefined || row.text === undefined) throw new Error(`模组宿主出错: ${String(row.exception ?? "没回").slice(0, 300)}`);
+    const r = JSON.parse(row.text) as { ok?: boolean; result?: Record<string, unknown>; error?: { message?: string } | string };
+    if (r.ok !== true) throw new Error(typeof r.error === "string" ? r.error : r.error?.message ?? "模组没给原因");
+    return r.result && typeof r.result === "object" ? r.result : null;
   }
 
   private count(action: string, route: Route | "act" | "ledger", ms: number): void {
@@ -275,6 +291,13 @@ export class CommandBroker {
 
   private async answer(command: string, d: Dispatch | null, action: string): Promise<Reply> {
     let route = routeOf(d, this.opts.mode);
+    // 记账类和被闸门当成动手的读: 直接按角色身份问 (AGENT_CALLS)
+    if (this.opts.mode === "server" && d && AGENT_CALLS.has(action)) {
+      const row = await this.ask(d.raw, true);
+      if (row.exception !== undefined || row.text === undefined) { this.count(action, "refuse", 0); return { ok: false, error: `模组宿主出错: ${String(row.exception).slice(0, 300)}`, unavailable: true }; }
+      this.count(action, "ledger", row.ms ?? 0);
+      return { ok: true, text: row.text };
+    }
     if (route === "mem") {
       const row = await this.ask(d!.raw);
       if (row.exception !== undefined || row.text === undefined) { this.count(action, "refuse", 0); return { ok: false, error: `模组宿主出错: ${String(row.exception).slice(0, 300)}`, unavailable: true }; }

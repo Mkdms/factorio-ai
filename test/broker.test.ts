@@ -186,3 +186,16 @@ test("动作: 真服上明确拒绝 (什么都不发), 沙盘转发", async () =
   assert.equal(sent.length, 1);
   assert.equal(sandbox.asked.length, 0, "沙盘的动作直接转发, 不问外面");
 });
+
+test("记账类和被闸门当成动手的读 (AGENT_CALLS): 真服模式直接按角色身份问游戏外的模组 (act), 不先按读者问", async () => {
+  class ActBroker extends CommandBroker {
+    calls: { action: string; act: boolean }[] = [];
+    protected override async ask2(raw: string, act = false) { this.calls.push({ action: (JSON.parse(raw) as { action: string }).action, act }); return { ms: 2, text: JSON.stringify({ ok: true, result: {} }) }; }
+  }
+  const b = new ActBroker({ pipe: "x", python: "x", probeArgs: [], mode: "server" });
+  for (const action of ["board_post", "reminder_add", "lesson_add", "ingredient_gap", "ghosts", "players"]) assert.equal((await b.handle(dispatch({ id: action, action, args: {} }))).ok, true, action);
+  assert.deepEqual(b.calls.map((c) => c.act), [true, true, true, true, true, true]);
+  assert.equal(b.stats.byAction.board_post?.route, "ledger");
+  await b.handle(dispatch({ id: "o", action: "observe", args: {} }));
+  assert.deepEqual(b.calls.at(-1), { action: "observe", act: false }, "普通的读照旧按读者问");
+});

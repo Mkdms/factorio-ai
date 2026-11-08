@@ -1,7 +1,23 @@
 // ./fh 动作翻译成玩家操作 (commands/actions.ts, broker.ts) 的纯逻辑; 真游戏的核对是 test/sandbox/actions.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { blocksBuild, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
+import { blocksBuild, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, routeTiles, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
+
+test("铺线方案 → 一格格放的清单: 电线杆给位置不管方向; 带子 / 水管按 details 的 entities, 方向数字或名字都认, 水管和地下带出口端不转", () => {
+  assert.deepEqual(routeTiles("pole_route", { item: "medium-electric-pole", positions: [{ x: 1.5, y: 2.5 }, "坏的", { x: 8.5, y: 2.5 }] }),
+    [{ item: "medium-electric-pole", position: { x: 1.5, y: 2.5 }, direction: null }, { item: "medium-electric-pole", position: { x: 8.5, y: 2.5 }, direction: null }]);
+  assert.equal(routeTiles("pole_route", { positions: [{ x: 0, y: 0 }] })[0].item, "small-electric-pole", "没写就是小电线杆");
+  const belts = routeTiles("belt_route", { entities: [
+    { name: "transport-belt", position: { x: 0.5, y: 0.5 }, direction: 4 },
+    { name: "underground-belt", position: { x: 1.5, y: 0.5 }, direction: 4, type: "input" },
+    { name: "underground-belt", position: { x: 5.5, y: 0.5 }, direction: 4, type: "output" },
+    { name: "transport-belt", position: { x: 6.5, y: 0.5 }, direction: "south" },
+  ] });
+  assert.deepEqual(belts.map((t) => t.direction), [4, 4, null, 8]);
+  const pipes = routeTiles("pipe_route", { entities: [{ name: "pipe", position: { x: 0.5, y: 0.5 }, direction: 0 }, { name: "pipe-to-ground", position: { x: 1.5, y: 0.5 }, direction: 12 }] });
+  assert.deepEqual(pipes.map((t) => [t.item, t.direction]), [["pipe", null], ["pipe-to-ground", 12]]);
+  assert.deepEqual(routeTiles("belt_route", {}), [], "没有清单就是空的");
+});
 import { CommandBroker } from "../commands/broker.ts";
 import { REPRESS_TICKS } from "../commands/timeline.ts";
 
@@ -150,9 +166,11 @@ test("回复格式照模组: 有 id、tick, 成功 result, 失败 error.code = a
   assert.equal(bad.ok, false);
   assert.equal(bad.error?.code, "action_failed");
   assert.match(bad.error!.message, /fh call move_to --args/);
-  assert.match((await a.run({ id: "x3", action: "construct", args: {} })).error!.message, /还没翻译/);
+  // construct 2026-11-08 接上了 (按虚影放实物); 还没翻译成玩家操作的拿 wire 当例子
+  assert.match((await a.run({ id: "x3", action: "wire", args: {} })).error!.message, /还没翻译/);
   assert.equal(a.has("build"), true);
-  assert.equal(a.has("construct"), false);
+  assert.equal(a.has("construct"), true);
+  assert.equal(a.has("wire"), false);
   assert.match((await a.run({ id: "x4", action: "research", args: { front: true } })).error!.message, /research 要 technology/);
 });
 

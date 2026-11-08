@@ -72,6 +72,26 @@ export function rotateTurns(from: number, to: number): number | null {
 }
 
 /** build_path 的点 → 每格带子的位置和方向 (纯函数): 只能横平竖直; 最后一格用 end_direction, 没给就接着上一段的方向。不合规矩的抛错 */
+/**
+ * 模组试算的方案 → 一格格放的清单 (纯函数): pole_route 回 positions + item; belt_route / pipe_route 加 details 回 entities {name, position, direction, type?}。
+ * 水管、电线杆不管方向; 地下带的出口端不转 (放在入口下游同向时游戏自动配成出口, 转它会把入口出口翻过来; 待沙盘核)
+ */
+export function routeTiles(action: string, plan: Record<string, unknown>): { item: string; position: Pos; direction: number | null }[] {
+  if (action === "pole_route") {
+    const item = typeof plan.item === "string" ? plan.item : "small-electric-pole";
+    return (Array.isArray(plan.positions) ? plan.positions : []).map(posOf).filter((p): p is Pos => !!p).map((position) => ({ item, position, direction: null }));
+  }
+  const out: { item: string; position: Pos; direction: number | null }[] = [];
+  for (const e of (Array.isArray(plan.entities) ? plan.entities : []) as Record<string, unknown>[]) {
+    const position = posOf(e.position), item = typeof e.name === "string" ? e.name : "";
+    if (!position || !item) continue;
+    const d = typeof e.direction === "number" ? e.direction : typeof e.direction === "string" ? DIR_BY_NAME[e.direction] ?? null : 0;
+    const undirected = item === "pipe" || /electric-pole|substation/.test(item) || ((e.type === "output" || e.ug_type === "output") && /underground-belt/.test(item));
+    out.push({ item, position, direction: undirected ? null : d });
+  }
+  return out;
+}
+
 export function pathTiles(points: Pos[], endDirection?: string): { position: Pos; direction: number }[] {
   if (points.length < 2) throw new Error("build_path 要至少 2 个点 (points)");
   const out: { position: Pos; direction: number }[] = [];
@@ -159,7 +179,7 @@ const posOf = (v: unknown): Pos | null => { const p = v as Partial<Pos> | undefi
 const fmt = (p: Pos) => `(${p.x},${p.y})`;
 
 /** 动手的这些命令 (say 也算: 别人看得到) */
-const ACTION_NAMES = ["move_to", "build", "transfer", "craft", "mine", "rotate", "research", "say", "build_path", "collect", "refuel", "feed", "shoot"] as const;
+const ACTION_NAMES = ["move_to", "build", "transfer", "craft", "mine", "rotate", "research", "say", "build_path", "collect", "refuel", "feed", "shoot", "pole_route", "belt_route", "pipe_route", "place_ghosts", "construct", "rebuild"] as const;
 
 /** --read-only 的行动层: 认得所有动作, 全部拒绝, 什么都不发给游戏 (这些动作模组的只读闸门有的不拦, 不接这一层就落到假接口上报怪错)。
  *  回复要带真的 tick: 写 0 命令行会当成世界回档了, 告诉模型 "the game rolled back" (2026-11-06 彩排查出) */
@@ -206,6 +226,9 @@ export class PlayerActions {
       case "research": return this.research(a);
       case "say": return this.say(a);
       case "build_path": return this.buildPath(a);
+      case "pole_route": case "belt_route": case "pipe_route": return this.route(action, a);
+      case "place_ghosts": return this.placeList(a);
+      case "construct": case "rebuild": return this.constructGhosts(action, a);
       case "collect": return this.collect(a);
       case "refuel": return this.refuel(a);
       case "feed": return this.feed(a);
@@ -240,7 +263,34 @@ export class PlayerActions {
     if (!this.d.assist) return null;
     const there = await this.entityAt(at);
     if (!there || Math.hypot(there.position.x - at.x, there.position.y - at.y) > 0.75) return null;
+    // 虚影 (队友放的、蓝图贴的、被毁的建筑留下的) 照着建是帮忙, 不算动别人的东西 (construct / rebuild)
+    if (there.type === "entity-ghost") return null;
     return this.refuseOthers(there);
+  }
+
+  /** place_ghosts: 这条路上没有机器人, 虚影没人建 → 清单里的东西直接放实物 (要背包里有); 参数和模组的一样 (entities [{name, position, direction?, recipe?}]) */
+  private async placeList(a: Record<string, unknown>) {
+    const ents = (Array.isArray(a.entities) ? a.entities : []) as Record<string, unknown>[];
+    if (!ents.length) throw new Error(`place_ghosts 要 entities: [{"name":"stone-furnace","position":{"x":1,"y":2}}] (这条路上没有机器人, 直接放实物; 整块的用 ./bp build)`);
+    const dirName = (d: unknown) => (typeof d === "string" ? d : typeof d === "number" ? NAME_BY_DIR[d] : undefined);
+    const builds = ents.map((e) => ({ item: String(e.name ?? e.item ?? ""), position: e.position, ...(dirName(e.direction) ? { direction: dirName(e.direction) } : {}), ...(typeof e.recipe === "string" ? { recipe: e.recipe } : {}) }));
+    if (a.dry_run === true) return this.buildCheck(builds);
+    const out = await this.build({ builds, walk: true, skip_existing: true, ...(typeof a.start_index === "number" ? { start_index: a.start_index } : {}) });
+    return { op: "place_ghosts", note: "没有机器人, 虚影没人建: 直接放了实物", ...out };
+  }
+
+  /** construct / rebuild: 范围里现有的虚影 (队友放的、./bp 贴的、被毁的建筑留下的) 按名字走过去一个个放实物; 近的先。标了拆除的这条路上不管 (要拆用 mine) */
+  private async constructGhosts(action: string, a: Record<string, unknown>) {
+    const me = await this.me();
+    const t = targetArea(a, me, 32);
+    const box = t.box ?? (() => { const xs = t.positions!.map((p) => p.x), ys = t.positions!.map((p) => p.y); return { left_top: { x: Math.min(...xs) - 1, y: Math.min(...ys) - 1 }, right_bottom: { x: Math.max(...xs) + 1, y: Math.max(...ys) + 1 } }; })();
+    const rows = (await readArea(this.d.call, box, ["name", "type", "position", "direction", "ghost_name"], 512, { type: ["entity-ghost"] })).entities as Record<string, any>[];
+    const ghosts = rows.filter((g) => typeof g.ghost_name === "string" && (!t.positions || t.positions.some((p) => Math.hypot(p.x - g.position.x, p.y - g.position.y) < 0.75)))
+      .sort((p, q) => Math.hypot(p.position.x - me.x, p.position.y - me.y) - Math.hypot(q.position.x - me.x, q.position.y - me.y));
+    if (!ghosts.length) return { op: action, ghosts: 0, note: rows.length ? "范围里的虚影读不出是什么 (ghost_name)" : "范围里没有虚影" };
+    const builds = ghosts.map((g) => ({ item: String(g.ghost_name), position: g.position as Pos, direction: NAME_BY_DIR[Number(g.direction ?? 0)] }));
+    if (a.dry_run === true) return { op: action, dry_run: true, ghosts: ghosts.length, ...(await this.buildCheck(builds)) };
+    return { op: action, ghosts: ghosts.length, ...(await this.build({ builds, walk: true, ...(typeof a.start_index === "number" ? { start_index: a.start_index } : {}) })) };
   }
 
   /** 这个位置上的实体 (建筑优先, 同名优先); 没有 null */
@@ -349,24 +399,35 @@ export class PlayerActions {
     const item = String(a.item ?? "transport-belt");
     const points = Array.isArray(a.points) ? a.points.map(posOf).filter((p): p is Pos => !!p) : [];
     const tiles = pathTiles(points, typeof a.end_direction === "string" ? a.end_direction : undefined);
-    const start = Math.max(1, typeof a.start_index === "number" ? a.start_index : 1);
+    return this.layTiles(tiles.map((t) => ({ item, ...t })), typeof a.start_index === "number" ? a.start_index : 1, "铺");
+  }
+
+  /**
+   * 按清单一格格放 (build_path 和三个铺线命令共用): 已经有同名同方向的跳过 (重跑不重复); 要方向的先放下, 不对就转手上的方向再放一次 (快速替换);
+   * direction 为 null 的 (水管、电线杆) 不管方向。干到 60 秒先回做了多少, start_index 接着来
+   */
+  private async layTiles(tiles: { item: string; position: Pos; direction: number | null }[], startIndex: number, verb: string) {
+    const start = Math.max(1, startIndex);
     const t0 = Date.now();
     let built = 0, next = start;
+    const same = (there: Record<string, any> | null, tile: { position: Pos; direction: number | null }) =>
+      !!there && Math.hypot(there.position.x - tile.position.x, there.position.y - tile.position.y) < 0.1 && (tile.direction === null || Number(there.direction ?? 0) === tile.direction);
     try {
       for (; next <= tiles.length; next++) {
-        if (Date.now() - t0 > ACT_BUDGET_MS) return { total: tiles.length, built, next_index: next, not_done: `一条命令最多干 ${ACT_BUDGET_MS / 1000} 秒: 加 start_index: ${next} 接着铺` };
+        if (Date.now() - t0 > ACT_BUDGET_MS) return { total: tiles.length, built, next_index: next, not_done: `一条命令最多干 ${ACT_BUDGET_MS / 1000} 秒: 加 start_index: ${next} 接着${verb}` };
         const tile = tiles[next - 1];
+        const item = tile.item;
         const there = await this.entityAt(tile.position, item);
-        { const no = await this.refuseReplacing(tile.position); if (no && !(there && Math.hypot(there.position.x - tile.position.x, there.position.y - tile.position.y) < 0.1 && Number(there.direction ?? 0) === tile.direction)) throw new Error(`第 ${next}/${tiles.length} 格 ${fmt(tile.position)}: ${no} (已铺 ${built})`); }
-        if (there && Math.hypot(there.position.x - tile.position.x, there.position.y - tile.position.y) < 0.1 && Number(there.direction ?? 0) === tile.direction) continue; // 已经铺好的跳过, 重跑不重复
+        { const no = await this.refuseReplacing(tile.position); if (no && !same(there, tile)) throw new Error(`第 ${next}/${tiles.length} 格 ${fmt(tile.position)}: ${no} (已${verb} ${built})`); }
+        if (same(there, tile)) continue; // 已经有了的跳过, 重跑不重复
         await this.walkInto(tile.position, BUILD_REACH, true);
         const player = await readPlayer(this.d.call);
-        if (player.cursor?.name !== item && !(await this.d.holdItem(item))) throw new Error(`no ${item} in inventory (铺到第 ${next}/${tiles.length} 格, 已铺 ${built}; 备好料加 start_index: ${next} 接着铺)`);
+        if (player.cursor?.name !== item && !(await this.d.holdItem(item))) throw new Error(`no ${item} in inventory (${verb}到第 ${next}/${tiles.length} 格, 已${verb} ${built}; 备好料加 start_index: ${next} 接着${verb})`);
         const out = await this.d.placeHeld(tile.position);
-        if (!out.ok) throw new Error(`第 ${next}/${tiles.length} 格 ${fmt(tile.position)} 放不下: ${out.error ?? ""} (已铺 ${built})`);
-        let e = await this.entityAt(tile.position, item);
+        if (!out.ok) throw new Error(`第 ${next}/${tiles.length} 格 ${fmt(tile.position)} ${item} 放不下: ${out.error ?? ""} (已${verb} ${built}${await this.placeWhy(item, tile.position, false)})`);
+        const e = await this.entityAt(tile.position, item);
         const have = Number(e?.direction ?? 0);
-        if (e && have !== tile.direction) {
+        if (e && tile.direction !== null && have !== tile.direction) {
           const turns = rotateTurns(have, tile.direction) ?? 0;
           for (let i = 0; i < turns; i++) { await this.pressHand("rotate"); await (this.d.sleep ?? defaultSleep)(60); }
           const again = await this.d.placeHeld(tile.position);
@@ -378,6 +439,23 @@ export class PlayerActions {
       }
     } finally { await this.d.clearCursor().catch(() => undefined); }
     return { total: tiles.length, built, next_index: null };
+  }
+
+  /**
+   * 铺电线杆 / 带子 / 水管 (2026-11-08 起; 原来这条路上直接被拒): 游戏外的模组按它的规则算 (试算; 带子和水管加 details 给逐格清单, 电线杆给位置),
+   * 角色按清单走过去一个个放 (layTiles), 没有虚影。dry_run: 只回模组算的方案。参数和第二版一样 (./fh help pole_route 等)
+   */
+  private async route(action: "pole_route" | "belt_route" | "pipe_route", a: Record<string, unknown>) {
+    if (!this.d.read) throw new Error(`${action}: 没接游戏外的模组, 算不了路线`);
+    const { dry_run, start_index, ...rest } = a;
+    const plan = await this.d.read(action, { ...rest, dry_run: true, ...(action === "pole_route" ? {} : { details: true }) });
+    if (!plan) throw new Error(`${action}: 游戏外的模组没回方案`);
+    const tiles = routeTiles(action, plan);
+    const failed = Array.isArray(plan.failed) ? (plan.failed as { position?: Pos; error?: string }[]) : [];
+    if (dry_run === true) return { ...plan, tiles: tiles.length, how: "真放时角色走过去一个个放 (玩家操作), 不放虚影" };
+    if (!tiles.length) throw new Error(`${action} 算出来没有能放的格子${failed.length ? `: ${failed.slice(0, 3).map((f) => `${f.position ? fmt(f.position) : ""} ${String(f.error ?? "").slice(0, 80)}`).join("; ")}` : ""}`);
+    const out = await this.layTiles(tiles, typeof start_index === "number" ? start_index : 1, "放");
+    return { op: action, planned: tiles.length, ...(typeof plan.route === "string" ? { route: plan.route } : {}), ...(failed.length ? { not_planned: failed.length } : {}), ...(plan.missing ? { missing: plan.missing } : {}), ...out };
   }
 
   /** 手上拿着东西按一下 (转手上的方向): 不悬停 */

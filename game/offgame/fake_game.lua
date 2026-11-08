@@ -299,7 +299,43 @@ function PROTO_GET.inserter_rotation_speed(p) return p.rotation_speed end
 function PROTO_GET.inserter_extension_speed(p) return p.extension_speed end
 function PROTO_GET.selectable_in_game(p) for _, f in ipairs(p.flags or {}) do if f == "not-selectable-in-game" then return false end end return true end
 function PROTO_GET.flags(p) local out = {} for _, f in ipairs(p.flags or {}) do out[f] = true end return out end
-function PROTO_GET.fluidbox_prototypes(p) note("读不到:流体盒原型") return {} end
+-- 流体口 (LuaFluidBoxPrototype): 导出数据的 fluid_box / fluid_boxes / input_fluid_box / output_fluid_box 原样转成运行时的形状 (pipe_connections 的 direction 已是 0/4/8/12)。
+-- 以前一律回空表, 模组的 pipe_route 报 "pipe-to-ground has no straight underground connection" (2026-11-08 核出来: 不装模组的路上铺不了水管)
+local function fluid_box_proto(b, i)
+  local conns = {}
+  for j, c in ipairs(b.pipe_connections or {}) do
+    conns[j] = {direction = c.direction or 0, connection_type = c.connection_type or "normal", flow_direction = c.flow_direction or "input-output", position = c.position and {x = c.position[1] or c.position.x, y = c.position[2] or c.position.y} or nil,
+      positions = c.positions and (function() local t = {} for k, q in ipairs(c.positions) do t[k] = {x = q[1] or q.x, y = q[2] or q.y} end return t end)() or nil, max_underground_distance = c.max_underground_distance}
+  end
+  return {index = i, volume = b.volume, production_type = b.production_type or "none", pipe_connections = conns, filter = b.filter, object_name = "LuaFluidBoxPrototype", valid = true}
+end
+function PROTO_GET.fluidbox_prototypes(p)
+  local out = {}
+  local function add(b) if type(b) == "table" and b.pipe_connections then out[#out + 1] = fluid_box_proto(b, #out + 1) end end
+  add(p.fluid_box); add(p.input_fluid_box); add(p.output_fluid_box)
+  for _, b in ipairs(p.fluid_boxes or {}) do add(b) end
+  return out
+end
+-- 占地框 / 选择框: 导出数据是 {{x0,y0},{x1,y1}}, 运行时是 {left_top={x,y}, right_bottom={x,y}} (模组的 construction.box 按后者读; 以前给数组, belt_route 报 "index field 'left_top'")
+local function bbox(b)
+  if type(b) ~= "table" then return nil end
+  local lt, rb = b[1] or b.left_top, b[2] or b.right_bottom
+  if not lt or not rb then return nil end
+  return {left_top = {x = lt[1] or lt.x, y = lt[2] or lt.y}, right_bottom = {x = rb[1] or rb.x, y = rb[2] or rb.y}}
+end
+function PROTO_GET.collision_box(p) return bbox(p.collision_box) end
+function PROTO_GET.selection_box(p) return bbox(p.selection_box) end
+-- 碰撞层: 原型没写就是游戏按类型给的默认层 (utility-constants 的 default_collision_masks; 运行时的 collision_mask 也是这个)
+function PROTO_GET.collision_mask(p)
+  if p.collision_mask then return p.collision_mask end
+  local u = raw_proto["utility-constants"] and raw_proto["utility-constants"].default or {}
+  return u.default_collision_masks and u.default_collision_masks[p.type] or nil
+end
+-- 物品放出来的实体 (导出数据是名字, 运行时是实体原型); 电线杆的接线距离 / 供电范围 (按品质的函数, 品质加成没搬: 普通以外记缺)
+function PROTO_GET.place_result(p) return type(p.place_result) == "string" and prototypes.entity[p.place_result] or nil end
+function PROTO_GET.max_wire_distance(p) return p.maximum_wire_distance end
+function PROTO_GET.get_max_wire_distance(p) return function(q) if q and q ~= "normal" and (type(q) ~= "table" or q.name ~= "normal") then note("prototype:pole.wire(quality)") end return p.maximum_wire_distance end end
+function PROTO_GET.get_supply_area_distance(p) return function(q) if q and q ~= "normal" and (type(q) ~= "table" or q.name ~= "normal") then note("prototype:pole.supply(quality)") end return p.supply_area_distance end end
 local function energy_proto(kind) return function(p) local s = p.energy_source if s and s.type == kind then return setmetatable({}, {__index = function(_, k) return s[k] end}) end return nil end end
 PROTO_GET.electric_energy_source_prototype = energy_proto("electric")
 PROTO_GET.burner_prototype = energy_proto("burner")
