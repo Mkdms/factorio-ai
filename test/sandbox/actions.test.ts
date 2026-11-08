@@ -107,6 +107,8 @@ before(async () => {
     insertExact: (at, i, n, inv) => target.insertExactDirect(at, i, n, inv), takeExact: (at, i, n, inv) => target.takeExactDirect(at, i, n, inv), itemCount: (at, inv, i) => target.entityItemCount(at, inv, i),
     stacks: () => target.inventorySlots(), chatSend: (t) => target.chatSend(t), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
     assist: { me: home.name, allowed: (at) => assistAllow.some((p) => Math.hypot(p.x - at.x, p.y - at.y) < 0.6) },
+    // 放不下时问模组 placements (和 core/run/online.ts 同一个接法; 代理在下面才建)
+    read: (a, args) => (broker ? broker.read(a, args) : Promise.resolve(null)),
   });
   broker = new CommandBroker({ pipe, python: venvPython(), probeArgs: hostArgs({ defines: path.join(protoDir, "defines.json"), proto: path.join(protoDir, "data-raw-dump.json"), pid: proc.pid!, exe, extra: ["--serve"] }), mode: "server", rcon: null, actions, luaRead: (a) => target.call("world_query", a) });
   await broker.start();
@@ -433,7 +435,7 @@ test("地块: map 有水, nearest_water 找得到, observe 看得到, 抽水机�
   const pump = await act("build", { item: "offshore-pump", position: { x: pond.x0 + 7.5, y: pond.y0 + 10.5 }, direction: "north", walk: true }, "--wait");
   await truth(`local a = ... for _, e in pairs(game.surfaces[1].find_entities_filtered{name = "offshore-pump", area = {{a.x0, a.y0}, {a.x0 + 32, a.y0 + 32}}}) do e.destroy() end
     local t = {} for x = a.x0 + 8, a.x0 + 13 do for y = a.y0 + 8, a.y0 + 13 do t[#t + 1] = {name = "grass-1", position = {x, y}} end end game.surfaces[1].set_tiles(t) return true`, pond);
-  return { pass: !!map.ok && regions.some((r) => r.count >= pond.n) && near.result?.found === true && inPond && tilesText.includes("water") && !!pump.ok && spots.length > 0 && !bad.ok && /放得下的位置/.test(badMsg),
+  return { pass: !!map.ok && regions.some((r) => r.count >= pond.n) && near.result?.found === true && inPond && tilesText.includes("water") && !!pump.ok && spots.length > 0 && !bad.ok && /附近放得下的位置 \(按游戏规则算的, 12 格内\): \(/.test(badMsg),
     seen: `真值 ${pond.n} 格; map ${JSON.stringify(regions).slice(0, 120)}; nearest_water ${String(near.result?.line ?? seenOf(near)).slice(0, 160)}; pump_spots ${spots.length}; observe ${tilesText.slice(0, 80)}; 放错 ${badMsg.slice(0, 160)}; 抽水机 ${seenOf(pump).slice(0, 120)}` };
 }));
 test("say 发聊天", () => check(async () => { const r = await act("say", { text: "动作核对 你好 [gps=1,2,nauvis]" }); return { pass: !!r.ok, seen: seenOf(r) }; }));
