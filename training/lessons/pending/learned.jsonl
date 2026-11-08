@@ -211,3 +211,8 @@
 {"rule":"手搓热能矿机要吃 1 个石炉 (5 石+9 铁): 先算石头","keys":{"recipe":"stone-furnace"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
 {"rule":"煤是开局瓶颈, 手采太慢 → 早点放煤机+箱子","keys":{"item":"wooden-chest"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
 {"rule":"工具: transfer 要 position+direction:to_entity (没有 positions 数组); collect 要 item","keys":{"action":"transfer"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08"}
+{"rule":"开局无煤 → 木头只烧约13秒, 直奔煤矿, 放两台采矿机对放自喂当煤库","keys":{"item":"coal"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
+{"rule":"手搓采矿机吃一个石炉: 每组机+炉要 10 石 + 9 铁","keys":{"recipe":"stone-furnace"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
+{"rule":"抽水泵: nearest_water 给的水格旁很多位置 placement blocked, 换到别的岸线(离水2~3格处)试才成功; 放上后 inspect 看出水口, 用…","keys":{"item":"pipe"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
+{"rule":"热能采矿机+石炉全靠手补煤, 每 ~4 分钟一轮, 极耗时; 下次尽早上电力采矿机或煤带","keys":{"item":"burner-mining-drill"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
+{"rule":"工具: transfer 放科技包常报\"少了0个\"但常已放入, 以 status 为准","keys":{"action":"transfer","item":"science"},"who":"claude-sonnet-5-5","run":"sonnet-2026-11-08b"}
