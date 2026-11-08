@@ -1499,6 +1499,12 @@ ${out.slice(0, 600)}`);
   process.on("SIGINT", () => { stop = true; log("收到 Ctrl+C, 收尾"); killAll(); });
 
   async function agentLoop(a: Agent) {
+    // 续轮提示词 (2026-11-08 装模组的路第 1 班: 只说"继续。离截止还有 N 分钟", 模型每轮补点料、写个小结就收, 第 3 轮起十几秒一轮, ./plan ./bp 一次没用;
+    // 不装模组那条路 core/run/online.ts 11-08 改过同样的毛病, 这里照搬)。群开的班是连续换班 (shifts.ts): 写明到点接着同一个世界, 免得它离截止近就不开大活
+    let lastMs = Number.POSITIVE_INFINITY;
+    const carry = values.group ? "到点会自动换班, 下一班接着同一个世界和你的 notes.md: 离截止近也照样开大活, 做到一半下一班接着做, 不用在截止前收尾。" : "";
+    const tools = "整条线用 ./plan 物品 每分钟 --build (贴虚影再 construct; 料不够它会说差什么); 接料 belt_route、电线杆 pole_route、水管 pipe_route; 补煤补弹交给 order_set 常驻命令, 别每轮手搬。";
+    const nextParty = () => (lastMs < 3 * 60_000 ? `上一轮你只跑了 ${Math.round(lastMs / 1000)} 秒就停了, 没必要: 不用写小结、不用等人, 这一轮一直发命令建东西, 中途不要结束回合。` : "接着干, 不用汇报、不用写小结。") + carry + tools;
     for (let n = 1; !stop && !a.left && Date.now() < deadline; n++) {
       a.turns = n; usage.turns = agents.reduce((x, y) => x + y.turns, 0);
       const left = Math.round((deadline - Date.now()) / 60000);
@@ -1508,7 +1514,8 @@ ${out.slice(0, 600)}`);
         : GOAL === "grow"
         ? `开始。${scanNote}先读 CLAUDE.md 和 notes.md${agents.length > 1 ? " 和 ../team.md (先认领再动手)" : ""}。第一步: 用 ./calc 算这一班的目标配比 (红瓶每分钟 30 个、绿瓶每分钟 30 个), 用 ./bp list 冶炼 看冶炼列; 把计划写进 notes.md 的"计划"一节, 再按计划用蓝图整块建。离截止还有 ${left} 分钟。`
         : `开始。${scanNote}先读 CLAUDE.md 和 notes.md, 再用 ./fp 开始玩。离截止还有 ${left} 分钟。`;
-      let prompt = n === 1 ? first : `继续。${facts(samples.at(-1))}离截止还有 ${left} 分钟。`;
+      let prompt = n === 1 ? (KIT === "party" ? `${first}${carry}先跑 ./plan 物品 每分钟 看下一档的线要几台、放哪, 加 --build 一条命令放整块。` : first)
+        : KIT === "party" ? `${nextParty()}${facts(samples.at(-1))}离截止还有 ${left} 分钟。` : `继续。${facts(samples.at(-1))}离截止还有 ${left} 分钟。`;
       if (n > 1 && a.nudge) { prompt = `监工 (只给事实): ${a.nudge}${await bottleneckFacts(h)} ${facts(samples.at(-1))}离截止还有 ${left} 分钟。继续。`; a.nudge = null; }
       prompt += " (说话和笔记用中文)"; // 简报里写了, 第二、三轮还是说英文
       log(`${tag(a) ? tag(a) + " " : ""}第 ${n} 轮开始`);
@@ -1517,6 +1524,7 @@ ${out.slice(0, 600)}`);
       const began = Date.now();
       const code = await turn(a, n, prompt);
       clearTimeout(killer);
+      lastMs = Date.now() - began;
       log(`${tag(a) ? tag(a) + " " : ""}第 ${n} 轮结束 (退出码 ${code}, ${((Date.now() - began) / 1000).toFixed(0)} 秒)`);
       if (code !== 0 && !stop) await sleep(5000); // 出错 (例如额度) 时别连发
       // 防空转 (第二轮 2026-11-02: 大脑判断达不成后每轮几秒就结束, 循环马上又叫, 3 分钟空转 38 次): 一轮不到 90 秒就结束,
