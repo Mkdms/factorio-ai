@@ -46,16 +46,38 @@ TypeScript 里用 `game/client/connect.ts` 的 `GameClient`: `start()` 起程序
 - `ui_read` 没有 `max_nodes` 了 (按相对深度 `max_depth` 截), 未知参数一律拒 → 去掉 3 处; 带选择器时只回匹配到的子树 (匹配的根 `matched = true`, 我们都按类型或 matched 过滤, 不受影响)。
 - 没变的 (核过源码): 背包 / 科技目录分页 (`truncated` + `next_offset`)、背包格子的 `valid_for_read` / `index`、`include: ["recipe"]`、`world_overview` 的 `viewport`、input 时间线写法 (`stop_previous` 默认 false 时有时间线在跑会拒, 我们的动作都等上一条做完)。
 **证据 (2026-11-09, 游戏 2.1.24, 沙盘)**: 编译 1 分 47 秒; 客户端 Gradle 单元测试 263 条 + 新加 1 条全过 (含上游新加的 UiTree / WorldQuerySchema / CollectionPaging 和 fork 的 PlayerAction / MemoryRead); `test/sandbox/client.test.ts` 5/5 (挂上、只读查询对真值、读内存、聊天、摘下); `test/sandbox/actions.test.ts` 51/51 (8.6 分钟: transfer 取放走 player_action 14 号、红绿线只读接线点 + entries 相对读、物流网、流体、第二个客户端、服务器没有不同步); `test/sandbox/run.test.ts` 7/7 (开班链路; 第一次 6/7 是 11-08 加的"那格地块"让查法多了地块名, 和升级无关, `commands/hints.ts errorHint` 修了)。旧程序留在 `data/client-0.0.10/`。
-上游这次加了什么、和我们有什么关系 (按"模型玩得更好"排; 合进来了, 但除了上面的适配还都没用上):
-1. **批量相对读 `query.reads`**: 一次调用对选中的每个实体 / 玩家 / 背包格跟着读一串相对路径 (例: 每台组装机的配方 + 输出箱内容 + 插件), 同一个安全点, 一条路径错不影响其余; 文档明说传送带 `get_transport_line` 内容、蓝图实体 / 瓦片、火车时刻表、生成的区块都能这样读。→ 我们开班扫描 / status / 放机器提示现在是一类一次往返; 模型要过的"一条命令看某条带子某条道上的东西"用它能做。
-2. **输入时间线一次做完整手势**: 同一条时间线里按住建造键 + 多段鼠标移动 + 拐角按 R, 一次铺一条带拐弯的传送带; 时间线结束或中断时按着的键一律松开。→ 我们 belt_route 是一格一格放 (沙盘 21 格), 可以改成一次一段。
-3. **折线图和成就卡结构化读取**: `ui_read` 读原生图表组件的原始序列 (标签 + 每个采样点, 可分页; 例: 星图上点星球之间的连线弹出的陨石密度图, 模型能自己算航线要多少火力), 读成就窗口里每张卡的原生状态枚举 (不推断"拿到没"); 场景模拟组件 (提示里的小动画) 只回身份, 不展开帧。→ 太空时代算平台火力用折线图; 核 MK 的成就不用再看 Steam 缓存文件。
-4. **UI 读取重做**: 无状态选择器 + 相对深度 (不再按节点数截前缀)、脚本 GUI 元素的 `LuaGuiElement` 属性 (name / type / state / tags / sprite; 只在本地有世界时)、下拉选项和长文本分页切片、`match.gui` 选择器。→ 我们按控件名找格子 (CraftingQueueSlot、InventoryGui) 的做法还能用; 装模组路读 Factory Planner 界面会更稳。
-5. **不同步的新发现**: 统计 getter (`get_item_production_statistics` 等) 和 `LuaFlowStatistics` 的计数在统计为空时会**创建同步状态**, 上游把它们从只读查询里去掉了。我们不受影响: 不装模组路的统计全从内存读 (`game/offgame/fake_game.lua` 的 stat())、真值 Lua 走沙盘服务器 RCON; 规矩记下: **联机客户端里一条统计 getter 都不跑**。
-6. 上限: 结果不再有 16 MiB 上限 (请求仍 16 MiB), `world_overview` 格子分页 (`start_cell` / `next_cell`), 绑定 / 玩家 / 背包默认全量; 不再要求用户自己保留 `factorio.pdb` (调试信息和 API 文档都是游戏自带的, 缺了由运行时诊断报)。
-7. Linux 部分的改动不要 (我们那份没有 Linux)。
-8. 上游还改了工具说明 (给 agent 看的提示词): 例如写明 `input` 一次能做组合键、按住拖动带拐弯。我们的模型不直接用这些工具 (经 `./fh` 的行动层), 但行动层自己的写法可以照着改 (下面第 2 步)。
-**下一步 (还没做)**: ① 开班扫描 / 放机器提示改用批量相对读, 一次读一大片机器的配方和输出箱; ② `belt_route` 改成一条时间线按住拖完一段 (现在一格一格放); ③ 给模型一条看某条带子某条道上东西的命令 (`get_transport_line` + `reads`); ④ 太空时代时用折线图算平台火力; ⑤ 成就核改读成就卡。
+上游 0.0.11 新增 / 改动的能力, 逐项对我们的代码 (2026-11-09 按 tools.md 新旧逐句对比 + 被动方法表新旧对比, 再 grep 我们的调用; 假接口里用内存实现的同名 Lua 函数不算"经注入客户端用了")。共 26 项: 用上 1 项、适配了没利用 2 项、没用 23 项。"价值"按模型玩得更好排: 高 = 现在的阶段就用得上。
+
+| # | 能力 | 我们用了吗 | 价值 / 用在哪 |
+|---|---|---|---|
+| 1 | 批量相对读 `query.reads`: 对选中的每个实体 / 玩家 / 背包格 / 目录项跟一串相对路径, 同一个安全点, 一条错不影响其余 (例: 一个区域一万台机器的配方 + 输出箱 + 插件一次读完) | 没用 (只在假接口里拿它兜底表的条目) | 高: 开班扫描、status、放机器提示、体检, 现在是一类一次往返 |
+| 2 | 原生实体过滤 `selection.filters` (EntitySearchFilters: 虚影名、待拆除、品质、装着某物品、势力…) | 没用 | 高: 找虚影 / 待拆 / 缺料的箱子不用先读全区再筛 |
+| 3 | 传送带每条道上每个物品的位置 (`get_detailed_contents` / `get_item_position` / `get_line_item_position`) | 没用 | 高: 模型要过"一条命令看某条带子某道上有什么", 查堵带 / 混带 |
+| 4 | 一条输入时间线做组合键、按住拖多段带拐弯、每格停留 (`per_point_ticks`、`snap: tile_center`) | 适配了没利用 (Timeline 有拖动写法, 行动层没调; 铺带一格一格放) | 高: belt_route / pole_route 一次拖完一段 |
+| 5 | `set_text` 上限 1024 → 16384 字 | 没用 (还按 1024 切, 超了走剪贴板, 会覆盖用户的剪贴板) | 高, 改一个常数: 贴蓝图串基本不再碰剪贴板 |
+| 6 | 按品质的原型数值 (机器 `get_crafting_speed` / `get_max_energy_usage` / `get_inventory_size` / `get_mining_drill_radius` / `get_researching_speed` / `get_supply_area_distance`; 物品 `get_spoil_ticks` / `get_module_effects` / `get_ammo_type`; 配方 `get_product_amount` / `get_product_quality`) | 没用 (按导出的原型数据算, 没有品质) | 中: 计算器 / 配比用到品质时 |
+| 7 | 地表方法 (`get_tile` / `get_hidden_tile` / `count_entities_filtered` / `count_tiles_filtered` / `get_property` 星球属性 / `get_chunks` / `is_chunk_generated` / 按位置找物流网) | 没用 | 中: 数矿、数水、找物流网, 去别的星球读重力 / 气压 |
+| 8 | 火车 (`game.train_manager` 的列车 / 车站, 时刻表的记录 / 等待条件 / 中断) | 没用 | 中: 火车那批 (还没接) 先能读 |
+| 9 | 蓝图物品的内容 (`get_blueprint_entities` / `get_blueprint_tiles` / 标签) | 没用 | 中: 核对手上 / 箱子里的蓝图是哪张 |
+| 10 | 势力的太空 / 品质状态 (`is_space_location_unlocked` / `is_space_platforms_unlocked` / `get_space_platforms` / `is_quality_unlocked` / `get_logistic_groups` / `get_friend` / `get_cease_fire` / `get_entity_count` / `get_spawn_position`) | 没用 | 中 (太空时代): 能去哪颗星、有几个平台 |
+| 11 | 进化度 `LuaForce.get_evolution_factor` (按星球) | 用了 (这次合并时改过去的) | — |
+| 12 | `inspect members` 加 `search`: 列任何对象能读的属性 / 方法 / 签名 / 说明 | 假接口用 members (旧版就有), search 没用 | 低: 工具开发时自己查能读什么 |
+| 13 | 全局根 `prototypes` / `defines`, 任意原型目录 (装备、地块、虚拟信号、太空地点) | 没用 (原型数据走导出) | 低: 游戏更新后不用重导就能读新原型 |
+| 14 | 长字符串切片 `slice`、迭代器条目 (`get_chunks`) | 没用 | 低 |
+| 15 | 回复不再有 16 MiB 上限 | 区域读已开到 10 万条, 但没配合批量读 | 跟第 1 项一起 |
+| 16 | `world_overview` 实体模式带 `fields` / `reads` / `include` / `filters` | 没用 (只拿它取画面范围) | 中: 画面里的机器一次读状态 + 配方 |
+| 17 | `world_overview` 网格分页 (`start_cell` / `next_cell`、`cell_limit`) | 没用 | 低: 大地图概况 |
+| 18 | 折线图原始序列 (标签 + 每个采样点, 可分页; 例: 星图上点星球之间连线弹出的陨石密度图) | 没用 | 中 (太空时代): 按航线算平台火力。生产统计窗口里的曲线是不是同一种组件待核, 是的话多一条不碰统计 getter 读产量的路 |
+| 19 | 成就卡的原生状态 | 没用 | 中: 核 MK 的成就不用看 Steam 缓存 |
+| 20 | 星图连线控件带连线原型 (再用原型目录读两端和距离) | 没用 | 中 (太空时代) |
+| 21 | 图片控件的静态 sprite; 场景模拟组件 (提示里的小动画) 只回类型不展开帧 | 没用 | 低 |
+| 22 | 脚本 GUI 属性 (`gui` / `gui_fields` / `gui_depth`、选择器 `match.gui`) | 没用 | 中 (只在装模组那条路): 读 Factory Planner 这类模组界面 |
+| 23 | 单个控件取值 `collection`: 下拉选项分页 (不用打开下拉)、文字 / 提示切片、gui 表 | 没用 | 中: 选配方的下拉、读长提示 |
+| 24 | 子树选择器 + 相对深度 `max_depth` + `sibling_index` | 适配了没利用 (还是读整棵树再过滤) | 低: 读界面更快、更省 |
+| 25 | 聊天长消息切片 + 水位续读 | 没用 | 低 (聊天一般短) |
+| 26 | 键位默认全量 + 按 ID / 子串查 | 没用 (带 limit 1024 读全量) | 低 |
+
+上游同时去掉了 16 个方法, 对我们没影响: 统计类 (`get_item_production_statistics` / `get_flow_count` / `get_input_count` …, 会创建同步状态) 我们从内存读; 流体盒的 `get_capacity` / `get_connections` / `get_pipe_connections` / `get_locked_fluid` / `get_prototype` / `get_fluid_segment_contents` 在 2.1 里本来就读不到 (`LuaEntity.fluidbox` 没了, harness 走 compat21); `get_personal_logistic_slot` / `get_vehicle_logistic_point` 是 1.x 的旧接口。工具说明也改了 (给 agent 看的提示词, 例: 写明 input 能拖动、组合键); 我们的模型经 `./fh` 用行动层, 不直接看这些说明, 照着改的是行动层 (第 4 项)。
 
 ## 证据 (游戏 2.1.24, 2026-11-07, 沙盘新图)
 `test/sandbox/client.test.ts` 5/5: 起程序 + 挂上观看窗口 (status attached / in_game); 暂停着 `world_query` 玩家周围 16 格 23 个实体名字 + 位置 = RCON 真值, 玩家位置 = 角色位置; `memory_read` 位置和主背包 = 真值 (读 2 次稳定, 45 毫秒), 物品 ID 342 条; `chat_send` 的话 `chat_read` 读回来, 游戏照常走; `detach` 后窗口还连着, 程序日志没报错。旧项目在同一套代码上核过的更多: 键鼠时间线放建筑 / 取放、直接发玩家动作 (取放 1 秒级)、界面、只读查询 9 项、联机服务器上只读进世界 5 分钟不掉线 (搬动作层时在新项目重核)。
