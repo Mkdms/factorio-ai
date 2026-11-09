@@ -71,14 +71,14 @@ export function rotateTurns(from: number, to: number): number | null {
   return (((to - from) / 4) % 4 + 4) % 4;
 }
 
-/** 能按住拖着放的: 普通传送带 (地下带、分流器、水管、电线杆不拖) */
-const DRAG_ITEM = /^(?:fast-|express-|turbo-)?transport-belt$/;
+/** 能按住拖着放的: 普通传送带和水管 (地下带、地下管、分流器不拖; 电线杆不拖: 模组按接线距离算好了每根的位置, 拖着放游戏会自己挑位置) */
+const DRAG_ITEM = /^(?:(?:fast-|express-|turbo-)?transport-belt|pipe)$/;
 /** 拖一段最多几格: 角色站在段中间, 两头都在够得着的 10 格里 */
 export const DRAG_MAX = 14;
 const STEP: Record<number, [number, number]> = { 0: [0, -1], 4: [1, 0], 8: [0, 1], 12: [-1, 0] };
 
 /**
- * 逐格清单里能一口气拖着放的直线段 (纯函数): 同一种普通传送带、同方向、下一格正好在带子朝向上挨着; 每段最多 max 格, 不到 3 格不拖。
+ * 逐格清单里能一口气拖着放的直线段 (纯函数): 同一种普通传送带、同方向、下一格正好在带子朝向上挨着 (水管没有方向: 按头两格的走向, 后面一格格同一走向挨着); 每段最多 max 格, 不到 3 格不拖。
  * 回每段的 [起, 止] 下标 (从 0 数, 含两头)。拐角那格的方向是出去那段的, 所以归下一段。
  * 注入客户端的程序 0.0.11 起一条 input 时间线能按住建造键沿多段路径拖 (game/client/tools.md "Input timelines"), 原来一格一格走过去放 (沙盘 21 格)。
  */
@@ -86,7 +86,12 @@ export function dragRuns(tiles: { item: string; position: Pos; direction: number
   const runs: [number, number][] = [];
   for (let i = 0; i < tiles.length;) {
     const t = tiles[i];
-    const s = t.direction === null ? undefined : STEP[t.direction];
+    let s: [number, number] | undefined = t.direction === null ? undefined : STEP[t.direction];
+    if (t.direction === null && tiles[i + 1]) {
+      // 没方向的 (水管): 走向看下一格, 只认横平竖直挨着的
+      const dx = tiles[i + 1].position.x - t.position.x, dy = tiles[i + 1].position.y - t.position.y;
+      if ((Math.abs(Math.abs(dx) - 1) < 0.01 && Math.abs(dy) < 0.01) || (Math.abs(dx) < 0.01 && Math.abs(Math.abs(dy) - 1) < 0.01)) s = [Math.round(dx), Math.round(dy)];
+    }
     if (!s || !DRAG_ITEM.test(t.item)) { i++; continue; }
     let j = i;
     while (j + 1 < tiles.length && j - i + 1 < max) {
@@ -99,6 +104,26 @@ export function dragRuns(tiles: { item: string; position: Pos; direction: number
   }
   return runs;
 }
+
+/**
+ * 一批建筑 (./bp build 整块建) 的放置顺序 (纯函数, 稳定排序): 按物品、再按方向排 —— 少换手 (每换一种要开背包拿一次)、少转向;
+ * 同一种同方向的再按"横穿的那一维、顺着方向的那一维"排, 同一条直线上的带子挨在一起 (能拖着放), 地下带入口在出口前面。
+ * 同样的输入排出来的顺序一样, 所以 start_index 接着放不乱 (src/play/bp-online.ts 每次传同一批)。
+ */
+export function buildOrder<T extends Record<string, unknown>>(rows: T[]): T[] {
+  const dirOf = (r: T) => (typeof r.direction === "string" ? DIR_BY_NAME[r.direction] ?? 0 : typeof r.direction === "number" ? r.direction : 0);
+  const keyed = rows.map((r, idx) => {
+    const p = posOf(r.position) ?? { x: 0, y: 0 };
+    const d = dirOf(r);
+    const s = STEP[d] ?? [1, 0];
+    return { r, item: String(r.item ?? r.name ?? ""), d, cross: s[0] !== 0 ? p.y : p.x, along: p.x * s[0] + p.y * s[1], idx };
+  });
+  keyed.sort((a, b) => (a.item < b.item ? -1 : a.item > b.item ? 1 : 0) || a.d - b.d || a.cross - b.cross || a.along - b.along || a.idx - b.idx);
+  return keyed.map((k) => k.r);
+}
+
+/** 放歪了能"转手上的方向、原地再放一次"改过来的 (快速替换同名的会按手上的方向换掉): 普通带子、机械臂。地下带不行 (会把入口出口翻过来) */
+const REPLACE_TO_ROTATE = new Set(["transport-belt", "inserter"]);
 
 /** build_path 的点 → 每格带子的位置和方向 (纯函数): 只能横平竖直; 最后一格用 end_direction, 没给就接着上一段的方向。不合规矩的抛错 */
 /**
@@ -749,7 +774,7 @@ export class PlayerActions {
     let placed = 0;
     // 站到段中间旁边 2 格 (站在线上会被刚放的带子运走): 两头离角色都在 BUILD_REACH 以内 (14 格一段: √(6.5² + 2²) + 走到的误差 1.5 ≈ 8.3)
     const mid = seg[Math.floor(seg.length / 2)].position;
-    const side = seg[0].direction === 4 || seg[0].direction === 12 ? { x: mid.x, y: mid.y + 2 } : { x: mid.x + 2, y: mid.y };
+    const side = Math.abs(seg[0].position.y - seg[seg.length - 1].position.y) < 0.01 ? { x: mid.x, y: mid.y + 2 } : { x: mid.x + 2, y: mid.y };
     await this.walkInto(side, 3, true);
     // 第一格照旧放 (手上的方向对好以后, 拖出来的同一方向)
     const firstIdx = todo[0].n;
@@ -886,15 +911,34 @@ export class PlayerActions {
   }
 
   private async build(a: Record<string, unknown>) {
-    const rows = (Array.isArray(a.builds) ? a.builds.map((r) => ({ ...a, ...(r as object), builds: undefined })) : [a]) as Record<string, unknown>[];
-    if (a.dry_run === true) return this.buildCheck(rows);
+    const given = (Array.isArray(a.builds) ? a.builds.map((r) => ({ ...a, ...(r as object), builds: undefined })) : [a]) as Record<string, unknown>[];
+    if (a.dry_run === true) return this.buildCheck(given);
+    // 整块建 (一批、跳过已有的): 按物品 / 方向排, 少换手少转向; 同一直线上的普通带子挨在一起, 一段段拖着放 (buildOrder、dragRuns)
+    const batch = given.length > 1 && a.skip_existing === true;
+    const rows = batch ? buildOrder(given) : given;
+    const tiles = rows.map((r) => ({ item: String(r.item ?? r.name ?? ""), position: posOf(r.position) ?? { x: 0, y: 0 }, direction: typeof r.direction === "string" ? DIR_BY_NAME[r.direction] ?? null : null }));
+    // 带配方的 (组装机) 不进拖动段
+    const runs = batch ? new Map(dragRuns(tiles.map((t, i) => (typeof rows[i].recipe === "string" ? { ...t, item: "" } : t)))) : new Map<number, number>();
     const built: Record<string, unknown>[] = [];
+    let dragged = 0;
     const start = Math.max(1, typeof a.start_index === "number" ? a.start_index : 1);
     try {
-      for (const [i, r] of rows.entries()) {
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
         if (i + 1 < start) continue;
         // 留点时间给这一件 (放下 2.5 秒, 带配方再 4 秒): 到点回做了多少, 命令行 90 秒等不到就没回复了
-        if (rows.length > 1 && Date.now() > this.deadline - 10_000) return { consumed: built.length, built: built.length, total: rows.length, next_index: i + 1, not_done: `一条命令最多干 ${ACT_BUDGET_MS / 1000} 秒: 加 start_index: ${i + 1} 接着放` };
+        if (rows.length > 1 && Date.now() > this.deadline - 10_000) return { consumed: built.length, built: built.length, ...(dragged ? { dragged } : {}), total: rows.length, next_index: i + 1, not_done: `一条命令最多干 ${ACT_BUDGET_MS / 1000} 秒: 加 start_index: ${i + 1} 接着放` };
+        const end = runs.get(i);
+        if (end !== undefined) {
+          // 一段直线上的带子拖着放; 段里有别的东西 (dragRun 回 null) 就照下面一件件放
+          const d = await this.dragRun(tiles, i + 1, end + 1, "放", built.length);
+          if (d) {
+            for (let k = 0; k < d.built; k++) built.push({ name: tiles[i].item, position: tiles[Math.min(end, i + k)].position });
+            dragged += d.dragged;
+            i = end;
+            continue;
+          }
+        }
         const item = String(r.item ?? r.name ?? "");
         const at = posOf(r.position);
         if (!item || !at) throw new Error(`build 要 item 和 position; e.g. fh call build --args '{"item":"stone-furnace","position":{"x":1,"y":2}}'`);
@@ -934,16 +978,29 @@ export class PlayerActions {
         if (!e) throw fail(`${item} 放下后在 ${fmt(at)} 读不到 (物品名和实体名不一样? 被挡了?)`);
         const entity: Record<string, unknown> = { name: e.name, type: e.type, position: e.position, ...(e.unit_number ? { unit_number: e.unit_number } : {}) };
         if (typeof r.direction === "string" && NAME_BY_DIR[Number(e.direction ?? 0)] !== r.direction) {
-          await this.d.clearCursor();
-          // 抽水机的朝向由水岸决定, 转不了; 放上了就是成功, 只报实际朝向 (2026-11-07 Steam 版实跑: 放上了却报"转了 2 下还是朝 west", 模型以为失败)
-          if (e.type === "offshore-pump") entity.direction = `${NAME_BY_DIR[Number(e.direction ?? 0)]} (朝向由水岸决定, 要的 ${r.direction} 不算数)`;
-          else entity.rotated = await this.rotateTo(e.position, String(e.name), Number(e.direction ?? 0), r.direction);
+          const want = DIR_BY_NAME[r.direction];
+          let fixed = false;
+          // 带子 / 机械臂: 转手上的方向, 原地再放一次 (快速替换成手上的方向) —— 手上的东西不放下, 后面同方向的直接放对 (整块建按方向排过)
+          if (REPLACE_TO_ROTATE.has(String(e.type)) && want !== undefined) {
+            const turns = rotateTurns(Number(e.direction ?? 0), want);
+            if (turns) {
+              for (let k = 0; k < turns; k++) { await this.pressHand("rotate"); await (this.d.sleep ?? defaultSleep)(60); }
+              const again = await this.d.placeHeld(e.position as Pos);
+              if (again.ok && (await this.directionSettled(e.position as Pos, String(e.name), want, Number(e.direction ?? 0))) === want) { entity.rotated = `转手上方向再放 (${turns} 下)`; fixed = true; }
+            }
+          }
+          if (!fixed) {
+            await this.d.clearCursor();
+            // 抽水机的朝向由水岸决定, 转不了; 放上了就是成功, 只报实际朝向 (2026-11-07 Steam 版实跑: 放上了却报"转了 2 下还是朝 west", 模型以为失败)
+            if (e.type === "offshore-pump") entity.direction = `${NAME_BY_DIR[Number(e.direction ?? 0)]} (朝向由水岸决定, 要的 ${r.direction} 不算数)`;
+            else entity.rotated = await this.rotateTo(e.position, String(e.name), Number(e.direction ?? 0), r.direction);
+          }
         }
         if (typeof r.recipe === "string") { await this.d.clearCursor(); await this.d.setRecipe(e.position, r.recipe); entity.recipe = r.recipe; }
         built.push(entity);
       }
     } finally { await this.d.clearCursor().catch(() => undefined); }
-    return rows.length === 1 ? { consumed: built.length, entity: built[0] } : { consumed: built.length, built: built.length, total: rows.length, entities: built.slice(-6) };
+    return rows.length === 1 ? { consumed: built.length, entity: built[0] } : { consumed: built.length, built: built.length, ...(dragged ? { dragged } : {}), total: rows.length, entities: built.slice(-6) };
   }
 
   /**
@@ -991,6 +1048,8 @@ export class PlayerActions {
     const blocked: string[] = [], clear: Pos[] = [];
     const seen = new Set<string>();
     let existing = 0;
+    /** 已经放好的, 按物品数: 接着放时不该再算进要备的料 (2026-11-09 沙盘: 16 座石炉的冶炼列放了 25 件后再跑, 报缺机械臂, 什么都没放) */
+    const existingBy: Record<string, number> = {};
     if (boxes.length) {
       const area = { left_top: { x: Math.min(...boxes.map((b) => b.left)) - 0.5, y: Math.min(...boxes.map((b) => b.top)) - 0.5 }, right_bottom: { x: Math.max(...boxes.map((b) => b.right)) + 0.5, y: Math.max(...boxes.map((b) => b.bottom)) + 0.5 } };
       const here = (await readArea(this.d.call, area, ["name", "type", "position", "bounding_box"], 4096)).entities as Record<string, any>[];
@@ -1003,7 +1062,7 @@ export class PlayerActions {
         if (seen.has(key)) continue;
         seen.add(key);
         if (e.type === "tree" || e.type === "simple-entity") clear.push(e.position as Pos);
-        else if (hits.some((r) => String(r.item ?? r.name) === e.name && posOf(r.position) && Math.hypot(posOf(r.position)!.x - e.position.x, posOf(r.position)!.y - e.position.y) < 0.1)) existing++;
+        else if (hits.some((r) => String(r.item ?? r.name) === e.name && posOf(r.position) && Math.hypot(posOf(r.position)!.x - e.position.x, posOf(r.position)!.y - e.position.y) < 0.1)) { existing++; existingBy[e.name] = (existingBy[e.name] ?? 0) + 1; }
         else blocked.push(`${e.name} ${fmt(e.position as Pos)}`);
       }
     }
@@ -1011,7 +1070,7 @@ export class PlayerActions {
     const cursor = (await readPlayer(this.d.call)).cursor;
     if (cursor?.name) held[cursor.name] = (held[cursor.name] ?? 0) + (cursor.count ?? 0);
     const missing: Record<string, number> = {};
-    for (const [n, c] of Object.entries(need)) if ((held[n] ?? 0) < c) missing[n] = c - (held[n] ?? 0);
+    for (const [n, c] of Object.entries(need)) { const left = c - (existingBy[n] ?? 0); if ((held[n] ?? 0) < left) missing[n] = left - (held[n] ?? 0); }
     // 单件被挡 / 抽水机: 一起给附近放得下的位置 (问模组的 placements, 按游戏规则算的), 模型不用一格一格试
     let spots: { position?: Pos; direction?: string }[] | undefined;
     const item0 = String(rows[0]?.item ?? rows[0]?.name ?? ""), at0 = posOf(rows[0]?.position);

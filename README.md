@@ -23,6 +23,20 @@ test\       测试
 data\       本机数据, 不上传
 ```
 
+## 模型手里有什么、请求怎么走 (默认路线: 不装模组, 沙盘和联机一样)
+```
+模型 (Claude Code / Codex / …; 角色目录在仓库外, 钩子只放行白名单命令)
+ ├ 读: 简报 AGENTS.md / CLAUDE.md、notes.md (上一班实测 + 复盘)、ref/ 手册和思路、world-scan.md (开班扫描 + 要点)
+ ├ ./fh call 读命令 ───────→ 代理 (commands/broker) → 游戏外的模组宿主 (harness Lua 跑在假接口上, 数据: 读内存 game/memory + 注入客户端补)
+ ├ ./fh call 动作 ─────────→ 代理 → 行动层 (commands/actions → body / walk / gui) → 注入客户端 (键鼠时间线、直接发玩家动作、界面) → 游戏
+ ├ ./fh call mcp / belt_lanes → 代理 → 注入客户端的只读工具 (world_query / world_overview / ui_read …, 上游 factorio-mcp; 只读, 不发给服务器)
+ ├ ./calc ./plan ./bp ────→ 计算器、规划、蓝图库 (data/training-private/blueprints) → 经管道调 ./fh 的动作一件件放
+ └ ./know ───────────────→ 训练集检索 (思路 / 核实的事实 / 教训 / 资料)
+递到手上的 (不等模型想起来): 放机器时附配比和现成的块、报错附查法、做某个动作时带出对应教训、开班扫描附要点。
+程序这边: 监工 (闲了催、体检、产量播报、英文提醒)、接力换班 (存档 + 笔记 + 上一班实测 + 复盘)、记录 / 统计、界面 (app/)。
+```
+另一条路 (装模组 + RCON, `src/play/run.ts`) 是后期不要成就时的全性能备用路: harness 模组装在游戏里, 没有注入客户端, 也就没有 `./fh call mcp`。
+
 ## 怎么跑
 ```
 npm test                 # 单元测试 (不开游戏)

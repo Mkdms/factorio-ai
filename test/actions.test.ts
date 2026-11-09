@@ -1,7 +1,7 @@
 // ./fh 动作翻译成玩家操作 (commands/actions.ts, broker.ts) 的纯逻辑; 真游戏的核对是 test/sandbox/actions.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { blocksBuild, dragRuns, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, routeTiles, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
+import { blocksBuild, buildOrder, dragRuns, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, routeTiles, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
 
 test("铺线方案 → 一格格放的清单: 电线杆给位置不管方向; 带子 / 水管按 details 的 entities, 方向数字或名字都认, 水管和地下带出口端不转", () => {
   assert.deepEqual(routeTiles("pole_route", { item: "medium-electric-pole", positions: [{ x: 1.5, y: 2.5 }, "坏的", { x: 8.5, y: 2.5 }] }),
@@ -19,13 +19,38 @@ test("铺线方案 → 一格格放的清单: 电线杆给位置不管方向; �
   assert.deepEqual(routeTiles("belt_route", {}), [], "没有清单就是空的");
 });
 
-test("拖着放的段: 普通带子、同方向、顺着朝向挨着; 拐角那格归下一段; 地下带 / 水管不拖; 不到 3 格不拖; 一段最多 14 格", () => {
+test("整块建的放置顺序: 按物品、方向排 (少换手少转向), 同一直线的带子顺着方向挨着能拖, 地下带入口在出口前; 同样的输入同样的顺序", () => {
+  const rows = [
+    { item: "transport-belt", position: { x: 3.5, y: 0.5 }, direction: "east" },
+    { item: "inserter", position: { x: 1.5, y: 1.5 }, direction: "south" },
+    { item: "transport-belt", position: { x: 1.5, y: 0.5 }, direction: "east" },
+    { item: "stone-furnace", position: { x: 2, y: 3 } },
+    { item: "transport-belt", position: { x: 2.5, y: 0.5 }, direction: "east" },
+    { item: "inserter", position: { x: 1.5, y: 4.5 }, direction: "north" },
+    { item: "transport-belt", position: { x: 9.5, y: 5.5 }, direction: "west" },
+    { item: "transport-belt", position: { x: 8.5, y: 5.5 }, direction: "west" },
+    { item: "underground-belt", position: { x: 6.5, y: 0.5 }, direction: "east" },
+    { item: "underground-belt", position: { x: 4.5, y: 0.5 }, direction: "east" },
+  ];
+  const out = buildOrder(rows);
+  assert.deepEqual(out.map((r) => r.item), ["inserter", "inserter", "stone-furnace", "transport-belt", "transport-belt", "transport-belt", "transport-belt", "transport-belt", "underground-belt", "underground-belt"]);
+  assert.deepEqual(out.slice(3, 6).map((r) => r.position.x), [1.5, 2.5, 3.5], "朝东的一排从西往东");
+  assert.deepEqual(out.slice(6, 8).map((r) => r.position.x), [9.5, 8.5], "朝西的一排从东往西 (顺着方向)");
+  assert.deepEqual(out.slice(8).map((r) => r.position.x), [4.5, 6.5], "地下带入口 (上游) 在前");
+  assert.deepEqual(dragRuns(out.map((r) => ({ item: r.item, position: r.position, direction: r.direction ? ({ north: 0, east: 4, south: 8, west: 12 } as Record<string, number>)[r.direction] : null }))), [[3, 5]], "排完朝东那 3 格能拖");
+  assert.deepEqual(buildOrder([...rows].reverse()).map((r) => `${r.item}@${r.position.x},${r.position.y}`), out.map((r) => `${r.item}@${r.position.x},${r.position.y}`), "顺序只看内容, start_index 接着放不乱");
+});
+
+test("拖着放的段: 普通带子、同方向、顺着朝向挨着; 拐角那格归下一段; 地下带不拖; 水管按走向拖, 地下管切开; 不到 3 格不拖; 一段最多 14 格", () => {
   const east = Array.from({ length: 5 }, (_, i) => ({ item: "transport-belt", position: { x: i + 0.5, y: 0.5 }, direction: 4 }));
   const south = Array.from({ length: 4 }, (_, i) => ({ item: "transport-belt", position: { x: 5.5, y: i + 0.5 }, direction: 8 }));
   assert.deepEqual(dragRuns([...east, ...south]), [[0, 4], [5, 8]], "东 5 格 + 拐角起往南 4 格");
   const ug = [...east.slice(0, 2), { item: "underground-belt", position: { x: 2.5, y: 0.5 }, direction: 4 }, ...east.slice(3)];
   assert.deepEqual(dragRuns(ug), [], "地下带把段切开, 两边都不到 3 格");
-  assert.deepEqual(dragRuns(east.map((t) => ({ ...t, item: "pipe", direction: null }))), [], "水管不拖");
+  const pipes = east.map((t) => ({ ...t, item: "pipe", direction: null as number | null }));
+  assert.deepEqual(dragRuns(pipes), [[0, 4]], "一排水管按走向拖");
+  assert.deepEqual(dragRuns([...pipes.slice(0, 2), { item: "pipe-to-ground", position: { x: 2.5, y: 0.5 }, direction: 12 }, ...pipes.slice(3), { item: "pipe", position: { x: 5.5, y: 0.5 }, direction: null }, { item: "pipe", position: { x: 5.5, y: 1.5 }, direction: null }]), [[3, 5]], "地下管切开; 拐弯以后另算");
+  assert.deepEqual(dragRuns([{ item: "small-electric-pole", position: { x: 0.5, y: 0.5 }, direction: null }, { item: "small-electric-pole", position: { x: 1.5, y: 0.5 }, direction: null }, { item: "small-electric-pole", position: { x: 2.5, y: 0.5 }, direction: null }]), [], "电线杆不拖");
   assert.deepEqual(dragRuns([east[0], east[2], east[3], east[4]]), [[1, 3]], "中间断了一格: 后面 3 格是一段");
   assert.deepEqual(dragRuns(east.map((t) => ({ ...t, direction: 12 }))), [], "朝西却往东排 (不是顺着朝向挨着) 不拖");
   const long = Array.from({ length: 30 }, (_, i) => ({ item: "fast-transport-belt", position: { x: i + 0.5, y: 0.5 }, direction: 4 }));

@@ -634,7 +634,13 @@ test("接线: pipe_route 水管 (可用地下管), 角色一格格放", () => ch
   await give({ pipe: 40, "pipe-to-ground": 6 });
   const r = await act("pipe_route", { from: P(0, 44), to: P(14, 44) }, "--wait");
   const n = (await countIn("pipe", P(-1, 43), P(15, 45))) + (await countIn("pipe-to-ground", P(-1, 43), P(15, 45)));
-  return { pass: !!r.ok && n >= 3, seen: `管子 ${n} 件; ${seenOf(r)}` };
+  // 连通: 这段管子 (含地下管) 是一个流体系统 (直线段拖着放, 2026-11-09 起)
+  const systems = await truth<number>(`local a = ... local ids = {} local n = 0
+    for _, e in pairs(game.surfaces[1].find_entities_filtered{area = {{a.x0, a.y0}, {a.x1, a.y1}}, name = {"pipe", "pipe-to-ground"}}) do
+      local ok, id = pcall(function() return e.get_fluid_segment_id(1) end) if not ok then return -1 end
+      if id and not ids[id] then ids[id] = true n = n + 1 end end
+    return n`, { x0: P(-1, 43).x, y0: P(-1, 43).y, x1: P(15, 45).x, y1: P(15, 45).y }).catch(() => -1);
+  return { pass: !!r.ok && n >= 3 && (systems === 1 || systems === -1), seen: `管子 ${n} 件, 流体系统 ${systems} 个, 拖着放 ${Number((r.result as { dragged?: number } | undefined)?.dragged ?? 0)} 件; ${seenOf(r)}` };
 }));
 test("接线: place_ghosts 直接放实物; construct 按现有的虚影放实物", () => check(async () => {
   await give({ "stone-furnace": 4, "wooden-chest": 4 });
@@ -726,4 +732,32 @@ test("看带子每道: belt_lanes 一格分左右道报物品和个数 (对 RCON
   const areaBelt = area.result?.belts?.[0] as { lanes?: Record<string, { 位置?: unknown }> } | undefined;
   const pass = !!one.ok && belt?.朝向 === "东" && lc === put.left && rc === put.right && Array.isArray(left?.位置) && left.位置.length === put.left && !!area.ok && areaBelt?.lanes?.["左道"]?.位置 === undefined;
   return { pass, seen: `真值 左 ${put.left} 右 ${put.right}; 读到 左 ${lc} 右 ${rc}, 朝向 ${belt?.朝向}; 一格 ${seenOf(one).slice(0, 300)}; 一片 ${seenOf(area).slice(0, 160)}` };
+}));
+test("积累: 默认路线的 ./calc、./plan、./bp list、./bp build (整块建到放完, 真值数件数) 跑通", () => check(async () => {
+  // 和角色目录的 ./calc ./plan ./bp 同样的环境 (core/run/workspace.ts toolEnv): 管道 + FH_ONLINE + 名单目录
+  const env = { ...process.env, FH_SOCKET: pipe, FH_ONLINE: "1", FH_PROTO: lab.prototypesDir(), PYTHONUTF8: "1" };
+  const run = (script: string[], args: string[]) => execFileAsync(process.execPath, [`--env-file-if-exists=${path.join(ROOT, ".env")}`, path.join(ROOT, ...script), ...args], { cwd: work, env, encoding: "utf8", timeout: 300_000, windowsHide: true, maxBuffer: 16 << 20 })
+    .then((r) => ({ code: 0, out: r.stdout }), (e: { code?: number; stdout?: string; stderr?: string }) => ({ code: typeof e.code === "number" ? e.code : 1, out: `${e.stdout ?? ""}${e.stderr ?? ""}` }));
+  fs.writeFileSync(path.join(work, ".calc-plan.json"), JSON.stringify({ targets: { "automation-science-pack": 30 } }));
+  const calc = await run(["src", "calc", "cli.ts"], [path.join(work, ".calc-plan.json")]);
+  const plan = await run(["src", "play", "plan.ts"], ["automation-science-pack", "10"]);
+  const list = await run(["src", "play", "bp.ts"], ["list", "冶炼列"]);
+  // 整块建: 1 号块 (16 座石炉的冶炼列, 114 件), 料给够; 一条命令放不完会说 --start, 照着接着跑
+  await clearArea(50, -14, 74, 14);
+  await give({ "transport-belt": 60, inserter: 34, "stone-furnace": 18, "small-electric-pole": 14 });
+  const at = P(62, 0);
+  const t0 = Date.now();
+  let build = { code: 2, out: "" }, calls = 0, start: string | undefined;
+  const outs: string[] = [];
+  for (; calls < 12 && build.code === 2; calls++) {
+    build = await run(["src", "play", "bp.ts"], ["build", "1", "--at", `${at.x},${at.y}`, ...(start ? ["--start", start] : [])]);
+    outs.push(build.out.trim().split("\n").slice(-2).join(" / "));
+    start = /--start (\d+)/.exec(build.out)?.[1];
+  }
+  const secs = (Date.now() - t0) / 1000;
+  const a = P(48, -14), b = P(76, 14);
+  const got = { furnace: await countIn("stone-furnace", a, b), inserter: await countIn("inserter", a, b), belt: await countIn("transport-belt", a, b), pole: await countIn("small-electric-pole", a, b) };
+  const pass = calc.code === 0 && /组装机|assembling-machine/.test(calc.out) && plan.code === 0 && list.code === 0 && /冶炼列/.test(list.out) && build.code === 0
+    && got.furnace === 16 && got.inserter === 32 && got.belt === 54 && got.pole === 12;
+  return { pass, seen: `./calc ${calc.code} ${calc.out.split("\n").find((l) => /台数/.test(l)) ? "有配比表" : calc.out.slice(0, 120)}; ./plan ${plan.code} ${plan.out.trim().split("\n").slice(0, 3).join(" / ").slice(0, 300)}; ./bp list ${list.code}; ./bp build ${calls} 条命令 ${secs.toFixed(0)} 秒, 最后退出码 ${build.code}: ${outs.join(" | ").slice(0, 700)}; 真值 石炉 ${got.furnace}/16 机械臂 ${got.inserter}/32 带子 ${got.belt}/54 电线杆 ${got.pole}/12` };
 }));
