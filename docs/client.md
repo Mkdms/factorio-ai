@@ -50,11 +50,11 @@ TypeScript 里用 `game/client/connect.ts` 的 `GameClient`: `start()` 起程序
 
 | # | 能力 | 我们用了吗 | 价值 / 用在哪 |
 |---|---|---|---|
-| 1 | 批量相对读 `query.reads`: 对选中的每个实体 / 玩家 / 背包格 / 目录项跟一串相对路径, 同一个安全点, 一条错不影响其余 (例: 一个区域一万台机器的配方 + 输出箱 + 插件一次读完) | 没用 (只在假接口里拿它兜底表的条目) | 高: 开班扫描、status、放机器提示、体检, 现在是一类一次往返 |
-| 2 | 原生实体过滤 `selection.filters` (EntitySearchFilters: 虚影名、待拆除、品质、装着某物品、势力…) | 没用 | 高: 找虚影 / 待拆 / 缺料的箱子不用先读全区再筛 |
+| 1 | 批量相对读 `query.reads`: 对选中的每个实体 / 玩家 / 背包格 / 目录项跟一串相对路径, 同一个安全点, 一条错不影响其余 (例: 一个区域一万台机器的配方 + 输出箱 + 插件一次读完) | 没用 (只在假接口里拿它兜底表的条目) | 高: 假接口补内存读不到的 (流体、红绿线、物流点) 现在一个实体一次往返 (约 30 毫秒, 20 处), 改成按区域一次读; 配方 / 箱子内容这些内存已经读得到, 不靠它 |
+| 2 | 原生实体过滤 `selection.filters` (EntitySearchFilters: 虚影名、待拆除、品质、装着某物品、势力…) | 没用 | 低: 不装模组那条路找实体走读内存 (假接口自己实现 find_entities_filtered), 经注入客户端的实体查询只有寻路读障碍、开枪找敌人几处, 用不上 |
 | 3 | 传送带每条道上每个物品的位置 (`get_detailed_contents` / `get_item_position` / `get_line_item_position`) | 没用 | 高: 模型要过"一条命令看某条带子某道上有什么", 查堵带 / 混带 |
 | 4 | 一条输入时间线做组合键、按住拖多段带拐弯、每格停留 (`per_point_ticks`、`snap: tile_center`) | 适配了没利用 (Timeline 有拖动写法, 行动层没调; 铺带一格一格放) | 高: belt_route / pole_route 一次拖完一段 |
-| 5 | `set_text` 上限 1024 → 16384 字 | 没用 (还按 1024 切, 超了走剪贴板, 会覆盖用户的剪贴板) | 高, 改一个常数: 贴蓝图串基本不再碰剪贴板 |
+| 5 | `set_text` 上限 1024 → 16384 字 | 没用 (还按 1024 切, 超了走剪贴板) | 现在为零: 不装模组那条路的贴蓝图 (`importBlueprint` / `importModes`) 没有调用方 (./bp build 没接进这条路); 接上时把门槛改到 16384, 基本不碰用户的剪贴板 |
 | 6 | 按品质的原型数值 (机器 `get_crafting_speed` / `get_max_energy_usage` / `get_inventory_size` / `get_mining_drill_radius` / `get_researching_speed` / `get_supply_area_distance`; 物品 `get_spoil_ticks` / `get_module_effects` / `get_ammo_type`; 配方 `get_product_amount` / `get_product_quality`) | 没用 (按导出的原型数据算, 没有品质) | 中: 计算器 / 配比用到品质时 |
 | 7 | 地表方法 (`get_tile` / `get_hidden_tile` / `count_entities_filtered` / `count_tiles_filtered` / `get_property` 星球属性 / `get_chunks` / `is_chunk_generated` / 按位置找物流网) | 没用 | 中: 数矿、数水、找物流网, 去别的星球读重力 / 气压 |
 | 8 | 火车 (`game.train_manager` 的列车 / 车站, 时刻表的记录 / 等待条件 / 中断) | 没用 | 中: 火车那批 (还没接) 先能读 |
