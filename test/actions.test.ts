@@ -1,6 +1,33 @@
 // ./fh 动作翻译成玩家操作 (commands/actions.ts, broker.ts) 的纯逻辑; 真游戏的核对是 test/sandbox/actions.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { recipeFacts } from "../commands/actions.ts";
+import { withDefaults } from "../commands/broker.ts";
+
+test("配方事实: 类别没写 = crafting; 角色能手搓的类别; 开局有没有; 哪些科技解锁 (排序)", () => {
+  const raw = {
+    character: { character: { crafting_categories: ["crafting", "hand-crafting"] } },
+    recipe: { "iron-gear-wheel": {}, "fast-transport-belt": { enabled: false }, "plastic-bar": { categories: ["chemistry", "cryogenics"], enabled: false }, "old-style": { category: "chemistry" } },
+    technology: { "logistics-2": { effects: [{ type: "unlock-recipe", recipe: "fast-transport-belt" }] }, "plastics": { effects: [{ type: "unlock-recipe", recipe: "plastic-bar" }] }, "x": { effects: [{ type: "unlock-recipe", recipe: "fast-transport-belt" }] } },
+  };
+  assert.deepEqual(recipeFacts(raw, "iron-gear-wheel"), { exists: true, handable: true, category: "crafting", enabledAtStart: true, unlockedBy: [] });
+  assert.deepEqual(recipeFacts(raw, "fast-transport-belt").unlockedBy, ["logistics-2", "x"]);
+  assert.equal(recipeFacts(raw, "fast-transport-belt").enabledAtStart, false);
+  assert.equal(recipeFacts(raw, "plastic-bar").handable, false, "2.1 的 categories (列表)");
+  assert.equal(recipeFacts(raw, "plastic-bar").category, "chemistry / cryogenics");
+  assert.equal(recipeFacts(raw, "old-style").handable, false, "旧的 category 也认");
+  assert.equal(recipeFacts(raw, "nope").exists, false);
+});
+
+test("technologies 不带参数默认只列现在能研究的 (原来一页 25 KB); 带参数的、别的命令原样", () => {
+  const d = withDefaults({ raw: '{"id":"1","action":"technologies","args":{}}', request: { id: "1", action: "technologies", args: {} } });
+  assert.deepEqual(d.request.args, { available: true });
+  assert.deepEqual(JSON.parse(d.raw).args, { available: true }, "转给模组宿主的原文也改了");
+  const named = { raw: '{"action":"technologies","args":{"name":"automation"}}', request: { action: "technologies", args: { name: "automation" } } };
+  assert.equal(withDefaults(named), named);
+  const other = { raw: '{"action":"recipes"}', request: { action: "recipes" } };
+  assert.equal(withDefaults(other), other);
+});
 import { blocksBuild, buildOrder, dragRuns, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, routeTiles, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
 
 test("铺线方案 → 一格格放的清单: 电线杆给位置不管方向; 带子 / 水管按 details 的 entities, 方向数字或名字都认, 水管和地下带出口端不转", () => {

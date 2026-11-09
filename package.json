@@ -15,8 +15,8 @@
   },
   "scripts": {
     "test": "node --env-file-if-exists=.env --test --test-timeout=30000 \"test/*.test.ts\"",
-    "test:sandbox": "node --env-file-if-exists=.env --test --test-timeout=3600000 \"test/sandbox/*.test.ts\"",
-    "test:sandbox-v2": "node --env-file-if-exists=.env --test --test-timeout=3600000 \"test/sandbox-v2/*.test.ts\"",
+    "test:sandbox": "node --env-file-if-exists=.env --test --test-concurrency=1 --test-timeout=3600000 \"test/sandbox/*.test.ts\"",
+    "test:sandbox-v2": "node --env-file-if-exists=.env --test --test-concurrency=1 --test-timeout=3600000 \"test/sandbox-v2/*.test.ts\"",
     "sandbox:demo": "node --env-file-if-exists=.env game/sandbox/cli.ts demo",
     "memory:setup": "node --env-file-if-exists=.env game/memory/setup.ts",
     "offgame:setup": "node --env-file-if-exists=.env game/offgame/setup.ts",

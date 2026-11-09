@@ -303,6 +303,39 @@ export class Body extends ClientTarget {
     return { name: a.name, count: Number(a.count ?? 0), ...(typeof a.item_number === "number" && a.item_number > 0 ? { number: a.item_number } : {}) };
   }
 
+  /** 这个实体是不是机器 (不是箱子一类): 机器的物品栏每种料有自己的格子 */
+  async #isMachine(at: Pos): Promise<boolean> {
+    const target = await this.#entityTarget(at);
+    const r = await this.mcp.call("world_query", { selection: { kind: "inspect", target }, fields: ["type"] });
+    const t = r.ok ? (r.data as { objects?: { attributes?: { type?: unknown } }[] })?.objects?.[0]?.attributes?.type : undefined;
+    return typeof t === "string" && !/container|wagon|car|spider-vehicle|character-corpse/.test(t);
+  }
+
+  /**
+   * 机器里这种物品该进第几格 (0 起; 不知道回 -1): 研究中心按原型的 lab_inputs 顺序 (一种瓶子一格), 组装机 / 炉子的原料格按当前配方的物品原料顺序。
+   * 一次查询 (批量相对读): 原型的 lab_inputs 和 get_recipe 的 ingredients
+   */
+  async #machineSlot(at: Pos, inv: number, item: string): Promise<number> {
+    const target = await this.#entityTarget(at);
+    const r = await this.mcp.call("world_query", { selection: { kind: "inspect", target }, fields: ["type"], reads: [{ path: [{ property: "prototype" }, { property: "lab_inputs" }] }, { path: [{ method: "get_recipe" }], fields: ["ingredients"] }] });
+    if (!r.ok) return -1;
+    const o = (r.data as { objects?: { attributes?: { type?: string }; reads?: { value?: unknown; attributes?: { ingredients?: unknown } }[] }[] })?.objects?.[0];
+    const list = (v: unknown) => (Array.isArray(v) ? v : v && typeof v === "object" ? Object.values(v as Record<string, unknown>) : []);
+    // 按实体类型分: defines.inventory 里研究中心的原料格和组装机的原料格是同一个编号 (2.1.24 都是 2), 按编号分会把组装机当成研究中心
+    const type = String(o?.attributes?.type ?? "");
+    if (type === "lab" && inv === this.defines?.inventory?.lab_input) {
+      const inputs = list(o?.reads?.[0]?.value).filter((x): x is string => typeof x === "string");
+      return inputs.indexOf(item);
+    }
+    if (inv === this.defines?.inventory?.crafter_input && /assembling-machine|furnace|rocket-silo/.test(type)) {
+      const items = list(o?.reads?.[1]?.attributes?.ingredients).filter((x) => (x as { type?: string })?.type !== "fluid").map((x) => String((x as { name?: unknown })?.name ?? ""));
+      const k = items.indexOf(item);
+      if (k < 0) console.error(`  [直接动作] 配方原料里没找到 ${item}: ${JSON.stringify(o?.reads?.[1] ?? o).slice(0, 600)}`);
+      return k;
+    }
+    return -1; // 燃料格、炮塔弹药格这类单格的不用定
+  }
+
   /** 找实体物品栏里第一个满足条件的格子 (0 起的格号, 给动作用); 没有返回 -1。第 1 格就读不到 = 查询本身有问题, 抛出去 */
   async #findEntitySlot(at: Pos, inv: number, pick: (s: { name: string; count: number } | null) => boolean, max = 48): Promise<{ slot: number; stack: { name: string; count: number; number?: number } | null }> {
     const target = await this.#entityTarget(at);
@@ -360,8 +393,19 @@ export class Body extends ClientTarget {
       }
     }
     if (mine < 0) throw new Error(`背包里没有一组 ≥ ${count} 个的 ${item}`);
-    // 目标格: 先找空格, 没有再找同种物品的格 (满了放不进去由读回发现)
-    let found = await this.#findEntitySlot(at, inv, (s) => !s);
+    // 目标格。箱子: 先找空格, 没有再找同种物品的格 (满了放不进去由读回发现)。
+    // 机器 (研究中心、组装机、炉子、炮塔…): 每种料有自己的格子, 先找已经放着这种东西的格, 再按机器的格子顺序 (研究中心按瓶子种类、组装机按配方原料) 定格, 最后才挑空格。
+    // 原来一律挑第一个空格: 游戏把东西放进它该去的那格, 我们一直盯着挑的那格读, 最后一下打在空格上被拒 (真跑 11-08: 研究中心 7 个进 6 个、红瓶组装机 40 个齿轮进 39 个; 沙盘复现 0/40)
+    const chestLike = inv === (this.defines?.inventory?.chest ?? 1) && !(await this.#isMachine(at));
+    let found = { slot: -1, stack: null as { name: string; count: number; number?: number } | null };
+    if (!chestLike) {
+      found = await this.#findEntitySlot(at, inv, (s) => !!s && s.name === item);
+      if (found.slot < 0) {
+        const fixed = await this.#machineSlot(at, inv, item);
+        if (fixed >= 0) { const s = await this.#entitySlot(at, inv, fixed + 1).catch(() => null); if (!s || s.name === item) found = { slot: fixed, stack: s }; }
+      }
+    }
+    if (found.slot < 0) found = await this.#findEntitySlot(at, inv, (s) => !s);
     if (found.slot < 0) found = await this.#findEntitySlot(at, inv, (s) => !!s && s.name === item);
     if (found.slot < 0) {
       const first = await this.#entitySlot(at, inv, 1).catch(() => null);
@@ -369,6 +413,7 @@ export class Body extends ClientTarget {
     }
     const { slot } = found;
     const existing = found.stack?.count ?? 0;
+    console.error(`  [直接动作] 目标: 物品栏 ${inv} 第 ${slot + 1} 格 (${found.stack ? `${found.stack.name}×${found.stack.count}` : "空"}), ${chestLike ? "箱子" : "机器"}`);
     return this.#input(async () => {
       const trace: unknown[] = [];
       let r = { given: 0, cur: existing, sent: 0, rounds: 0 };
@@ -380,6 +425,8 @@ export class Body extends ClientTarget {
         if (!held.ok) throw new Error(`没拿到手 (背包第 ${mine + 1} 格 ${item}, 等了 ${held.ticks} tick): ${JSON.stringify(held.p)}`);
         r = await this.#splitUntil(at, inv, slot, existing, count, id, own.item_number !== undefined, inHandOf(held.p));
       } finally { trace.push(await this.#closeGui()); }
+      // 一个都没放进、那格本来就有东西: 多半是满了或这格不收 (真跑 11-08: 燃料格已有 50 块煤还要加 4 块, 报"放了 4 轮还不对", 模型看不懂)
+      if (r.given === 0 && existing > 0) throw new Error(`一个都放不进: 实体第 ${slot + 1} 格已经有 ${existing} 个 ${found.stack?.name ?? item} (满了, 或这格不收 ${item}); 先取出来或放别处`);
       if (r.given < count) throw new Error(`放了 ${r.rounds} 轮还不对: 手上只少了 ${r.given} 个 (要 ${count}), 那格 ${r.cur} 个, 发了 ${r.sent} 次右键`);
       return { direct: true, playerSlot: mine, entitySlot: slot, given: r.given, entitySlotNow: r.cur, sent: r.sent, rounds: r.rounds, trace };
     });

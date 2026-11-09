@@ -81,7 +81,7 @@
   machine making it (the first 48): `full_per_min` (full speed, as `inspect`) beside `measured_per_min`, what it made
   by its own crafts counter over `measured_over` (10-20 min; "not counted yet" for a machine the harness's background
   count has not reached).
-- `technologies {name? | prefix?, level?, available?, limit?}`: each technology's `effects` as the research screen lists them
+- `technologies {name? | prefix?, level?, available?, limit?}` (with no arguments: only the technologies you can research now, as `available: true`; `{"available": false}` pages through all of them): each technology's `effects` as the research screen lists them
   (recipes unlocked, places, qualities, modifiers such as `ammo-damage (bullet) +40%` or `low-density-structure
   productivity +10%`) and, for one with levels, `next_level` ("level 8 adds ...; N units"). Each one not researched:
   `progress`, `takes` (the time it alone would take at the labs' rate measured over the last minute, as the research

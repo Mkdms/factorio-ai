@@ -176,12 +176,17 @@ return function(api)
       elseif not ghost and not r.h then
         parts[#parts+1] = 'built from it since (robots or a hand: the harness does not see which)'
       end
+    elseif lu then
+      -- (factorio-ai, 2026-11-09) no harness record but the game keeps a last user: say who, not "unknown". On the route
+      -- without mods the hands are outside the harness (a player's own input), so its record never sees those builds.
+      out.by = lu
+      parts[1] = string.format('by %s (the game\'s last user; the harness has no record of placing %s here)', lu, ghost and 'this ghost' or 'it')
     else
       out.unknown = true
       parts[1] = string.format('unknown: no harness record of placing %s here (the record began %s ago, at tick %d, and keeps the last %d placements); placed before then, by the game (the ghost of a destroyed entity) or by a player',
         ghost and 'this ghost' or 'it or its ghost', ago(game.tick - L.since), L.since, MAX)
     end
-    if lu then parts[#parts+1] = 'the game\'s last user: ' .. lu end
+    if lu and r then parts[#parts+1] = 'the game\'s last user: ' .. lu end
     out.line = table.concat(parts, '; ')
     return out
   end

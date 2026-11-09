@@ -153,7 +153,8 @@ def main() -> int:
 
     # 注入客户端的 Lua 补内存读不到的 (--lua): 假接口要的时候, 经标准输出问代理, 代理调注入客户端的只读查询 world_query (只开放被动查询) 再写回标准输入。
     # 一次约 30 毫秒, 要挡一点游戏帧, 所以: 3 秒内同样的问题不再问; 一次提问最多问 LUA_BUDGET 条; 后台任务只看缓存, 不发新查询。
-    lua_state = {"budget": {}, "background": False, "seq": 0, "cache": {}, "reads": 0, "hits": 0, "over": 0, "ms": 0.0, "errors": 0, "last_error": None, "top": {}}
+    # over = 没问的总数; 拆开: over_bg 后台任务 (本来就只看缓存, 不算缺), over_budget 模型提问时这一类的额度用完了 (真缺了, over_top 按问的是什么数)
+    lua_state = {"budget": {}, "background": False, "seq": 0, "cache": {}, "reads": 0, "hits": 0, "over": 0, "over_bg": 0, "over_budget": 0, "over_top": {}, "ms": 0.0, "errors": 0, "last_error": None, "top": {}}
     q = None  # --serve 时才有 (标准输入的队列)
     deferred: list = []  # 等回复时读到的别的请求
 
@@ -165,15 +166,23 @@ def main() -> int:
         if hit and now - hit[0] < LUA_TTL:
             lua_state["hits"] += 1
             return to_lua(lua, hit[1])
+        def label_of(r: str) -> str:
+            p = json.loads(r)
+            s = p.get("selection") or {}
+            st = (s.get("path") or [{}])[-1]
+            return str(st.get("method") or st.get("property") or ",".join(p.get("fields") or []) or s.get("kind"))
         if lua_state["background"] or lua_state["budget"].get(kind, 0) <= 0:
             lua_state["over"] += 1
+            if lua_state["background"]:
+                lua_state["over_bg"] += 1
+            else:
+                lua_state["over_budget"] += 1
+                lb = f"{kind}:{label_of(req)}"
+                lua_state["over_top"][lb] = lua_state["over_top"].get(lb, 0) + 1
             return None
         lua_state["budget"][kind] -= 1
         lua_state["reads"] += 1
-        parsed = json.loads(req)
-        sel = parsed.get("selection") or {}
-        step = (sel.get("path") or [{}])[-1]
-        label = str(step.get("method") or step.get("property") or ",".join(parsed.get("fields") or []) or sel.get("kind"))
+        label = label_of(req)
         lua_state["top"][label] = lua_state["top"].get(label, 0) + 1
         lua_state["seq"] += 1
         seq = lua_state["seq"]

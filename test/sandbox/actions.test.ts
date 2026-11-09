@@ -19,7 +19,7 @@ import { clientReady } from "../../game/client/connect.ts";
 import { CommandBroker } from "../../commands/broker.ts";
 import { Body } from "../../commands/body.ts";
 import { closeWindows, openCharacterGui, readTree } from "../../commands/gui.ts";
-import { PlayerActions } from "../../commands/actions.ts";
+import { PlayerActions, recipeFacts } from "../../commands/actions.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const execFileAsync = promisify(execFile);
@@ -106,7 +106,7 @@ before(async () => {
     call: target.call, controls: () => target.controls!, defines: () => target.defines, tick: () => target.tick(),
     holdItem: (i) => target.holdItem(i), placeHeld: (at) => target.placeHeld(at), clearCursor: () => target.clearCursor(), ensureBody: () => target.ensureBody(), setRecipe: (at, r) => target.setRecipe(at, r),
     insertExact: (at, i, n, inv) => target.insertExactDirect(at, i, n, inv), takeExact: (at, i, n, inv) => target.takeExactDirect(at, i, n, inv), itemCount: (at, inv, i) => target.entityItemCount(at, inv, i),
-    stacks: () => target.inventorySlots(), chatSend: (t) => target.chatSend(t), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
+    stacks: () => target.inventorySlots(), chatSend: (t) => target.chatSend(t), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null), recipeInfo: (r) => recipeFacts(raw as never, r),
     assist: { me: home.name, allowed: (at) => assistAllow.some((p) => Math.hypot(p.x - at.x, p.y - at.y) < 0.6) },
     // 放不下时问模组 placements (和 core/run/online.ts 同一个接法; 代理在下面才建)
     read: (a, args, act) => (broker ? broker.read(a, args, act) : Promise.resolve(null)),
@@ -760,4 +760,53 @@ test("积累: 默认路线的 ./calc、./plan、./bp list、./bp build (整块�
   const pass = calc.code === 0 && /组装机|assembling-machine/.test(calc.out) && plan.code === 0 && list.code === 0 && /冶炼列/.test(list.out) && build.code === 0
     && got.furnace === 16 && got.inserter === 32 && got.belt === 54 && got.pole === 12;
   return { pass, seen: `./calc ${calc.code} ${calc.out.split("\n").find((l) => /台数/.test(l)) ? "有配比表" : calc.out.slice(0, 120)}; ./plan ${plan.code} ${plan.out.trim().split("\n").slice(0, 3).join(" / ").slice(0, 300)}; ./bp list ${list.code}; ./bp build ${calls} 条命令 ${secs.toFixed(0)} 秒, 最后退出码 ${build.code}: ${outs.join(" | ").slice(0, 700)}; 真值 石炉 ${got.furnace}/16 机械臂 ${got.inserter}/32 带子 ${got.belt}/54 电线杆 ${got.pole}/12` };
+}));
+test("transfer 给正在消耗的机器 (烧着的炉子加煤、炼着的炉子加矿、炮塔装弹): 数对, 不报'几轮还不对'", () => check(async () => {
+  // 考场: 一座正在炼铁的石炉 (有矿有煤, 燃烧器里烧着)、一座空炮塔; 模型笔记里 77 次取放 6 次报"放了 4 轮还不对", 几乎都差正好 1 个
+  const f = P(44, 80), t = P(48, 80);
+  await truth(`local a = ... local s = game.surfaces[1]
+    local fu = s.create_entity{name = "stone-furnace", position = a.f, force = "player"}
+    fu.get_inventory(defines.inventory.crafter_input).insert{name = "iron-ore", count = 20}
+    fu.get_inventory(defines.inventory.fuel).insert{name = "coal", count = 1}
+    s.create_entity{name = "gun-turret", position = a.t, force = "player"} return true`, { f, t });
+  await give({ coal: 20, "iron-ore": 20, "firearm-magazine": 20 });
+  await sleep(1500); // 燃烧器吃掉那 1 块煤, 燃料格空了; 炉子在炼
+  const results: string[] = [];
+  let pass = true;
+  // 多格子的机器 (真跑 11-08 修过以后还错的 2 次): 做红瓶的组装机加齿轮 (原料格按配方分格)、研究中心加红瓶 (按瓶子种类分格), 研究中心第二次是已经有瓶子了再加
+  const m = P(52, 80), l = P(57, 80);
+  await truth(`local a = ... local s = game.surfaces[1]
+    local am = s.create_entity{name = "assembling-machine-1", position = a.m, force = "player"} am.set_recipe("automation-science-pack")
+    s.create_entity{name = "lab", position = a.l, force = "player"} return true`, { m, l });
+  await give({ "iron-gear-wheel": 50, "automation-science-pack": 20 });
+  for (const [what, pos, item, count] of [["烧着的炉子加煤", f, "coal", 5], ["炼着的炉子加矿", f, "iron-ore", 10], ["炮塔装弹", t, "firearm-magazine", 10], ["红瓶组装机加齿轮", m, "iron-gear-wheel", 40], ["研究中心加红瓶", l, "automation-science-pack", 7], ["研究中心再加红瓶", l, "automation-science-pack", 5]] as const) {
+    const before = await myCount(item);
+    const r = await act("transfer", { position: pos, direction: "to_entity", item, count, walk: true });
+    const moved = before - (await myCount(item));
+    results.push(`${what}: 背包少 ${moved}/${count} ${r.ok ? "" : seenOf(r).slice(0, 220)}`);
+    if (!r.ok || moved !== count) pass = false;
+  }
+  return { pass, seen: results.join(" | ") };
+}));
+test("模型报过的: 手搓没研究的配方说哪项科技解锁、手搓不了的说要进机器; technologies 不带参数只列现在能研究的", () => check(async () => {
+  const locked = await act("craft", { recipe: "fast-transport-belt", count: 1 });
+  const chem = await act("craft", { recipe: "plastic-bar", count: 1 });
+  const techs = await act("technologies", {});
+  const size = JSON.stringify(techs.result ?? {}).length;
+  const entries = ((techs.result?.entries ?? []) as { researched?: boolean }[]);
+  const lockedMsg = locked.ok ? "" : String(locked.error?.message ?? "");
+  const chemMsg = chem.ok ? "" : String(chem.error?.message ?? "");
+  const pass = !locked.ok && /由科技 logistics-2 解锁 \(logistics-2 没研究\)/.test(lockedMsg) && /research --args/.test(lockedMsg) && !chem.ok && /手搓不了/.test(chemMsg) && !!techs.ok && entries.length > 0 && entries.every((e) => e.researched === false) && size < 25_000;
+  return { pass, seen: `快速带: ${lockedMsg.split("\n")[0].slice(0, 220)} | 塑料: ${chemMsg.split("\n")[0].slice(0, 160)} | technologies ${entries.length} 项 ${size} 字` };
+}));
+test("模型报过的 (11-06 版本): ./fh view 不报 find_tiles_filtered 是空的; inspect 自己刚放的木箱不显示 unknown", () => check(async () => {
+  await give({ "wooden-chest": 2 });
+  const at = P(4, 90);
+  const b = await act("build", { item: "wooden-chest", position: at, walk: true });
+  const ins = await act("inspect", { position: at });
+  const view = await fh("view", "--out", path.join(work, "view.png"));
+  const insText = JSON.stringify(ins.result ?? ins.error ?? {});
+  const viewText = JSON.stringify(view.result ?? view.error ?? {});
+  const pass = !!b.ok && !!ins.ok && /wooden-chest/.test(insText) && !/unknown/i.test(insText) && !/find_tiles_filtered/.test(viewText) && !!view.ok;
+  return { pass, seen: `inspect ${insText.slice(0, 400)} | view ${view.ok ? "ok" : ""} ${viewText.slice(0, 300)}` };
 }));

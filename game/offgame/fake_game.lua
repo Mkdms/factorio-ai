@@ -64,7 +64,12 @@ local function lua_wrap(v, target, path)
     local o = lua_inspect(target, path, {"name", "type", "unit_number", "position"})
     return lua_entity_ref(o and o.attributes or v)
   end
-  if v.observation == "reference" and v.object_name then return remote_object(target, path, v.object_name) end
+  if v.observation == "reference" and v.object_name then
+    -- 引用里自带的身份字段 (注入客户端 0.0.11: name / index / id / unit_number / valid) 直接放上, 读名字不用再问一次
+    local o = remote_object(target, path, v.object_name)
+    for _, k in ipairs({"name", "index", "id", "unit_number"}) do if v[k] ~= nil then rawset(o, k, v[k]) end end
+    return o
+  end
   local out = {}
   for k, x in pairs(v) do out[k] = lua_wrap(x, target, path_plus(path, {index = k})) end
   return out
@@ -764,7 +769,9 @@ function G.operable() return true end
 function G.rotatable() return true end
 function G.destructible() return true end
 function G.minable() return true end
-function G.last_user() note("读不到:last_user") return nil end
+-- 谁最后动过它 (游戏自己记的 last_user): 内存没读, 问注入客户端 (只读属性)。不装模组那条路上放东西的是我们的行动层, harness 自己的放置记录里没有,
+-- 原来这里回 nil, inspect 自己刚放的木箱显示 "placed unknown" (模型 11-06 笔记报过, 2026-11-09 沙盘复现)
+function G.last_user(e, r) local v = lua_attr(r, "last_user") if v == nil then note("读不到:last_user") end return v end
 -- 流体盒个数只看原型和配方, 同一种问一次就记住 (不然 status 一轮几十条查询)
 local fluid_counts = {}
 function G.fluids_count(e, r)

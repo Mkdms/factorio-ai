@@ -29,7 +29,7 @@ import { pdbDumpExe } from "../../game/memory/read.ts";
 import { BACKEND_PREFS, chooseBackend, cleanBackendPref, type BackendChoice, type BackendPref } from "../../commands/backend.ts";
 import { CommandBroker, RconPipe } from "../../commands/broker.ts";
 import { Body } from "../../commands/body.ts";
-import { PlayerActions, readOnlyActions } from "../../commands/actions.ts";
+import { PlayerActions, readOnlyActions, recipeFacts } from "../../commands/actions.ts";
 import { startDragGuard } from "../../commands/drag-guard.ts";
 import { readPlayer } from "../../commands/query.ts";
 import { botNameCandidates, clientPhase, onlineBrief, parseHostPort, readServer, scrubClientLogs, scrubText, secretsOf, whereLine, type ClientPhase, type ServerConn } from "./online-lib.ts";
@@ -346,7 +346,7 @@ try {
     call: t.call, controls: () => t.controls!, defines: () => t.defines, tick: () => t.tick(),
     holdItem: (i) => t.holdItem(i), placeHeld: (at) => t.placeHeld(at), clearCursor: () => t.clearCursor(), ensureBody: () => t.ensureBody(), setRecipe: (at, r) => t.setRecipe(at, r),
     insertExact: (at, i, n, inv) => t.insertExactDirect(at, i, n, inv), takeExact: (at, i, n, inv) => t.takeExactDirect(at, i, n, inv), itemCount: (at, inv, i) => t.entityItemCount(at, inv, i),
-    stacks: () => t.inventorySlots(), chatSend: (x) => t.chatSend(x), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null),
+    stacks: () => t.inventorySlots(), chatSend: (x) => t.chatSend(x), recipeTime: (r) => raw.recipe?.[r]?.energy_required ?? (raw.recipe?.[r] ? 0.5 : null), recipeInfo: (r) => recipeFacts(raw as never, r),
     assist: values["own-world"] ? undefined : { me: name, allowed: assistAllowed }, me: name, lessons: delivery?.pick,
     // 放不下时问模组 placements 找附近放得下的位置 (代理在下面才建, 用到时已经有了)
     read: (action, args, act) => (broker ? broker.read(action, args, act) : Promise.resolve(null)),

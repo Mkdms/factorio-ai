@@ -21,6 +21,19 @@ export function parseDispatch(command: string): Dispatch | null {
   try { return { raw: m[2], request: JSON.parse(m[2]) as Dispatch["request"] }; } catch { return null; }
 }
 
+/**
+ * 不带参数时的默认参数 (纯函数): technologies 不带参数回一页 32 项、约 25 KB (模型笔记里报过"太长", 角色 journal 17 次) → 默认只列现在能研究的 (available: true);
+ * 要全部写 {"available": false}。其余请求原样。
+ */
+export function withDefaults(d: Dispatch): Dispatch {
+  const a = d.request.args;
+  if (d.request.action === "technologies" && (!a || !Object.keys(a).length)) {
+    const request = { ...d.request, args: { available: true } };
+    return { raw: JSON.stringify(request), request };
+  }
+  return d;
+}
+
 /** 外面答得和模组一样的读命令 (旧项目逐项核过 1936 项差 7 项; 新加要先核)。别的读命令还靠模组记的账或背景任务。
  *  派对命令行把 nearest、stock 这些视图发成 observe + args.scope (harness.js OBSERVE_SCOPES), 所以这里按视图名。
  *  scan 不在里面: 电线连接和地上物品内存还没读, 2026-11-06 核出来 854 项差 32 项 */
@@ -299,7 +312,8 @@ export class CommandBroker {
 
   /** 一条 RCON 命令 → 回给命令行的那一行 */
   async handle(command: string): Promise<Reply> {
-    const d = parseDispatch(command);
+    const parsed = parseDispatch(command);
+    const d = parsed && this.opts.mode === "server" ? withDefaults(parsed) : parsed;
     const action = d ? viewOf(d) : "(不是请求)";
     if (this.opts.mode === "server" && (d?.request as { operator?: unknown } | undefined)?.operator === true) { this.count(action, "refuse", 0); return { ok: false, refused: true, error: "operator 请求不走 ./fh" }; }
     // 模型问管理员: 联机没有监工和界面在收, 不报出来就没人看见 (2026-11-06 真服第一班, 模型等答复等了 9 分钟)

@@ -206,6 +206,7 @@ export type ActionDeps = {
   stacks: () => Promise<({ name: string; count: number } | null)[]>;
   chatSend: (text: string) => Promise<{ ok: boolean; error?: string }>;
   /** 配方要几秒 (游戏数据); 不知道回 null */ recipeTime?: (recipe: string) => number | null;
+  /** 配方能不能手搓、开局就有没有、哪些科技解锁它 (游戏数据, recipeFacts); 不知道回 null */ recipeInfo?: (recipe: string) => RecipeFacts | null;
   sleep?: (ms: number) => Promise<void>;
   /** 别人的服务器 = 协助模式 (I:\fn 总规则): 不拆不改别人的建筑和设置, 共享的材料每样不超过库存一半。me = 这个客户端的玩家名 */
   /** allowed: 用户点过头的位置 (别人的建筑也能动); 只有用户能给, 模型自己开不了 */
@@ -219,6 +220,21 @@ export type ActionDeps = {
   /** 设请求格 (界面点选; configure 的 requests 用) */
   setRequest?: (at: Pos, item: string, min: number, max?: number) => Promise<unknown>;
 };
+
+export type RecipeFacts = { exists: boolean; handable: boolean; category: string; enabledAtStart: boolean; unlockedBy: string[] };
+
+/**
+ * 原型数据 (data-raw-dump) 里一个配方的事实 (纯函数): 类别 (没写 = crafting)、角色能不能手搓 (角色的 crafting_categories)、开局就有没有、哪些科技的 unlock-recipe 解锁它。
+ * 手搓失败时说清楚为什么 (模型笔记里报过"手搓面板不显示解锁条件", 角色 journal 19 次只说"没解锁或不能手搓")
+ */
+export function recipeFacts(raw: { recipe?: Record<string, { category?: string; categories?: string[]; enabled?: boolean }>; technology?: Record<string, { name?: string; effects?: { type?: string; recipe?: string }[] }>; character?: Record<string, { crafting_categories?: string[] }> }, recipe: string): RecipeFacts {
+  const r = raw.recipe?.[recipe];
+  const hand = new Set(raw.character?.character?.crafting_categories ?? ["crafting"]);
+  // 2.1 起是 categories (一个配方可以在几类机器里做; 2.1.24 原型导出实测), 之前是 category; 都没写 = crafting
+  const cats = r?.categories ?? (r?.category ? [r.category] : ["crafting"]);
+  const unlockedBy = Object.entries(raw.technology ?? {}).filter(([, t]) => (t.effects ?? []).some((e) => e.type === "unlock-recipe" && e.recipe === recipe)).map(([n]) => n).sort();
+  return { exists: !!r, handable: cats.some((c) => hand.has(c)), category: cats.join(" / "), enabledAtStart: r?.enabled !== false, unlockedBy };
+}
 
 /** 协助模式: 这件东西动不动得 (纯函数): 树、石头、矿谁都能挖; 建筑只动自己放的 (last_user 是自己) */
 export function assistVerdict(e: { name?: unknown; type?: unknown; last_user?: unknown; position?: { x: number; y: number } }, me: string): string | null {
@@ -1146,7 +1162,8 @@ export class PlayerActions {
     const count = typeof a.count === "number" ? a.count : 1;
     if (!recipe) throw new Error(`craft 要 recipe; e.g. fh call craft --args '{"recipe":"iron-gear-wheel","count":5}'`);
     const queueBefore = (await readPlayer(this.d.call)).craftingQueueSize ?? 0;
-    await craftByHand(this.d.call, this.d.controls(), recipe, count);
+    try { await craftByHand(this.d.call, this.d.controls(), recipe, count); }
+    catch (e) { if (/recipe is unavailable/.test((e as Error).message)) throw new Error(`${(e as Error).message}${await this.craftWhy(recipe)}`); throw e; }
     await (this.d.sleep ?? defaultSleep)(200);
     const queue = (await readPlayer(this.d.call)).craftingQueueSize ?? 0;
     const time = this.d.recipeTime?.(recipe) ?? null;
@@ -1154,6 +1171,23 @@ export class PlayerActions {
     // 队列没变长 = 没排上 (料不够; 动作只报已发出, 看队列): 和模组的 nothing_queued 一样不算失败, bp-gather 靠它判断
     if (queue <= queueBefore && (time === null || time > 0.3)) return { started: 0, nothing_queued: `nothing was queued for ${recipe}: 手搓队列没变长 (料不够?)`, moved: 0, inv: (await this.invLine()).line };
     return { started: count, ...(hand !== undefined ? { hand_s: hand, queue_s: hand } : {}), moved: 0, timed: `crafts land in your inventory as each finishes${hand !== undefined ? ` (hand queue ${hand}s)` : ""}` };
+  }
+
+  /** 手搓面板里没有这个配方: 说清是不能手搓、还是没研究 (哪项科技解锁、研究了没, 注入客户端读势力的科技), 附能跑的下一条命令 */
+  private async craftWhy(recipe: string): Promise<string> {
+    const f = this.d.recipeInfo?.(recipe);
+    if (!f) return "";
+    if (!f.exists) return `。没有叫 ${recipe} 的配方 (名字写错? ./know ${recipe})`;
+    if (!f.handable) return `。${recipe} 是 ${f.category} 类的配方, 手搓不了, 要放进机器做 (组装机 / 化工厂…; ./know ${recipe})`;
+    if (f.enabledAtStart || !f.unlockedBy.length) return "";
+    let state = "";
+    try {
+      const r = await this.d.call("world_query", { selection: { kind: "technologies", names: f.unlockedBy }, fields: ["name", "researched"] });
+      const rows = r.ok ? ((r.data as { objects?: { attributes?: { name?: string; researched?: boolean } }[] })?.objects ?? []).map((o) => o.attributes ?? {}) : [];
+      if (rows.length) state = rows.map((t) => `${t.name} ${t.researched ? "已研究" : "没研究"}`).join("、");
+    } catch { /* 读不到研究状态就只说谁解锁 */ }
+    const first = f.unlockedBy[0];
+    return `。由科技 ${f.unlockedBy.join(" / ")} 解锁${state ? ` (${state})` : ""}; 先研究: ./fh call research --args '{"technology":"${first}"}'`;
   }
 
   private async holdMine(at: Pos, ticks: number) {
