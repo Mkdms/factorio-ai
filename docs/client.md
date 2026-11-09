@@ -47,6 +47,7 @@ TypeScript 里用 `game/client/connect.ts` 的 `GameClient`: `start()` 起程序
 - 没变的 (核过源码): 背包 / 科技目录分页 (`truncated` + `next_offset`)、背包格子的 `valid_for_read` / `index`、`include: ["recipe"]`、`world_overview` 的 `viewport`、input 时间线写法 (`stop_previous` 默认 false 时有时间线在跑会拒, 我们的动作都等上一条做完)。
 **证据 (2026-11-09, 游戏 2.1.24, 沙盘)**: 编译 1 分 47 秒; 客户端 Gradle 单元测试 263 条 + 新加 1 条全过 (含上游新加的 UiTree / WorldQuerySchema / CollectionPaging 和 fork 的 PlayerAction / MemoryRead); `test/sandbox/client.test.ts` 5/5 (挂上、只读查询对真值、读内存、聊天、摘下); `test/sandbox/actions.test.ts` 51/51 (8.6 分钟: transfer 取放走 player_action 14 号、红绿线只读接线点 + entries 相对读、物流网、流体、第二个客户端、服务器没有不同步); `test/sandbox/run.test.ts` 7/7 (开班链路; 第一次 6/7 是 11-08 加的"那格地块"让查法多了地块名, 和升级无关, `commands/hints.ts errorHint` 修了)。旧程序留在 `data/client-0.0.10/`。
 上游 0.0.11 新增 / 改动的能力, 逐项对我们的代码 (2026-11-09 按 tools.md 新旧逐句对比 + 被动方法表新旧对比, 再 grep 我们的调用; 假接口里用内存实现的同名 Lua 函数不算"经注入客户端用了")。共 26 项: 用上 1 项、适配了没利用 2 项、没用 23 项。"价值"按模型玩得更好排: 高 = 现在的阶段就用得上。
+**同日接上以后**: 模型经 `./fh call mcp` (只读直通, docs/commands.md) 能直接用全部只读的: 第 1~3、6~10、12~14、16~26 项; 行动层接了第 4 项 (belt_route 直线段拖着放); 第 3 项另做成 `./fh call belt_lanes`。还没接: 第 1 项给假接口自己用 (流体 / 红绿线 / 物流点现在一个实体问一次, 改按区域一次读)、第 5 项 (贴蓝图这条路上没有调用方)、第 4 项的 pole_route / pipe_route 拖动。下表"我们用了吗"一列是接之前的样子。
 
 | # | 能力 | 我们用了吗 | 价值 / 用在哪 |
 |---|---|---|---|

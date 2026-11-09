@@ -1,7 +1,7 @@
 // ./fh 动作翻译成玩家操作 (commands/actions.ts, broker.ts) 的纯逻辑; 真游戏的核对是 test/sandbox/actions.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { blocksBuild, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, routeTiles, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
+import { blocksBuild, dragRuns, handSeconds, insertInventory, mineHold, pathTiles, PlayerActions, rotateTurns, routeTiles, takeInventories, targetArea, type ActionDeps } from "../commands/actions.ts";
 
 test("铺线方案 → 一格格放的清单: 电线杆给位置不管方向; 带子 / 水管按 details 的 entities, 方向数字或名字都认, 水管和地下带出口端不转", () => {
   assert.deepEqual(routeTiles("pole_route", { item: "medium-electric-pole", positions: [{ x: 1.5, y: 2.5 }, "坏的", { x: 8.5, y: 2.5 }] }),
@@ -17,6 +17,19 @@ test("铺线方案 → 一格格放的清单: 电线杆给位置不管方向; �
   const pipes = routeTiles("pipe_route", { entities: [{ name: "pipe", position: { x: 0.5, y: 0.5 }, direction: 0 }, { name: "pipe-to-ground", position: { x: 1.5, y: 0.5 }, direction: 12 }] });
   assert.deepEqual(pipes.map((t) => [t.item, t.direction]), [["pipe", null], ["pipe-to-ground", 12]]);
   assert.deepEqual(routeTiles("belt_route", {}), [], "没有清单就是空的");
+});
+
+test("拖着放的段: 普通带子、同方向、顺着朝向挨着; 拐角那格归下一段; 地下带 / 水管不拖; 不到 3 格不拖; 一段最多 14 格", () => {
+  const east = Array.from({ length: 5 }, (_, i) => ({ item: "transport-belt", position: { x: i + 0.5, y: 0.5 }, direction: 4 }));
+  const south = Array.from({ length: 4 }, (_, i) => ({ item: "transport-belt", position: { x: 5.5, y: i + 0.5 }, direction: 8 }));
+  assert.deepEqual(dragRuns([...east, ...south]), [[0, 4], [5, 8]], "东 5 格 + 拐角起往南 4 格");
+  const ug = [...east.slice(0, 2), { item: "underground-belt", position: { x: 2.5, y: 0.5 }, direction: 4 }, ...east.slice(3)];
+  assert.deepEqual(dragRuns(ug), [], "地下带把段切开, 两边都不到 3 格");
+  assert.deepEqual(dragRuns(east.map((t) => ({ ...t, item: "pipe", direction: null }))), [], "水管不拖");
+  assert.deepEqual(dragRuns([east[0], east[2], east[3], east[4]]), [[1, 3]], "中间断了一格: 后面 3 格是一段");
+  assert.deepEqual(dragRuns(east.map((t) => ({ ...t, direction: 12 }))), [], "朝西却往东排 (不是顺着朝向挨着) 不拖");
+  const long = Array.from({ length: 30 }, (_, i) => ({ item: "fast-transport-belt", position: { x: i + 0.5, y: 0.5 }, direction: 4 }));
+  assert.deepEqual(dragRuns(long), [[0, 13], [14, 27], [28, 29]].filter(([a, b]) => b - a + 1 >= 3), "长的切成 14 格一段 (最后 2 格不拖)");
 });
 import { CommandBroker } from "../commands/broker.ts";
 import { REPRESS_TICKS } from "../commands/timeline.ts";

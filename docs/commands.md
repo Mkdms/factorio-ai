@@ -4,6 +4,7 @@
 - **读命令** (inventory / observe / inspect / status / nearest / stock / sleep 的条件…) → 问游戏外的模组宿主 (`game/offgame`): harness 的 Lua 原样答, 数据来自读内存; 内存读不到的 (流体、红绿线、物流网、别的玩家、地块) 宿主回头问注入客户端的只读查询。
 - **账本命令** (sleep / tell / chat_ack) → 也在外面的模组里跑, 不碰游戏。
 - **动作** (move_to / build / transfer / craft / mine / rotate / research / say / build_path / collect / refuel / feed / shoot) → 行动层 (`actions.ts`) 翻译成玩家操作: 走路 (`walk.ts` 自己寻路 + WASD)、放建筑和取放 (`body.ts`: 直接发玩家动作, 格子带物品 ID)、界面 (`gui.ts`: 手搓、研究、设配方)、键鼠时间线 (`timeline.ts`), 都经注入客户端的程序 (`game/client`) 发出去; 回复格式照模组。没翻译的动作明确拒绝, 什么都不发。
+- **直接读游戏** (2026-11-09 起): `./fh call mcp --args '{"tool":"world_query","args":{...}}'` 把注入客户端的只读工具 (world_query / world_overview / ui_read / input_bindings / chat_read) 原样交给模型, 代理直接答 (`client-reads.ts`), 不过身体锁、不进行动层; 动作类工具和截图一律拒。回复超过 2.4 万字只回开头, 全文写进角色目录 `mcp-last.json`。上游 (factorio-mcp) 以后再加的读法, 模型当天就能用, 不用等我们逐项接。`./fh call belt_lanes` (传送带每条道上有什么) 是在它上面用批量相对读做的一条命令。两条的说明在 `own-help.ts` (`./fh help mcp` / `belt_lanes` 由包装答, 派对 harness 里没有这两条), 例子在沙盘里真跑过。
 - **只读模式** (`--read-only`): 所有动作在代理就拒了。
 - **协助模式** (别人的服务器): 建筑只动自己放的 (读 `last_user`), 别人的箱子最多拿一半, 用户点头的位置才能换; 模型自己开不了。
 
@@ -21,6 +22,7 @@
 | `walk.ts` | 寻路 (A*, 踩带子代价 0.25、机器缝、终点被占停最近空位) + WASD 长按 (每 10 tick 重按, 切窗口不停) |
 | `gui.ts` | 界面: 开角色窗口、手搓、研究、设配方、设请求、贴蓝图 (都走界面点击 + 读回) |
 | `query.ts` | 注入客户端的只读查询: 玩家、背包、研究、区域实体 (分页)、物流请求、配方 |
+| `client-reads.ts` / `own-help.ts` | 模型直接用的只读工具 (`mcp`) 和看带子每道 (`belt_lanes`), 它们的 `./fh help` 说明 |
 | `client-target.ts` / `io-types.ts` | 注入客户端的程序包成统一接口 (读 + 挂接 + 动作), 行动层继承它 |
 | `timeline.ts` / `controls.ts` | 键鼠时间线 (长按一律重按) 和按键映射 (从游戏读, 不写死) |
 | `drag-guard.ts` / `drag-guard.ps1` | 拖游戏窗口不卡游戏 (Windows 移动循环卡主线程) |

@@ -99,6 +99,19 @@ test("角色目录的 fh.ps1 (PowerShell 版) 同样能用, JSON 参数不拆坏
   assert.ok(JSON.stringify(r.result).includes("stone-furnace"), JSON.stringify(r.result).slice(0, 300));
 });
 
+test("角色目录的 ./fh call mcp: 开班时把注入客户端交给代理了 (sh 读玩家, ps1 读背包); ./fh help mcp 两版都有说明", async () => {
+  const shOut = (await run(bashExe(), [path.join(roleDir, "fh"), "call", "mcp", "--args", JSON.stringify({ tool: "world_query", args: { selection: { kind: "player" }, fields: ["name"] } }), "--format", "json"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true })).stdout;
+  const a = JSON.parse(shOut) as { ok?: boolean; result?: { data?: { objects?: { attributes?: { name?: string } }[] } } };
+  assert.ok(a.ok && typeof a.result?.data?.objects?.[0]?.attributes?.name === "string", shOut.slice(0, 400));
+  const psOut = (await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(roleDir, "fh.ps1"), "call", "mcp", "--args", '{"tool": "world_query", "args": {"selection": {"kind": "inventory", "owner": {"kind": "character"}}, "fields": ["name", "count"]}}', "--format", "json"], { cwd: roleDir, encoding: "utf8", timeout: 120_000, windowsHide: true })).stdout;
+  const b = JSON.parse(psOut) as { ok?: boolean; result?: { data?: { objects?: unknown[] } } };
+  assert.ok(b.ok && Array.isArray(b.result?.data?.objects), psOut.slice(0, 400));
+  const helpSh = (await run(bashExe(), [path.join(roleDir, "fh"), "help", "mcp"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true })).stdout;
+  const helpPs = (await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(roleDir, "fh.ps1"), "help", "belt_lanes"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true })).stdout;
+  assert.match(helpSh, /只开放: world_query/, helpSh.slice(0, 200));
+  assert.match(helpPs, /左道 \/ 右道/, helpPs.slice(0, 200));
+});
+
 test("角色目录的 ./know 和 ./fh help: 查积累 (sh 和 ps1), 手册大的先回目录、按段看", async () => {
   const { stdout: know } = await run(bashExe(), [path.join(roleDir, "know"), "研究中心"], { cwd: roleDir, encoding: "utf8", timeout: 60_000, windowsHide: true });
   assert.match(know, /^\[(思路|事实|要点|教训|资料) /m, know.slice(0, 300));

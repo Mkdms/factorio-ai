@@ -368,7 +368,8 @@ try {
   } else {
     // 模型问管理员的话: 记下来报在日志里 (界面那块接上后进界面)
     const onOperator = (text: string) => { fs.appendFileSync(path.join(runDir, "operator.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), text })}\n`); log(`模型问管理员: ${text.replace(/\s+/g, " ").slice(0, 400)}`); };
-    broker = new CommandBroker({ pipe, python: venvPython(), probeArgs, mode: "server", rcon: null, actions, luaRead: useLua && t ? (a) => t.call("world_query", a) : null, onOperator });
+    // client: 模型直接用注入客户端的只读工具 (./fh call mcp) 和看带子每道 (belt_lanes); 只读连接没注入就不给 (commands/client-reads.ts)
+    broker = new CommandBroker({ pipe, python: venvPython(), probeArgs, mode: "server", rcon: null, actions, luaRead: useLua && t ? (a) => t.call("world_query", a) : null, onOperator, client: t ? (tool, a) => t.call(tool, a) : null, dumpDir: dir });
     log("起游戏外的模组 (平时几秒; 第一次要从游戏符号算布局, 约 1~2 分钟)");
     await broker.start();
     const where = await broker.where();

@@ -7,6 +7,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { EXISTING_LUA } from "../src/play/expand.ts";
 import { ORDER_CALLS, Scheduler, type Step, type StepResult } from "./orders.ts";
 import { siteLua } from "../src/play/plan-lib.ts";
+import { beltLanes, mcpPassthrough, type ClientCall } from "./client-reads.ts";
 
 export type BrokerMode = "sandbox" | "server";
 export type Dispatch = { raw: string; request: { id?: string; action?: string; args?: Record<string, unknown>; bot?: string; player?: number } };
@@ -91,7 +92,14 @@ type Reply = { ok: boolean; text?: string; error?: string; refused?: boolean; un
 export type ActionLayer = { has(action: string): boolean; run(request: Dispatch["request"]): Promise<unknown> };
 
 /** luaRead: 内存读不到的问注入客户端的 Lua (注入客户端的程序 world_query); 不给就不注入, 这些字段和原来一样记缺 */
-export type BrokerOpts = { onOperator?: (text: string) => void; pipe: string; python: string; probeArgs: string[]; mode: BrokerMode;rcon?: { send(command: string): Promise<string> } | null; actions?: ActionLayer | null; luaRead?: ((args: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown; error?: string }>) | null };
+export type BrokerOpts = { onOperator?: (text: string) => void; pipe: string; python: string; probeArgs: string[]; mode: BrokerMode;rcon?: { send(command: string): Promise<string> } | null; actions?: ActionLayer | null; luaRead?: ((args: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown; error?: string }>) | null;
+  /** 模型直接用注入客户端的只读工具 (./fh call mcp) 和经它批量读的命令 (belt_lanes): commands/client-reads.ts; 没注入 (只读连接) 就不给 */
+  client?: ClientCall | null;
+  /** mcp 回复太长时全文写到这里 (角色目录) */
+  dumpDir?: string };
+
+/** 代理直接答、经注入客户端读的命令 (不过身体锁、不进行动层) */
+export const CLIENT_READS = new Set(["mcp", "belt_lanes"]);
 
 export class CommandBroker {
   readonly stats: BrokerStats = { mem: 0, rcon: 0, refused: 0, acted: 0, memMs: 0, byAction: {} };
@@ -334,7 +342,22 @@ export class CommandBroker {
     }
   }
 
+  /** ./fh call mcp / belt_lanes: 经注入客户端的只读工具答 (commands/client-reads.ts); 回复形状照模组 {id, ok, tick, result | error} */
+  private async clientRead(d: Dispatch, action: string): Promise<Reply> {
+    const tick = await this.tick().catch(() => 0);
+    const reply = (body: Record<string, unknown>) => ({ ok: true, text: JSON.stringify({ id: d.request.id, tick, ...body }) });
+    if (!this.opts.client) { this.count(action, "refuse", 0); return reply({ ok: false, error: { code: "unavailable", message: `${action}: 这一班没注入客户端 (只读连接), 读不了` } }); }
+    const t0 = Date.now();
+    const args = (d.request.args ?? {}) as Record<string, unknown>;
+    try {
+      const out = action === "mcp" ? await mcpPassthrough(this.opts.client, args, this.opts.dumpDir) : await beltLanes(this.opts.client, args);
+      this.count(action, "mem", Date.now() - t0);
+      return reply(out.ok ? { ok: true, result: out.result } : { ok: false, error: out.error });
+    } catch (e) { this.count(action, "refuse", 0); return reply({ ok: false, error: { code: "client_read", message: (e as Error).message.slice(0, 500) } }); }
+  }
+
   private async answer(command: string, d: Dispatch | null, action: string): Promise<Reply> {
+    if (this.opts.mode === "server" && d && CLIENT_READS.has(action)) return this.clientRead(d, action);
     let route = routeOf(d, this.opts.mode);
     // 记账类和被闸门当成动手的读: 直接按角色身份问 (AGENT_CALLS)
     if (this.opts.mode === "server" && d && AGENT_CALLS.has(action)) {

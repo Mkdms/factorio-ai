@@ -11,7 +11,8 @@
 ## 接口: `./fh`
 
 - 做动作: `./fh call ACTION --args '{...}'`。参数拿不准先查: `./fh help ACTION`。
-- 看: `./fh call status`、`observe`、`inspect`、`inventory`、`nearest`、`stock`、`recipes`、`technologies`、`map`。
+- 看: `./fh call status`、`observe`、`inspect`、`inventory`、`nearest`、`stock`、`recipes`、`technologies`、`map`。某格带子每条道上有什么: `./fh call belt_lanes --args '{"position":{"x":..,"y":..}}'` (一片带子加 `radius` 或给 `area`)。
+- 直接读游戏 (上面的命令没有的都能读): `./fh call mcp --args '{"tool":"world_query","args":{...}}'`, 只读、不动角色、不发给服务器; 一次能对一片区域的每台机器跟着读配方、输出箱、插件 (`reads`), 也能读界面里的折线图和成就卡 (`ui_read`)。写法和例子: `./fh help mcp`。
 - 手册: `./fh help 主题` (主题列在后面; 大的先回目录, `./fh help 主题 序号` 看一段)。查全部积累 (老玩家思路、核实过的事实、教训、检索资料; 官方中文名或内部名都行): `./know 关键词`。放机器、查东西、报错时回复会自动附相关经验, 用不用你定。
 - 算和建: `./calc '{"targets":{"automation-science-pack":30}}'` 按目标产量算每个配方要几台、吃多少 (只给 targets 自动展开全链); `./plan 物品 每分钟 [--near x,y]` 算全链 → 减场上已有 → 挑蓝图块 → 找空地 → 查背包缺什么, 打出能直接跑的命令, 加 `--build` 算完直接放; `./bp list 关键词` / `./bp show 编号` / `./bp build 编号 --at x,y [--dir east]` 整块建 (一条命令: 备料 → 清树石 → 一件件放; 没放完回下一条命令)。用不用你定, 手放也行。
 - 每个失败都要读: 退出码非零有一行 `error:`, 部分成功以 `warning:` 结尾。别把 `./fh` 的输出丢掉或接 `head` / `tail`, 会藏起报错和队友的话。动作和相关的 `say` 用 `&&` 连。

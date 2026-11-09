@@ -25,6 +25,18 @@ const note = (what: string, e: unknown) => { try { fs.appendFileSync(".fh-hints.
 /** 这个角色在游戏里叫什么 */
 function botName(a: string[]): string { const i = a.indexOf("--bot"); return i >= 0 ? a[i + 1] ?? "" : ""; }
 
+// 我们自己加的命令 (派对 harness 里没有, 命令行查不到说明): ./fh help mcp / belt_lanes 由这里答 (commands/own-help.ts)
+if (helpPos[0]) {
+  const { OWN_HELP } = await import("./own-help.ts");
+  const text = OWN_HELP[helpPos[0]];
+  if (text) {
+    const j = args.indexOf("--journal");
+    if (j >= 0 && args[j + 1]) { try { fs.appendFileSync(args[j + 1], `${JSON.stringify({ at: new Date().toISOString(), event: "help", topic: helpPos[0] })}\n`); } catch { /* 记不上算了 */ } }
+    process.stdout.write(`${text}\n`);
+    process.exit(0);
+  }
+}
+
 // 手册按段查: ./fh help 主题 → 太大就回目录; ./fh help 主题 3 或 ./fh help 主题 P-prod-03 → 这一段
 if (helpPos[0] && process.env.FH_REF_DIR) {
   try {

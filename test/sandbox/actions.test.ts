@@ -113,7 +113,7 @@ before(async () => {
     nextUpgrade: (n) => { const all = raw as unknown as Record<string, Record<string, { next_upgrade?: unknown }>>; for (const rows of Object.values(all)) { const u = rows?.[n]?.next_upgrade; if (typeof u === "string") return u; } return null; },
     setRequest: (at, item, min, max) => target.setRequest(at, item, min, max),
   });
-  broker = new CommandBroker({ pipe, python: venvPython(), probeArgs: hostArgs({ defines: path.join(protoDir, "defines.json"), proto: path.join(protoDir, "data-raw-dump.json"), pid: proc.pid!, exe, extra: ["--serve"] }), mode: "server", rcon: null, actions, luaRead: (a) => target.call("world_query", a) });
+  broker = new CommandBroker({ pipe, python: venvPython(), probeArgs: hostArgs({ defines: path.join(protoDir, "defines.json"), proto: path.join(protoDir, "data-raw-dump.json"), pid: proc.pid!, exe, extra: ["--serve"] }), mode: "server", rcon: null, actions, luaRead: (a) => target.call("world_query", a), client: (tool, a) => target.call(tool, a), dumpDir: work });
   await broker.start();
   await clearArea(-16, -16, 40, 24);
 });
@@ -616,11 +616,19 @@ test("接线: pole_route 模组按接线距离算位置, 角色一根根放", ()
   const n = await countIn("small-electric-pole", P(-2, 28), P(33, 33));
   return { pass: !!r.ok && n >= 4 && (await myCount("small-electric-pole")) === before - n, seen: `放了 ${n} 根; ${seenOf(r)}` };
 }));
-test("接线: belt_route 带拐弯, 角色一格格放, 方向对", () => check(async () => {
+test("接线: belt_route 带拐弯, 直线段按住拖着放 (dragged), 整条首尾相接方向对", () => check(async () => {
   await give({ "transport-belt": 60, "underground-belt": 4 });
+  const t0 = Date.now();
   const r = await act("belt_route", { from: P(0, 36), to: P(16, 40) }, "--wait");
+  const secs = (Date.now() - t0) / 1000;
   const n = await countIn("transport-belt", P(-1, 35), P(17, 41));
-  return { pass: !!r.ok && n >= 18, seen: `带子 ${n} 格; ${seenOf(r)}` };
+  // 方向对 = 一条连着的线: 只有起点没有上游、只有终点没有下游 (belt_neighbours 是游戏按方向算的)
+  const chain = await truth<{ heads: number; tails: number }>(`local a = ... local s = game.surfaces[1] local heads, tails = 0, 0
+    for _, e in pairs(s.find_entities_filtered{area = {{a.x0, a.y0}, {a.x1, a.y1}}, type = {"transport-belt", "underground-belt"}}) do
+      local nb = e.belt_neighbours if #nb.inputs == 0 then heads = heads + 1 end if #nb.outputs == 0 then tails = tails + 1 end end
+    return {heads = heads, tails = tails}`, { x0: P(-1, 35).x, y0: P(-1, 35).y, x1: P(17, 41).x, y1: P(17, 41).y });
+  const dragged = Number((r.result as { dragged?: number } | undefined)?.dragged ?? 0);
+  return { pass: !!r.ok && n >= 18 && dragged >= 6 && chain.heads === 1 && chain.tails === 1, seen: `带子 ${n} 格, 拖着放 ${dragged} 格, ${secs.toFixed(1)} 秒; 起点 ${chain.heads} 终点 ${chain.tails}; ${seenOf(r)}` };
 }));
 test("接线: pipe_route 水管 (可用地下管), 角色一格格放", () => check(async () => {
   await give({ pipe: 40, "pipe-to-ground": 6 });
@@ -681,4 +689,41 @@ test("接线: queue_submit 角色空着 20 秒后一步步跑; order_set 燃料�
   const st = await act("queue_status", {}), ord = await act("orders", {});
   await act("order_remove", { name: "keep-fuel" });
   return { pass: !!q.ok && !!o.ok && chest === 1 && fuel >= 3, seen: `箱子 ${chest}, 炉子燃料 ${fuel}; 队列 ${seenOf(st).slice(0, 160)}; 常驻 ${seenOf(ord).slice(0, 200)}` };
+}));
+test("直通: ./fh call mcp 的帮助例子 (批量相对读配方、虚影过滤、members、只读方法、界面) 对真值; 动作类工具被拒", () => check(async () => {
+  // 考场: 一台设好配方的组装机、一个带子虚影 (沙盘里用 RCON 摆, 只当题目)
+  await truth(`local a = ... local s = game.surfaces[1] local e = s.create_entity{name = "assembling-machine-1", position = a.m, force = "player"} e.set_recipe("iron-gear-wheel")
+    s.create_entity{name = "entity-ghost", inner_name = "transport-belt", position = a.g, force = "player"} return true`, { m: P(30, 70), g: P(34, 70) });
+  const q = (args: unknown) => act("mcp", { tool: "world_query", args });
+  const r1 = await q({ selection: { kind: "entities", position: P(30, 70), radius: 3, type: "assembling-machine" }, fields: ["name", "position", "status"], reads: [{ path: [{ method: "get_recipe" }], fields: ["name"] }, { path: [{ method: "get_output_inventory" }, { method: "get_contents" }] }] });
+  const recipe = r1.result?.data?.objects?.[0]?.reads?.[0]?.attributes?.name;
+  const r2 = await q({ selection: { kind: "entities", position: P(34, 70), radius: 3, type: "entity-ghost", filters: { ghost_name: "transport-belt" } }, fields: ["ghost_name", "position"] });
+  const ghost = r2.result?.data?.objects?.[0]?.attributes?.ghost_name;
+  const r3 = await q({ selection: { kind: "inspect", target: { kind: "character" } }, mode: "members", search: "inventory" });
+  const members = ((r3.result?.data?.objects?.[0]?.members ?? []) as { name: string }[]).map((m) => m.name);
+  const r4 = await q({ selection: { kind: "inspect", target: { kind: "game" }, path: [{ property: "forces" }, { index: "enemy" }, { method: "get_evolution_factor", arguments: ["nauvis"] }] } });
+  const evo = Number(r4.result?.data?.objects?.[0]?.value);
+  const evoTruth = await truth<number>(`return game.forces.enemy.get_evolution_factor("nauvis")`);
+  const r5 = await act("mcp", { tool: "ui_read", args: { max_depth: 1, fields: [] } });
+  const roots = (r5.result?.data?.roots ?? []) as number[];
+  const r6 = await act("mcp", { tool: "input", args: { timeline: [] } });
+  const pass = recipe === "iron-gear-wheel" && ghost === "transport-belt" && members.includes("get_main_inventory") && Math.abs(evo - evoTruth) < 1e-9 && roots.length >= 1 && r6.ok === false;
+  return { pass, seen: `配方 ${recipe}; 虚影 ${ghost}; members ${members.slice(0, 6).join(",")}; 进化度 ${evo} / 真值 ${evoTruth}; 界面根 ${roots.length}; input ${seenOf(r6).slice(0, 80)}; ${[r1, r2, r3, r4, r5].filter((r) => !r.ok).map((r) => seenOf(r).slice(0, 200)).join(" | ")}` };
+}));
+test("看带子每道: belt_lanes 一格分左右道报物品和个数 (对 RCON 真值); 一片只报数", () => check(async () => {
+  const at = P(40, 70);
+  const put = await truth<{ left: number; right: number }>(`local a = ... local s = game.surfaces[1] local e = s.create_entity{name = "transport-belt", position = a.p, direction = defines.direction.east, force = "player"}
+    local l, r = e.get_transport_line(defines.transport_line.left_line), e.get_transport_line(defines.transport_line.right_line)
+    for i = 1, 2 do l.insert_at_back({name = "iron-plate", count = 1}) end r.insert_at_back({name = "copper-plate", count = 1})
+    return {left = l.get_item_count("iron-plate"), right = r.get_item_count("copper-plate")}`, { p: at });
+  await sleep(1500); // 物品走到带子头上停住
+  const one = await act("belt_lanes", { position: at });
+  const belt = one.result?.belts?.[0] as { 朝向?: string; lanes?: Record<string, { 数?: { name: string; count: number }[] | string; 位置?: unknown[] }> } | undefined;
+  const left = belt?.lanes?.["左道"], right = belt?.lanes?.["右道"];
+  const lc = Array.isArray(left?.数) ? left.数.find((x) => x.name === "iron-plate")?.count : undefined;
+  const rc = Array.isArray(right?.数) ? right.数.find((x) => x.name === "copper-plate")?.count : undefined;
+  const area = await act("belt_lanes", { position: at, radius: 3 });
+  const areaBelt = area.result?.belts?.[0] as { lanes?: Record<string, { 位置?: unknown }> } | undefined;
+  const pass = !!one.ok && belt?.朝向 === "东" && lc === put.left && rc === put.right && Array.isArray(left?.位置) && left.位置.length === put.left && !!area.ok && areaBelt?.lanes?.["左道"]?.位置 === undefined;
+  return { pass, seen: `真值 左 ${put.left} 右 ${put.right}; 读到 左 ${lc} 右 ${rc}, 朝向 ${belt?.朝向}; 一格 ${seenOf(one).slice(0, 300)}; 一片 ${seenOf(area).slice(0, 160)}` };
 }));

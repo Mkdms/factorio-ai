@@ -71,6 +71,35 @@ export function rotateTurns(from: number, to: number): number | null {
   return (((to - from) / 4) % 4 + 4) % 4;
 }
 
+/** 能按住拖着放的: 普通传送带 (地下带、分流器、水管、电线杆不拖) */
+const DRAG_ITEM = /^(?:fast-|express-|turbo-)?transport-belt$/;
+/** 拖一段最多几格: 角色站在段中间, 两头都在够得着的 10 格里 */
+export const DRAG_MAX = 14;
+const STEP: Record<number, [number, number]> = { 0: [0, -1], 4: [1, 0], 8: [0, 1], 12: [-1, 0] };
+
+/**
+ * 逐格清单里能一口气拖着放的直线段 (纯函数): 同一种普通传送带、同方向、下一格正好在带子朝向上挨着; 每段最多 max 格, 不到 3 格不拖。
+ * 回每段的 [起, 止] 下标 (从 0 数, 含两头)。拐角那格的方向是出去那段的, 所以归下一段。
+ * 注入客户端的程序 0.0.11 起一条 input 时间线能按住建造键沿多段路径拖 (game/client/tools.md "Input timelines"), 原来一格一格走过去放 (沙盘 21 格)。
+ */
+export function dragRuns(tiles: { item: string; position: Pos; direction: number | null }[], max = DRAG_MAX): [number, number][] {
+  const runs: [number, number][] = [];
+  for (let i = 0; i < tiles.length;) {
+    const t = tiles[i];
+    const s = t.direction === null ? undefined : STEP[t.direction];
+    if (!s || !DRAG_ITEM.test(t.item)) { i++; continue; }
+    let j = i;
+    while (j + 1 < tiles.length && j - i + 1 < max) {
+      const a = tiles[j], b = tiles[j + 1];
+      if (b.item !== t.item || b.direction !== t.direction || Math.abs(b.position.x - a.position.x - s[0]) > 0.01 || Math.abs(b.position.y - a.position.y - s[1]) > 0.01) break;
+      j++;
+    }
+    if (j - i + 1 >= 3) runs.push([i, j]);
+    i = j + 1;
+  }
+  return runs;
+}
+
 /** build_path 的点 → 每格带子的位置和方向 (纯函数): 只能横平竖直; 最后一格用 end_direction, 没给就接着上一段的方向。不合规矩的抛错 */
 /**
  * 模组试算的方案 → 一格格放的清单 (纯函数): pole_route 回 positions + item; belt_route / pipe_route 加 details 回 entities {name, position, direction, type?}。
@@ -647,36 +676,102 @@ export class PlayerActions {
   private async layTiles(tiles: { item: string; position: Pos; direction: number | null }[], startIndex: number, verb: string) {
     const start = Math.max(1, startIndex);
     const t0 = Date.now();
-    let built = 0, next = start;
-    const same = (there: Record<string, any> | null, tile: { position: Pos; direction: number | null }) =>
-      !!there && Math.hypot(there.position.x - tile.position.x, there.position.y - tile.position.y) < 0.1 && (tile.direction === null || Number(there.direction ?? 0) === tile.direction);
+    let built = 0, dragged = 0, next = start;
+    // 普通传送带的直线段按住拖着放 (dragRuns); 段的起点 (从 1 数) → 终点
+    const runs = new Map(dragRuns(tiles).map(([a, b]) => [a + 1, b + 1] as const));
     try {
       for (; next <= tiles.length; next++) {
-        if (Date.now() - t0 > ACT_BUDGET_MS) return { total: tiles.length, built, next_index: next, not_done: `一条命令最多干 ${ACT_BUDGET_MS / 1000} 秒: 加 start_index: ${next} 接着${verb}` };
-        const tile = tiles[next - 1];
-        const item = tile.item;
-        const there = await this.entityAt(tile.position, item);
-        { const no = await this.refuseReplacing(tile.position); if (no && !same(there, tile)) throw new Error(`第 ${next}/${tiles.length} 格 ${fmt(tile.position)}: ${no} (已${verb} ${built})`); }
-        if (same(there, tile)) continue; // 已经有了的跳过, 重跑不重复
-        await this.walkInto(tile.position, BUILD_REACH, true);
-        const player = await readPlayer(this.d.call);
-        if (player.cursor?.name !== item && !(await this.d.holdItem(item))) throw new Error(`no ${item} in inventory (${verb}到第 ${next}/${tiles.length} 格, 已${verb} ${built}; 备好料加 start_index: ${next} 接着${verb})`);
-        const out = await this.d.placeHeld(tile.position);
-        if (!out.ok) throw new Error(`第 ${next}/${tiles.length} 格 ${fmt(tile.position)} ${item} 放不下: ${out.error ?? ""} (已${verb} ${built}${await this.placeWhy(item, tile.position, false)})`);
-        const e = await this.entityAt(tile.position, item);
-        const have = Number(e?.direction ?? 0);
-        if (e && tile.direction !== null && have !== tile.direction) {
-          const turns = rotateTurns(have, tile.direction) ?? 0;
-          for (let i = 0; i < turns; i++) { await this.pressHand("rotate"); await (this.d.sleep ?? defaultSleep)(60); }
-          const again = await this.d.placeHeld(tile.position);
-          if (!again.ok) throw new Error(`第 ${next} 格转方向没成: ${again.error ?? ""}`);
-          const got = await this.directionSettled(tile.position, item, tile.direction, have);
-          if (got !== tile.direction) throw new Error(`第 ${next} 格 ${fmt(tile.position)} 转完还是朝 ${NAME_BY_DIR[got]} (要 ${NAME_BY_DIR[tile.direction]})`);
+        if (Date.now() - t0 > ACT_BUDGET_MS) return { total: tiles.length, built, ...(dragged ? { dragged } : {}), next_index: next, not_done: `一条命令最多干 ${ACT_BUDGET_MS / 1000} 秒: 加 start_index: ${next} 接着${verb}` };
+        const end = runs.get(next);
+        if (end !== undefined) {
+          const r = await this.dragRun(tiles, next, end, verb, built);
+          if (r) { built += r.built; dragged += r.dragged; next = end; continue; }
+          // 段里有别的东西 / 拖不了: 这一段照旧一格格放
         }
-        built++;
+        if (await this.placeTile(tiles, next, verb, built)) built++;
       }
     } finally { await this.d.clearCursor().catch(() => undefined); }
-    return { total: tiles.length, built, next_index: null };
+    return { total: tiles.length, built, ...(dragged ? { dragged } : {}), next_index: null };
+  }
+
+  /** 这一格已经是要的东西 (同名、方向对): 重跑跳过 */
+  private static same(there: Record<string, any> | null, tile: { position: Pos; direction: number | null }) {
+    return !!there && Math.hypot(there.position.x - tile.position.x, there.position.y - tile.position.y) < 0.1 && (tile.direction === null || Number(there.direction ?? 0) === tile.direction);
+  }
+
+  /** 放清单里第 n 格 (从 1 数): 已经有了回 false; 放下去方向不对就转手上的方向再放一次 (快速替换) */
+  private async placeTile(tiles: { item: string; position: Pos; direction: number | null }[], n: number, verb: string, built: number): Promise<boolean> {
+    const tile = tiles[n - 1];
+    const item = tile.item;
+    const there = await this.entityAt(tile.position, item);
+    { const no = await this.refuseReplacing(tile.position); if (no && !PlayerActions.same(there, tile)) throw new Error(`第 ${n}/${tiles.length} 格 ${fmt(tile.position)}: ${no} (已${verb} ${built})`); }
+    if (PlayerActions.same(there, tile)) return false;
+    await this.walkInto(tile.position, BUILD_REACH, true);
+    await this.holdFor(item, n, tiles.length, verb, built);
+    const out = await this.d.placeHeld(tile.position);
+    if (!out.ok) throw new Error(`第 ${n}/${tiles.length} 格 ${fmt(tile.position)} ${item} 放不下: ${out.error ?? ""} (已${verb} ${built}${await this.placeWhy(item, tile.position, false)})`);
+    const e = await this.entityAt(tile.position, item);
+    const have = Number(e?.direction ?? 0);
+    if (e && tile.direction !== null && have !== tile.direction) {
+      const turns = rotateTurns(have, tile.direction) ?? 0;
+      for (let i = 0; i < turns; i++) { await this.pressHand("rotate"); await (this.d.sleep ?? defaultSleep)(60); }
+      const again = await this.d.placeHeld(tile.position);
+      if (!again.ok) throw new Error(`第 ${n} 格转方向没成: ${again.error ?? ""}`);
+      const got = await this.directionSettled(tile.position, item, tile.direction, have);
+      if (got !== tile.direction) throw new Error(`第 ${n} 格 ${fmt(tile.position)} 转完还是朝 ${NAME_BY_DIR[got]} (要 ${NAME_BY_DIR[tile.direction]})`);
+    }
+    return true;
+  }
+
+  /** 手上拿着这种东西 (没有就从背包拿; 背包没有就报还差, 带接着放的下标) */
+  private async holdFor(item: string, n: number, total: number, verb: string, built: number) {
+    const player = await readPlayer(this.d.call);
+    if (player.cursor?.name !== item && !(await this.d.holdItem(item))) throw new Error(`no ${item} in inventory (${verb}到第 ${n}/${total} 格, 已${verb} ${built}; 备好料加 start_index: ${n} 接着${verb})`);
+  }
+
+  /**
+   * 拖着放一段 (第 a~b 格, 从 1 数): 段里只要有别的东西 (不是同名同方向的带子) 就回 null, 由调用方一格格放 (协助模式不动别人的东西、挡路的报清楚, 都在 placeTile 里);
+   * 角色走到段中间 → 第一格照旧放 (顺带把手上的方向对好) → 剩下的按住建造键沿直线拖过去 → 一次读回, 漏的 / 方向不对的一格格补。
+   */
+  private async dragRun(tiles: { item: string; position: Pos; direction: number | null }[], a: number, b: number, verb: string, built: number): Promise<{ built: number; dragged: number } | null> {
+    const seg = tiles.slice(a - 1, b);
+    const item = seg[0].item;
+    const xs = seg.map((t) => t.position.x), ys = seg.map((t) => t.position.y);
+    const box = { left_top: { x: Math.min(...xs) - 0.5, y: Math.min(...ys) - 0.5 }, right_bottom: { x: Math.max(...xs) + 0.5, y: Math.max(...ys) + 0.5 } };
+    const onTile = (e: Record<string, any>, p: Pos) => Math.abs(e.position.x - p.x) < 0.6 && Math.abs(e.position.y - p.y) < 0.6;
+    const scan = async () => ((await readArea(this.d.call, box, ["name", "type", "position", "direction"], 2_000)).entities as Record<string, any>[]).filter((e) => !NOT_ENTITIES.has(String(e.type)) && e.type !== "resource");
+    const before = await scan();
+    const missing = (rows: Record<string, any>[]) => seg.map((t, k) => ({ t, n: a + k })).filter(({ t }) => !rows.some((e) => onTile(e, t.position) && PlayerActions.same(e, t)));
+    // 段里有别的东西 (别人的建筑、方向不对的带子、树石): 不拖, 免得快速替换掉别人的东西或拖出半段
+    if (seg.some((t) => before.some((e) => onTile(e, t.position) && !PlayerActions.same(e, t)))) return null;
+    const todo = missing(before);
+    if (!todo.length) return { built: 0, dragged: 0 };
+    let placed = 0;
+    // 站到段中间旁边 2 格 (站在线上会被刚放的带子运走): 两头离角色都在 BUILD_REACH 以内 (14 格一段: √(6.5² + 2²) + 走到的误差 1.5 ≈ 8.3)
+    const mid = seg[Math.floor(seg.length / 2)].position;
+    const side = seg[0].direction === 4 || seg[0].direction === 12 ? { x: mid.x, y: mid.y + 2 } : { x: mid.x + 2, y: mid.y };
+    await this.walkInto(side, 3, true);
+    // 第一格照旧放 (手上的方向对好以后, 拖出来的同一方向)
+    const firstIdx = todo[0].n;
+    if (await this.placeTile(tiles, firstIdx, verb, built)) placed++;
+    const rest = seg.slice(firstIdx - a);
+    if (rest.length >= 2) {
+      await this.holdFor(item, firstIdx, tiles.length, verb, built + placed);
+      const from = rest[0].position, to = rest[rest.length - 1].position;
+      const perPoint = 3;
+      const ticks = rest.length * perPoint;
+      // 指针先到起点 (motion 在按键之前), 整段按住建造键; 中途每 10 tick 重按一次 (切窗口时游戏会松开按着的键)
+      const t = new Timeline().worldMotion(from, to, perPoint, 0).holdControl(this.d.controls().resolve("build"), 0, ticks);
+      const r = await this.d.call("input", { timeline: t.entries });
+      if (!r.ok) throw new Error(`拖着放第 ${firstIdx}~${b} 格没成: ${(r.error ?? "").slice(0, 200)}`);
+      await (this.d.sleep ?? defaultSleep)(150);
+    }
+    // 读回: 拖出来的数一下, 漏的 / 方向不对的一格格补
+    const after = await scan();
+    const left = missing(after);
+    const dragged = todo.length - left.length - (placed && !left.some((x) => x.n === firstIdx) ? 1 : 0);
+    for (const { n } of left) if (await this.placeTile(tiles, n, verb, built + placed + dragged)) placed++;
+    return { built: placed + Math.max(0, dragged), dragged: Math.max(0, dragged) };
   }
 
   /**
