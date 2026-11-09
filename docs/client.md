@@ -29,7 +29,33 @@ TypeScript 里用 `game/client/connect.ts` 的 `GameClient`: `start()` 起程序
 - 只读查询只开放被动查询: 任意 Lua、会改状态的方法 (`can_insert` 这类探测也会改状态) 不收。
 - 注入过一条选中 (`SelectedEntityChanged`) 之后客户端自己的鼠标选中会失灵: 选中用真鼠标悬停, 不注入。
 - `player_action` 的格子要带那格当时的物品 ID + 品质 ID (`memory_read` 的 ID 表), 无效 ID 会把客户端弄掉线, 绝不猜。
+- 统计 getter (`get_item_production_statistics` 这类) 和 `LuaFlowStatistics` 的计数在统计为空时会创建同步状态 (上游 0.0.11 查出, 已从只读查询里去掉): 联机客户端里一条都不跑, 统计从内存读。
 - 存档时注入的 Lua 读可能弄崩游戏: 存档前松开按键并停通信 (下一块接)。
+
+## 升到上游 0.0.11 (提交 bc9ff88, 2026-11-09)
+原来这份 = 上游 5489375 (0.0.10, 2026-11-02) + fork 的 6 个提交 (player_action、memory_read、两种 world_query 读法)。上游之后只有 bc9ff88 一个提交: 约 170 个文件, tools.md 从 1300 行到 1770 行。
+**怎么合的**: 在 fork 历史上把 pilot 和上游合并 (12 个文件 20 处冲突, 都是 fork 碰过的地方), 再按我们的命名导出, 三方合并进 game/client (底 = fork pilot 导出、我们 = game/client、他们 = 合并结果导出; 导出的 fork pilot 和原来的 game/client 258 个文件一字不差, 只有 5 个文档 / 构建文件有我们加的头注)。合并后的 fork 历史打成包留在本机仓库外的历史包目录 (`factorio-mcp-2026-11-09-merged-0.0.11.bundle`, 分支 merge)。fork 的东西怎么留的:
+- `player_action` 从操作号 13 改成 **14**: 上游把 13 拿去做"预留请求缓冲区", 不改的话发玩家动作会进错分支 (C++ 桥 resident.cpp、宿主 ResidentConnection.kt / Platform.kt 三处)。调试符号表里 fork 的 3 个类型信息符号排在上游新加的 `BadFunctionCall` 后面 (FmSymbol 枚举和 symbolPrefixes 按位置一一对应)。
+- `get_wire_connector(s)` 只放行最后一个参数是 `false` 的读法: 加进上游的被动方法表, 检查挪到上游新的路径校验 (`ObservationRead.kt inspectionPath`); 单元测试 `ObjectInspectionTest.wireConnectorReadsRequireOrCreateFalse`。
+- 阵营字段 `enemy_evolution` 去掉: 上游放行了 `LuaForce.get_evolution_factor`, 我们改用 inspect 读 (`commands/client-target.ts evolution`)。
+**接口变了, 我们这边跟着改的**:
+- `world_query` 的参数要包在 `query` 对象里 → `connect.ts toolArgs` 统一包 (commands/ 和假接口经代理转来的 Lua 读都走这里, 已经带 query 的原样发)。
+- inspect 默认 values 模式不收 `limit` / `offset` → 去掉 10 处 (actions / body / online); 要表的条目和总数写 `mode: "entries"` (读物流请求的分组数 `query.ts readRequests`)。
+- values 模式碰到表不再自动给条目, 给的是预览 (数字键过 JSON 变字符串键, 红绿线 `get_wire_connectors` 按编号取会落空) → 假接口问方法时同一次调用加一条相对读 `reads: [{mode: "entries"}]`, 是表就用带原始键的条目 (`game/offgame/fake_game.lua lua_inspect / lua_result`)。
+- 区域查询"条数够不够"看 `selection_complete` (`truncated` 还包括嵌套值按深度省略) → `query.ts areaCut`, readArea / readEntities / walk.ts 用它。
+- `ui_read` 没有 `max_nodes` 了 (按相对深度 `max_depth` 截), 未知参数一律拒 → 去掉 3 处; 带选择器时只回匹配到的子树 (匹配的根 `matched = true`, 我们都按类型或 matched 过滤, 不受影响)。
+- 没变的 (核过源码): 背包 / 科技目录分页 (`truncated` + `next_offset`)、背包格子的 `valid_for_read` / `index`、`include: ["recipe"]`、`world_overview` 的 `viewport`、input 时间线写法 (`stop_previous` 默认 false 时有时间线在跑会拒, 我们的动作都等上一条做完)。
+**证据 (2026-11-09, 游戏 2.1.24, 沙盘)**: 编译 1 分 47 秒; 客户端 Gradle 单元测试 263 条 + 新加 1 条全过 (含上游新加的 UiTree / WorldQuerySchema / CollectionPaging 和 fork 的 PlayerAction / MemoryRead); `test/sandbox/client.test.ts` 5/5 (挂上、只读查询对真值、读内存、聊天、摘下); `test/sandbox/actions.test.ts` 51/51 (8.6 分钟: transfer 取放走 player_action 14 号、红绿线只读接线点 + entries 相对读、物流网、流体、第二个客户端、服务器没有不同步); `test/sandbox/run.test.ts` 7/7 (开班链路; 第一次 6/7 是 11-08 加的"那格地块"让查法多了地块名, 和升级无关, `commands/hints.ts errorHint` 修了)。旧程序留在 `data/client-0.0.10/`。
+上游这次加了什么、和我们有什么关系 (按"模型玩得更好"排; 合进来了, 但除了上面的适配还都没用上):
+1. **批量相对读 `query.reads`**: 一次调用对选中的每个实体 / 玩家 / 背包格跟着读一串相对路径 (例: 每台组装机的配方 + 输出箱内容 + 插件), 同一个安全点, 一条路径错不影响其余; 文档明说传送带 `get_transport_line` 内容、蓝图实体 / 瓦片、火车时刻表、生成的区块都能这样读。→ 我们开班扫描 / status / 放机器提示现在是一类一次往返; 模型要过的"一条命令看某条带子某条道上的东西"用它能做。
+2. **输入时间线一次做完整手势**: 同一条时间线里按住建造键 + 多段鼠标移动 + 拐角按 R, 一次铺一条带拐弯的传送带; 时间线结束或中断时按着的键一律松开。→ 我们 belt_route 是一格一格放 (沙盘 21 格), 可以改成一次一段。
+3. **折线图和成就卡结构化读取**: `ui_read` 读原生图表组件的原始序列 (标签 + 每个采样点, 可分页; 例: 星图上点星球之间的连线弹出的陨石密度图, 模型能自己算航线要多少火力), 读成就窗口里每张卡的原生状态枚举 (不推断"拿到没"); 场景模拟组件 (提示里的小动画) 只回身份, 不展开帧。→ 太空时代算平台火力用折线图; 核 MK 的成就不用再看 Steam 缓存文件。
+4. **UI 读取重做**: 无状态选择器 + 相对深度 (不再按节点数截前缀)、脚本 GUI 元素的 `LuaGuiElement` 属性 (name / type / state / tags / sprite; 只在本地有世界时)、下拉选项和长文本分页切片、`match.gui` 选择器。→ 我们按控件名找格子 (CraftingQueueSlot、InventoryGui) 的做法还能用; 装模组路读 Factory Planner 界面会更稳。
+5. **不同步的新发现**: 统计 getter (`get_item_production_statistics` 等) 和 `LuaFlowStatistics` 的计数在统计为空时会**创建同步状态**, 上游把它们从只读查询里去掉了。我们不受影响: 不装模组路的统计全从内存读 (`game/offgame/fake_game.lua` 的 stat())、真值 Lua 走沙盘服务器 RCON; 规矩记下: **联机客户端里一条统计 getter 都不跑**。
+6. 上限: 结果不再有 16 MiB 上限 (请求仍 16 MiB), `world_overview` 格子分页 (`start_cell` / `next_cell`), 绑定 / 玩家 / 背包默认全量; 不再要求用户自己保留 `factorio.pdb` (调试信息和 API 文档都是游戏自带的, 缺了由运行时诊断报)。
+7. Linux 部分的改动不要 (我们那份没有 Linux)。
+8. 上游还改了工具说明 (给 agent 看的提示词): 例如写明 `input` 一次能做组合键、按住拖动带拐弯。我们的模型不直接用这些工具 (经 `./fh` 的行动层), 但行动层自己的写法可以照着改 (下面第 2 步)。
+**下一步 (还没做)**: ① 开班扫描 / 放机器提示改用批量相对读, 一次读一大片机器的配方和输出箱; ② `belt_route` 改成一条时间线按住拖完一段 (现在一格一格放); ③ 给模型一条看某条带子某条道上东西的命令 (`get_transport_line` + `reads`); ④ 太空时代时用折线图算平台火力; ⑤ 成就核改读成就卡。
 
 ## 证据 (游戏 2.1.24, 2026-11-07, 沙盘新图)
 `test/sandbox/client.test.ts` 5/5: 起程序 + 挂上观看窗口 (status attached / in_game); 暂停着 `world_query` 玩家周围 16 格 23 个实体名字 + 位置 = RCON 真值, 玩家位置 = 角色位置; `memory_read` 位置和主背包 = 真值 (读 2 次稳定, 45 毫秒), 物品 ID 342 条; `chat_send` 的话 `chat_read` 读回来, 游戏照常走; `detach` 后窗口还连着, 程序日志没报错。旧项目在同一套代码上核过的更多: 键鼠时间线放建筑 / 取放、直接发玩家动作 (取放 1 秒级)、界面、只读查询 9 项、联机服务器上只读进世界 5 分钟不掉线 (搬动作层时在新项目重核)。

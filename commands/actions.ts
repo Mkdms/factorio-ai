@@ -553,7 +553,7 @@ export class PlayerActions {
     if (assistVerdict(e, this.d.assist.me) === null) return null; // 矿、树、石头
     // 自己的尸体总能捡: 尸体没有"谁放的", 看它记的玩家编号; 别人的不动
     if (e.type === "character-corpse") {
-      const c = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "entities", position: e.position, name: e.name }, path: [{ property: "character_corpse_player_index" }] }, limit: 4 });
+      const c = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "entities", position: e.position, name: e.name }, path: [{ property: "character_corpse_player_index" }] } });
       const d = c.data as { objects?: { value?: unknown }[]; player?: { index?: unknown } } | undefined;
       if (c.ok && d?.objects?.[0]?.value === d?.player?.index) return null;
     }
@@ -563,7 +563,7 @@ export class PlayerActions {
 
   /** 谁放的 (last_user 的名字; 读不到 / 没有 = 空串) */
   private async lastUserName(e: { position?: Pos; name?: unknown }): Promise<string> {
-    const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "entities", position: e.position, name: e.name }, path: [{ property: "last_user" }] }, fields: ["name"], limit: 4 });
+    const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "entities", position: e.position, name: e.name }, path: [{ property: "last_user" }] }, fields: ["name"] });
     const o = (r.data as { objects?: { availability?: string; attributes?: { name?: unknown } }[] } | undefined)?.objects?.[0];
     return o?.availability === "nil" || !r.ok ? "" : typeof o?.attributes?.name === "string" ? o.attributes.name : "";
   }
@@ -1041,7 +1041,7 @@ export class PlayerActions {
     if (inv === undefined) return [];
     const out: number[] = [];
     for (let k = 1; k <= 3; k++) {
-      const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "character" }, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "name", "count"], limit: 4 });
+      const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "character" }, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "name", "count"] });
       const s = r.ok ? (r.data as { objects?: { attributes?: { valid_for_read?: boolean; name?: string; count?: number } }[] })?.objects?.[0]?.attributes : null;
       if (s?.valid_for_read && s.name === item) out.push(Number(s.count ?? 0));
     }
@@ -1055,7 +1055,7 @@ export class PlayerActions {
     let magazines = 0, rounds = 0;
     const names = new Set<string>();
     for (let k = 1; k <= 3; k++) {
-      const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "character" }, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "name", "count", "ammo"], limit: 4 });
+      const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "character" }, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "name", "count", "ammo"] });
       if (!r.ok) return null;
       const s = (r.data as { objects?: { attributes?: { valid_for_read?: boolean; name?: string; count?: number; ammo?: number } }[] })?.objects?.[0]?.attributes;
       if (!s?.valid_for_read) continue;
@@ -1083,7 +1083,7 @@ export class PlayerActions {
   }
 
   private async health(): Promise<{ health: number; max: number } | null> {
-    const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "character" } }, fields: ["health", "max_health"], limit: 4 });
+    const r = await this.d.call("world_query", { selection: { kind: "inspect", target: { kind: "character" } }, fields: ["health", "max_health"] });
     const s = r.ok ? (r.data as { objects?: { attributes?: { health?: number; max_health?: number } }[] })?.objects?.[0]?.attributes : null;
     return typeof s?.health === "number" ? { health: s.health, max: Number(s.max_health ?? 250) } : null;
   }

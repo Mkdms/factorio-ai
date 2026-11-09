@@ -322,7 +322,7 @@ try {
     name = me.name || name;
     if (!me.hasCharacter) log("这个玩家没有身体 (观战 / 死了?): 动作会失败");
     if (!readOnly && (await target.ensureBody())) log("角色进世界时开着地图 (远程视图), 退出来了");
-    const used = await target.call("world_query", { selection: { kind: "inspect", target: { kind: "game" }, path: [{ property: "console_command_used" }] }, limit: 4 });
+    const used = await target.call("world_query", { selection: { kind: "inspect", target: { kind: "game" }, path: [{ property: "console_command_used" }] } });
     log(`这张图用过控制台命令吗 (game.console_command_used): ${JSON.stringify(used.ok ? (used.data as { objects?: { value?: unknown }[] })?.objects?.[0] ?? used.data : used.error).slice(0, 200)}`);
   }
   if (useRcon) {

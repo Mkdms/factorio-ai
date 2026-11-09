@@ -2,6 +2,8 @@
 
 package factorioai.client.acceptance
 
+import factorioai.client.worldQuery
+
 import factorioai.client.McpHttpClient
 import factorioai.client.toolValue
 import kotlinx.cinterop.toKString
@@ -48,7 +50,7 @@ class UiNumberAcceptanceTest {
                 val names = listOf("finite", "zero", "negative", "suppressed")
                 val expected = listOf(12345.125, 0.0, -0.25, null)
                 names.forEachIndexed { index, name ->
-                    val api = client.tool("world_query", buildJsonObject {
+                    val api = client.worldQuery(buildJsonObject {
                         putJsonObject("selection") {
                             put("kind", "inspect")
                             putJsonObject("target") { put("kind", "player") }

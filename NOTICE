@@ -2,7 +2,8 @@ Factorio AI includes third-party code:
 
 game/client/
   The Windows and common parts of factorio-mcp by czp3009, https://github.com/czp3009/factorio-mcp (our fork's branch
-  pilot as of commit e460220, 2026-11-07, which added player_action, memory_read and two world_query read forms). The
+  pilot as of commit e460220, 2026-11-07, which added player_action, memory_read and two world_query read forms; merged
+  with upstream 0.0.11, commit bc9ff88, on 2026-11-09, player_action moved to operation 14). The
   upstream repository has no licence file; the code and its documents (tools.md, AGENTS.md, development.md, kept in
   game/client/) are used with the author's permission, relayed to us, on the condition of attribution. This project
   grants no licence to that code. Changes: Kotlin package renamed to factorioai.client, program renamed to

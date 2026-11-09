@@ -74,7 +74,7 @@ export async function importBlueprint(call: Call, controls: Controls, text: stri
   steps.cursor = p.cursor?.name ?? null;
   if (!p.cursor) {
     // 还是空: 把界面上能看到的文字读出来 (可能是提示或报错)
-    const r = await call("ui_read", { max_nodes: 4096 });
+    const r = await call("ui_read", {});
     const labels = ((r.data as { nodes?: { type?: string; text?: string | null; visible?: boolean }[] } | undefined)?.nodes ?? []).filter((n) => n.visible && typeof n.text === "string" && n.text.length > 0 && n.text.length < 300).map((n) => n.text);
     steps.uiText = labels.slice(0, 12);
   }
@@ -95,7 +95,8 @@ type UiNode = { id: number; parent?: number; type: string; text?: string | null;
 type Pos = { x: number; y: number };
 
 export async function readTree(call: Call, selector?: unknown): Promise<UiNode[]> {
-  const r = await call("ui_read", { max_nodes: 4096, ...(selector ? { selector } : {}) });
+  // 0.0.11: 没有 max_nodes 了 (按相对深度 max_depth 截, 不按节点数); 带选择器时只回匹配到的子树, 匹配到的根 matched = true
+  const r = await call("ui_read", selector ? { selector } : {});
   return ((r.data as { nodes?: UiNode[] } | undefined)?.nodes ?? []);
 }
 const hasWidget = async (call: Call, t: string) => (await readTree(call, { path: [{ axis: "descendant", match: { native_type: t } }] })).some((n) => n.type === t || n.type.endsWith(t));

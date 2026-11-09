@@ -46,9 +46,11 @@ local function inspect_selection(target, path)
   if path and #path > 0 then sel.path = path end
   return sel
 end
+-- 注入客户端的程序 0.0.11 起: values 模式 (默认) 不收 limit; 表在 values 里是预览 (数字键过 JSON 会变成字符串键),
+-- 所以不给 fields 时同一次调用里再要一条相对读 entries (带原始键, 和原来一样); 结果不是表的话那一条单独报错, 不影响主结果
 local function lua_inspect(target, path, fields)
-  local req = {selection = inspect_selection(target, path), limit = 256}
-  if fields then req.fields = fields end
+  local req = {selection = inspect_selection(target, path)}
+  if fields then req.fields = fields else req.reads = {{mode = "entries", limit = 256}} end
   local r = lua_ask(req)
   return r and r.objects and r.objects[1] or nil
 end
@@ -67,16 +69,27 @@ local function lua_wrap(v, target, path)
   for k, x in pairs(v) do out[k] = lua_wrap(x, target, path_plus(path, {index = k})) end
   return out
 end
--- 一次查询的结果: 单值 value、表 entries、对象 userdata、空 availability = nil
+-- 条目 (entries 模式的回复) → Lua 表, 键保留原来的类型
+local function lua_entries(en, target, path)
+  local out = {}
+  for _, x in ipairs(en) do if x.key ~= nil then out[x.key] = lua_wrap(x.value, target, path_plus(path, {index = x.key})) end end
+  return out
+end
+-- 一次查询的结果: 单值 value、表 (相对读 reads[1] 的 entries)、对象 userdata、空 availability = nil
 local function lua_result(o, target, path)
   if not o or o.availability == "nil" then return nil end
-  if o.value_type == "userdata" and o.object_name then return remote_object(target, path, o.object_name) end
-  if o.value ~= nil then return o.value end
-  if o.entries then
-    local out = {}
-    for _, en in ipairs(o.entries) do out[en.key] = lua_wrap(en.value, target, path_plus(path, {index = en.key})) end
-    return out
+  local first = o.reads and o.reads[1]
+  local en = first and first.entries
+  if o.value_type == "userdata" and o.object_name then
+    if en and o.object_name == "LuaCustomTable" then return lua_entries(en, target, path) end
+    return remote_object(target, path, o.object_name)
   end
+  if en then return lua_entries(en, target, path) end
+  if o.value ~= nil then
+    if type(o.value) == "table" then return lua_wrap(o.value, target, path) end
+    return o.value
+  end
+  if o.entries then return lua_entries(o.entries, target, path) end
   return nil
 end
 -- 物流网、线路网络这些对象: 模组读哪个成员就问哪个 (每类的成员名只问一次)。对象每次提问都新造, 不跨提问留

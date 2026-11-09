@@ -2,6 +2,8 @@
 
 package factorioai.client.acceptance
 
+import factorioai.client.worldQuery
+
 import factorioai.client.McpHttpClient
 import factorioai.client.toolValue
 import kotlinx.cinterop.toKString
@@ -28,7 +30,7 @@ class ViewportAcceptanceTest {
                 client.initialize()
                 client.tool("attach", buildJsonObject { put("pid", pid) }).toolValue()
                 attached = true
-                val player = client.tool("world_query", buildJsonObject {
+                val player = client.worldQuery(buildJsonObject {
                     putJsonObject("selection") {
                         put("kind", "inspect")
                         putJsonObject("target") { put("kind", "player") }

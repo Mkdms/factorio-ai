@@ -68,6 +68,9 @@ test("报错给查法: 退出码或 error: 行都算; 命令行写错和聊天�
   assert.equal(errorHint(["call", "transfer"], "ok", 0, state, d), null, "成功的不附");
   assert.equal(errorHint(["status", "--brief"], "error: client_error: fh status does not take --brief", 1, state, d), null);
   assert.equal(errorHint(["say", "你好"], "error: x", 1, state, d), null);
+  // 放不下的报错里带"那格地块 red-desert-2": 地块名不进查法 (沙盘开班测试 2026-11-09 查出)
+  const placed = errorHint(["call", "build"], "error: action_failed: placement blocked by 看不到挡着的东西; 那格地块 red-desert-2; 附近放得下的位置 (4,0) (放不下: burner-mining-drill 没放上", 1, {}, d)!;
+  assert.match(placed, /查法: \.\/know build burner-mining-drill; /);
 });
 
 test("队友事实: 只报别人的、新的, 5 分钟最多一条; 普通命令不加载知识库; 动作计数", async () => {

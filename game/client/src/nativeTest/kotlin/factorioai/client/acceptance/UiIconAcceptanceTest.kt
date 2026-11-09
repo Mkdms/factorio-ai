@@ -2,6 +2,8 @@
 
 package factorioai.client.acceptance
 
+import factorioai.client.worldQuery
+
 import factorioai.client.McpHttpClient
 import factorioai.client.toolValue
 import kotlin.test.*
@@ -72,9 +74,7 @@ class UiIconAcceptanceTest {
                     )) {
                     val api =
                         client
-                            .tool(
-                                "world_query",
-                                buildJsonObject {
+                            .worldQuery(buildJsonObject {
                                     putJsonObject("selection") {
                                         put("kind", "inspect")
                                         putJsonObject("target") { put("kind", "player") }

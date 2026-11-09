@@ -27,6 +27,16 @@ export function clientReady(exe = clientExe()): boolean {
  */
 export const READ_TOOLS = new Set(["status", "world_query", "world_overview", "ui_read", "input_bindings", "chat_read", "screenshot", "memory_read"]);
 
+/**
+ * 0.0.11 (2026-11-09) 起 world_query 的参数要放在一个 `query` 对象里 (selection / fields / limit / reads … 都在里面)。
+ * 我们的调用方 (commands/、假接口 game/offgame 经代理转过来的 Lua 读) 原来是平铺写的: 在这里统一包一层, 已经带 query 的原样发。
+ * 别的变化要在调用点改: inspect 默认 values 模式不收 limit / offset, 要表的条目写 mode: "entries" (game/client/tools.md "Query sizes")。
+ */
+export function toolArgs(name: string, args: Record<string, unknown>): Record<string, unknown> {
+  if (name === "world_query" && !("query" in args)) return { query: args };
+  return args;
+}
+
 export interface CallResult { ok: boolean; ms: number; data?: unknown; text?: string; error?: string; bytes: number; /** 断线类错误 (不是工具自己报错) */ transport?: boolean; retried?: boolean; /** 第一张图片 (base64, 截图用) */ image?: { data: string; mimeType?: string } }
 
 export class GameClient {
@@ -96,7 +106,7 @@ export class GameClient {
     const ctl = new AbortController();
     const dog = setTimeout(() => ctl.abort(), watchdogMs);
     try {
-      const r = (await this.client!.callTool({ name, arguments: args }, undefined, { signal: ctl.signal, timeout: watchdogMs + 1000 })) as { content?: { type: string; text?: string; data?: string; mimeType?: string }[]; isError?: boolean; structuredContent?: unknown };
+      const r = (await this.client!.callTool({ name, arguments: toolArgs(name, args) }, undefined, { signal: ctl.signal, timeout: watchdogMs + 1000 })) as { content?: { type: string; text?: string; data?: string; mimeType?: string }[]; isError?: boolean; structuredContent?: unknown };
       const text = (r.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n");
       const imageBytes = (r.content ?? []).filter((c) => c.type === "image").reduce((n, c) => n + Math.floor(((c.data ?? "").length * 3) / 4), 0);
       this.bytesIn += text.length + imageBytes;

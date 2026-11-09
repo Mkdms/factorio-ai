@@ -2,6 +2,8 @@
 
 package factorioai.client.acceptance
 
+import factorioai.client.worldQuery
+
 import factorioai.client.McpHttpClient
 import factorioai.client.toolValue
 import factorioai.client.decodeImage
@@ -120,10 +122,10 @@ class ScreenshotAcceptanceTest {
                     assertTrue(result.getValue("isError").jsonPrimitive.boolean)
                     assertEquals("Screenshot unavailable while rendering is suspended.",
                         result.getValue("structuredContent").jsonObject.getValue("error").jsonPrimitive.content)
-                    client.tool("ui_read", buildJsonObject { put("max_nodes", 32) }).toolValue()
+                    client.tool("ui_read", buildJsonObject { put("max_depth", 1) }).toolValue()
                 }
                 if (getenv("FACTORIO_AI_CLIENT_TEST_SCREENSHOT_WORLD")?.toKString() == "1") {
-                    client.tool("world_query", buildJsonObject {
+                    client.worldQuery(buildJsonObject {
                         putJsonObject("selection") {
                             put("kind", "tiles")
                             putJsonObject("area") {
@@ -178,7 +180,7 @@ class ScreenshotAcceptanceTest {
                     }.jsonObject
                     assertEquals("image/png", image.getValue("mimeType").jsonPrimitive.content)
                     val bytes = Base64.decode(image.getValue("data").jsonPrimitive.content)
-                    assertTrue(bytes.size in 33..16 * 1024 * 1024)
+                    assertTrue(bytes.size >= 33)
                     assertContentEquals(byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10), bytes.copyOf(8))
                     fun integer(offset: Int) = (offset until offset + 4).fold(0) { value, i ->
                         (value shl 8) or (bytes[i].toInt() and 255)

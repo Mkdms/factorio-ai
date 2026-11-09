@@ -110,7 +110,8 @@ export function errorHint(args: string[], out: string, status: number, state: Hi
   if (/client_error/.test(out)) return null; // 命令行写错了: 它自己的报错已经说清楚了
   const k = `e:${cmd}`;
   if (d.now - (state[k] ?? 0) < ERROR_SAME_MS) return null;
-  const err = /^error:(.*)$/m.exec(out)?.[1] ?? "";
+  // 放不下时报错里有"那格地块 red-desert-2" (commands/actions.ts placeFailure): 地块名不是要查的东西, 先去掉 (不然查法变成 ./know build red-desert-2 …)
+  const err = (/^error:(.*)$/m.exec(out)?.[1] ?? "").replace(/那格地块 \S+/g, "");
   const items = [...new Set([...err.matchAll(/\b[a-z]+(?:-[a-z0-9]+)+\b/g)].map((m) => m[0]))].slice(0, 2);
   const q = [cmd, ...items].join(" ");
   const lines = d.know(q, 1);

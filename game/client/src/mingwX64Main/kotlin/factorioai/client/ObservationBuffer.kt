@@ -3,7 +3,7 @@
 package factorioai.client
 
 import factorioai.client.nativebridge.FmObservationBuffer
-import factorioai.client.nativebridge.FM_OBSERVATION_TEXT_BYTES
+import factorioai.client.nativebridge.FmUiMediaBuffer
 import kotlinx.cinterop.*
 
 private const val observationTransferBytes = 1024 * 1024
@@ -56,6 +56,13 @@ internal fun FmObservationBuffer.readObservationBytes(readMemory: (Long, Int) ->
 }
 
 internal fun FmObservationBuffer.readObservationText(readMemory: (Long, Int) -> ByteArray): String {
-    require(size <= FM_OBSERVATION_TEXT_BYTES.toULong()) { "Resident observation text exceeds its bound" }
+    require(size <= Int.MAX_VALUE.toULong()) { "Resident observation text exceeds byte-array representation" }
     return readObservationBytes(readMemory).decodeToString()
+}
+
+internal fun FmUiMediaBuffer.readObservationText(readMemory: (Long, Int) -> ByteArray): String = memScoped {
+    val buffer = alloc<FmObservationBuffer>()
+    buffer.address = address
+    buffer.size = size
+    buffer.readObservationText(readMemory)
 }

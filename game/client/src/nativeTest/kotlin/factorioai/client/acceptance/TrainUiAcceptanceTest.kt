@@ -2,6 +2,8 @@
 
 package factorioai.client.acceptance
 
+import factorioai.client.worldQuery
+
 import factorioai.client.McpHttpClient
 import factorioai.client.toolValue
 import kotlin.test.*
@@ -105,9 +107,7 @@ class TrainUiAcceptanceTest {
 
         suspend fun player() =
             client
-                .tool(
-                    "world_query",
-                    buildJsonObject {
+                .worldQuery(buildJsonObject {
                         putJsonObject("selection") { put("kind", "player") }
                         putJsonArray("fields") {
                             add("controller_type")
@@ -188,9 +188,7 @@ class TrainUiAcceptanceTest {
                 }
                 val train =
                     client
-                        .tool(
-                            "world_query",
-                            buildJsonObject {
+                        .worldQuery(buildJsonObject {
                                 putJsonObject("selection") {
                                     put("kind", "entities")
                                     put("type", "locomotive")

@@ -125,15 +125,10 @@ export class ClientTarget implements IoTarget {
   }
 
   async evolution(surface: string) {
-    // 三条路都试: 我们分支 (pilot) 加的阵营字段 enemy_evolution (敌对阵营按星球); 旧的 evolution_factor 字段; inspect 调 LuaForce.get_evolution_factor
-    const e = await this.mcp.call("world_query", { selection: { kind: "force" }, fields: ["enemy_evolution"] });
-    if (e.ok) { const v = (e.data as any)?.objects?.[0]?.attributes?.enemy_evolution?.enemy?.[surface]?.factor; if (typeof v === "number") return v; }
-    const a = await this.mcp.call("world_query", { selection: { kind: "force" }, fields: ["evolution_factor"] });
-    if (a.ok) { const v = (a.data as any)?.objects?.[0]?.attributes?.evolution_factor; if (typeof v === "number") return v; }
+    // 0.0.11 起上游放行 LuaForce.get_evolution_factor (按星球), 我们分支原来加的阵营字段 enemy_evolution 合并时去掉了
     const b = await this.mcp.call("world_query", { selection: { kind: "inspect", target: { kind: "game" }, path: [{ property: "forces" }, { index: "enemy" }, { method: "get_evolution_factor", arguments: [surface] }] } });
     if (b.ok) { const v = (b.data as any)?.objects?.[0]?.value; if (typeof v === "number") return v; }
-    const first = (e.data as any)?.objects?.[0];
-    throw new Unsupported(`enemy_evolution: ${(e.error ?? JSON.stringify({ attributes: first?.attributes, read_status: first?.read_status })).slice(0, 1500)}; 阵营字段 evolution_factor: ${(a.error ?? "没有这个值").slice(0, 100)}; inspect 方法: ${(b.error ?? JSON.stringify(b.data)).slice(0, 100)}`);
+    throw new Unsupported(`inspect game.forces.enemy.get_evolution_factor(${surface}): ${(b.error ?? JSON.stringify(b.data)).slice(0, 300)}`);
   }
 
   async research() { return readResearch(this.call); }
@@ -150,7 +145,8 @@ export class ClientTarget implements IoTarget {
   }
 
   async frame() {
-    const d = await this.#must("ui_read", { max_nodes: 1 });
+    // 只要帧号: 只回根 (max_depth 0), 不要字段 (0.0.11 去掉了 max_nodes)
+    const d = await this.#must("ui_read", { max_depth: 0, fields: [] });
     return Number(d.frame);
   }
 

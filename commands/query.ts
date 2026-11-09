@@ -5,7 +5,10 @@ import type { CallResult } from "../game/client/connect.ts";
 
 export type Call = (name: string, args?: Record<string, unknown>) => Promise<CallResult>;
 type Obj = { attributes?: Record<string, unknown>; valid_for_read?: boolean };
-type Page = { objects?: Obj[]; truncated?: boolean; next_offset?: number; player?: Record<string, unknown>; tick?: number };
+type Page = { objects?: Obj[]; truncated?: boolean; next_offset?: number; player?: Record<string, unknown>; tick?: number; selection_complete?: boolean };
+
+/** 区域查询有没有因为条数漏掉: 0.0.11 起看 selection_complete (truncated 还包括嵌套值按深度省略); 老版本没有这个字段就看 truncated */
+export const areaCut = (page: { truncated?: boolean; selection_complete?: boolean }) => page.selection_complete === undefined ? Boolean(page.truncated) : page.selection_complete === false;
 
 async function must(call: Call, name: string, args: Record<string, unknown>): Promise<Page> {
   const r = await call(name, args);
@@ -62,7 +65,7 @@ export async function readResearch(call: Call) {
 export async function readEntities(call: Call, area: { left_top: { x: number; y: number }; right_bottom: { x: number; y: number } }, fields = ["name", "position", "status"]) {
   // 区域实体查询不收 offset (只有目录类收; 注入客户端的程序 tools.md 查询大小表): 一次读, 满了要切区域再读 (第一版 readArea 的做法, 下一步搬)
   const page = await must(call, "world_query", { selection: { kind: "entities", area }, fields, limit: 256 });
-  if (page.truncated) throw new Error("区域里实体超过 256 个, 要切区域再读 (待搬第一版的分区读)");
+  if (areaCut(page)) throw new Error("区域里实体超过 256 个, 要切区域再读 (待搬第一版的分区读)");
   return (page.objects ?? []).map((o) => o.attributes ?? {});
 }
 
@@ -101,8 +104,9 @@ export type RequestPath = "sections" | "get_section";
  */
 export async function readRequests(call: Call, entity: EntityRef, path: RequestPath = "sections") {
   const target = { kind: "entities", name: entity.name, position: entity.position };
-  const inspect = (p: unknown[]) => must(call, "world_query", { selection: { kind: "inspect", target, path: p }, limit: 64 });
-  const secs = await inspect([{ method: "get_logistic_sections" }, { property: "sections" }]);
+  // 0.0.11: values 模式 (默认) 不收 limit, 表要条目和总数得写 mode: "entries"
+  const inspect = (p: unknown[], entries = false) => must(call, "world_query", { selection: { kind: "inspect", target, path: p }, ...(entries ? { mode: "entries", limit: 64 } : {}) });
+  const secs = await inspect([{ method: "get_logistic_sections" }, { property: "sections" }], true);
   const total = Number((secs.objects?.[0] as { total?: number } | undefined)?.total ?? 0);
   const out: { item: string; min?: number; max?: number; section: number }[] = [];
   for (let i = 1; i <= total; i++) {
@@ -140,14 +144,14 @@ export async function readArea(call: Call, area: Area, fields = ["name", "positi
       const page = await must(call, "world_query", { selection: { kind: "entities", area: b, ...(filter.type?.length ? { type: filter.type } : {}), ...(filter.name?.length ? { name: filter.name } : {}) }, fields: want, limit });
       calls++;
       const w = b.right_bottom.x - b.left_top.x;
-      if (page.truncated && w > 8) {
+      if (areaCut(page) && w > 8) {
         const mx = (b.left_top.x + b.right_bottom.x) / 2, my = (b.left_top.y + b.right_bottom.y) / 2;
         again.push({ left_top: b.left_top, right_bottom: { x: mx, y: my } }, { left_top: { x: mx, y: b.left_top.y }, right_bottom: { x: b.right_bottom.x, y: my } },
           { left_top: { x: b.left_top.x, y: my }, right_bottom: { x: mx, y: b.right_bottom.y } }, { left_top: { x: mx, y: my }, right_bottom: b.right_bottom });
         splits++;
         continue;
       }
-      if (page.truncated) truncated = true;
+      if (areaCut(page)) truncated = true;
       for (const o of page.objects ?? []) {
         const a = o.attributes ?? {};
         const pos = a.position as { x: number; y: number } | undefined;

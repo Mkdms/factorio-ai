@@ -2,7 +2,7 @@
 // 只用客户端能做的: 注入客户端的程序 的只读查询读障碍 (实体占地框、水面), 我们自己在格子上算 A*, 再按住方向键一段段走, 每段走完读位置纠偏。
 // 不调游戏的寻路请求 (那是会改状态的异步请求, 注入客户端的程序 的只读白名单不收, 客户端也不能做)。
 import type { Call } from "./query.ts";
-import { readPlayer } from "./query.ts";
+import { areaCut, readPlayer } from "./query.ts";
 import { Timeline } from "./timeline.ts";
 import type { Controls } from "./controls.ts";
 
@@ -28,15 +28,15 @@ const BELT_COST = 0.25;
 async function readObstacles(call: Call, area: Box) {
   const r = await call("world_query", { selection: { kind: "entities", area }, fields: ["name", "type", "bounding_box"], limit: 20_000 });
   if (!r.ok) throw new Error(`读实体失败: ${r.error}`);
-  const d = r.data as { objects?: { attributes?: Record<string, any> }[]; truncated?: boolean };
-  if (d.truncated) throw new Error("区域里实体太多被截断, 缩小范围");
+  const d = r.data as { objects?: { attributes?: Record<string, any> }[]; truncated?: boolean; selection_complete?: boolean };
+  if (areaCut(d)) throw new Error("区域里实体太多被截断, 缩小范围");
   const rows = (d.objects ?? []).map((o) => o.attributes ?? {}).filter((a) => a.bounding_box);
   const boxes = rows.filter((a) => !PASSABLE.has(a.type)).map((a) => a.bounding_box as Box);
   const belts = rows.filter((a) => BELT_TYPES.has(a.type)).map((a) => a.bounding_box as Box);
   const t = await call("world_query", { selection: { kind: "tiles", area }, fields: ["name", "position"], limit: 40_000 });
   if (!t.ok) throw new Error(`读地块失败: ${t.error}`);
-  const td = t.data as { objects?: { attributes?: Record<string, any> }[]; truncated?: boolean };
-  if (td.truncated) throw new Error("地块被截断, 缩小范围");
+  const td = t.data as { objects?: { attributes?: Record<string, any> }[]; truncated?: boolean; selection_complete?: boolean };
+  if (areaCut(td)) throw new Error("地块被截断, 缩小范围");
   const water = (td.objects ?? []).map((o) => o.attributes ?? {}).filter((a) => /water|out-of-map|lava|ammoniacal|oil-ocean/.test(String(a.name))).map((a) => a.position as P);
   return { boxes, water, belts };
 }

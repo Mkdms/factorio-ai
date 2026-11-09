@@ -240,7 +240,7 @@ export class Body extends ClientTarget {
 
   /** 自己身上某个物品栏第 k 格 (1 起) 那件物品的 item_number; 普通物品没有 */
   async #ownItemNumber(inv: number, k: number): Promise<{ item_number?: number }> {
-    const r = await this.mcp.call("world_query", { selection: { kind: "inspect", target: { kind: "character" }, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "item_number"], limit: 4 });
+    const r = await this.mcp.call("world_query", { selection: { kind: "inspect", target: { kind: "character" }, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "item_number"] });
     const n = r.ok ? (r.data as { objects?: { attributes?: { item_number?: unknown } }[] })?.objects?.[0]?.attributes?.item_number : undefined;
     return typeof n === "number" && n > 0 ? { item_number: n } : {};
   }
@@ -291,7 +291,7 @@ export class Body extends ClientTarget {
    */
   async #entitySlot(at: Pos, inv: number, k: number, known?: { kind: "entities"; position: Pos; name?: string }): Promise<{ name: string; count: number; number?: number } | null> {
     const target = known ?? await this.#entityTarget(at);
-    const ask = () => this.mcp.call("world_query", { selection: { kind: "inspect", target, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "name", "count", "item_number"], limit: 8 });
+    const ask = () => this.mcp.call("world_query", { selection: { kind: "inspect", target, path: [{ method: "get_inventory", arguments: [inv] }, { index: k }] }, fields: ["valid_for_read", "name", "count", "item_number"] });
     let r = await ask();
     // 这一点上不止一个实体: 通常是物流机器人正飞过箱子 (2026-11-06 注入客户端的程序 存档副本), 过一下就走了
     for (let i = 0; i < 12 && !r.ok && /exactly one entity/.test(r.error ?? ""); i++) { await new Promise((ok) => setTimeout(ok, 200)); r = await ask(); }
@@ -331,7 +331,7 @@ export class Body extends ClientTarget {
     const p = await this.mcp.call("world_query", { selection: { kind: "player" }, fields: ["selected", "cursor_stack", "hand_location"] });
     const a = (p.data as any)?.objects?.[0]?.attributes ?? {};
     // opened 是个 LuaEntity (或别的对象) 引用: inspect 的 values 模式按属性表分页读, 要给 fields 才能直接拿到 name (不带 fields 时 limit 4 只读到前 4 个属性)
-    const o = await this.mcp.call("world_query", { selection: { kind: "inspect", target: { kind: "player" }, path: [{ property: "opened" }] }, fields: ["name"], limit: 4 });
+    const o = await this.mcp.call("world_query", { selection: { kind: "inspect", target: { kind: "player" }, path: [{ property: "opened" }] }, fields: ["name"] });
     const opened = (o.data as any)?.objects?.[0];
     const openedName = opened?.availability === "nil" ? null : opened?.attributes?.name ?? opened?.object_name ?? null;
     const out = { step, selected: a.selected?.name ?? null, cursor: a.cursor_stack?.valid_for_read === false ? null : a.cursor_stack ? `${a.cursor_stack.name}×${a.cursor_stack.count}` : null, hand: a.hand_location ?? null, opened: o.ok ? openedName : `读不到: ${(o.error ?? "").slice(0, 80)}` };
@@ -354,7 +354,7 @@ export class Body extends ClientTarget {
       const ammoInv = this.defines.inventory.character_ammo;
       const me = { kind: "character" };
       for (let k = 1; k <= 3 && mine < 0; k++) {
-        const r = await this.mcp.call("world_query", { selection: { kind: "inspect", target: me, path: [{ method: "get_inventory", arguments: [ammoInv] }, { index: k }] }, fields: ["valid_for_read", "name", "count"], limit: 4 });
+        const r = await this.mcp.call("world_query", { selection: { kind: "inspect", target: me, path: [{ method: "get_inventory", arguments: [ammoInv] }, { index: k }] }, fields: ["valid_for_read", "name", "count"] });
         const a = r.ok ? (r.data as { objects?: { attributes?: { valid_for_read?: boolean; name?: string; count?: number } }[] })?.objects?.[0]?.attributes : null;
         if (a?.valid_for_read && a.name === item && Number(a.count) >= count) { mine = k - 1; source = ammoInv; }
       }
